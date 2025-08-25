@@ -198,7 +198,19 @@ const OrderList = () => {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        {item.permalink ? (
+                          <a
+                            href={item.permalink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 hover:underline"
+                            title="Ouvrir la fiche produit"
+                          >
+                            {item.name}
+                          </a>
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        )}
                         {size !== 'N/A' && (
                           <div className="text-xs text-gray-500 mt-1">
                             Taille: {size}

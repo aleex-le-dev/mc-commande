@@ -2,6 +2,8 @@
 class WordPressAPI {
   constructor() {
     this.config = this.loadConfig()
+    // Cache simple pour éviter des requêtes répétées de permalinks
+    this.productPermalinkCache = new Map()
   }
 
   // Charge la configuration depuis les variables d'environnement ou le localStorage
@@ -60,159 +62,101 @@ class WordPressAPI {
     return `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
   }
 
-  // Récupère la traduction française d'un produit via WPML
+  // Récupère la traduction française d'un produit via Google Translate
   async getProductTranslation(productId, currentName) {
-    // TEMPORAIREMENT DÉSACTIVÉ - Retourner le nom original pour voir les vrais articles
-    console.log('WPML: Traduction temporairement désactivée, nom original conservé:', currentName)
-    return currentName
-    
-    // CODE ORIGINAL COMMENTÉ EN ATTENDANT LA CORRECTION
-    /*
     try {
-      if (!this.isConfigured()) {
-        console.log('WPML: Configuration WordPress manquante, titre original conservé:', currentName)
+      console.log('Google Translate: Tentative de traduction pour le produit', productId, 'avec le titre:', currentName)
+      
+      // Heuristiques simples: si le nom semble déjà FR, ne rien faire
+      const frenchAccents = ['é', 'è', 'ê', 'ë', 'à', 'ù', 'û', 'ü', 'î', 'ï', 'ô', 'œ', 'æ', 'ç']
+      const frenchWords = [' le ', ' la ', ' les ', ' des ', ' du ', ' de ', ' au ', ' aux ', ' et ', ' avec ', ' sans ', ' robe ', ' jupe ', ' pantalon ', ' chemise ', ' blouse ']
+      const lower = ` ${currentName.toLowerCase()} `
+      const hasFrenchAccents = frenchAccents.some(ch => currentName.includes(ch))
+      const hasFrenchWords = frenchWords.some(w => lower.includes(w))
+      if (hasFrenchAccents || hasFrenchWords) {
+        console.log('Google Translate: Détecté comme FR (accents/mots FR), pas de traduction:', currentName)
         return currentName
       }
-
-      const baseUrl = this.getBaseUrl()
-      const authParams = this.getAuthParams()
       
-      console.log('WPML: Tentative de récupération de la traduction pour le produit', productId, 'avec le titre:', currentName)
+      // Auto-détection de langue et traduction uniquement si EN détecté
+      const translateUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=fr&dt=t&q=${encodeURIComponent(currentName)}`
+      console.log('Google Translate: Appel de l\'API:', translateUrl)
       
-      // Approche 1: Utiliser _wpml_import_translation_group pour trouver les traductions
-      const wpmlTranslationGroup = product.meta_data.find(meta => meta.key === '_wpml_import_translation_group')
-      if (wpmlTranslationGroup) {
-        console.log('WPML: Groupe de traduction trouvé:', wpmlTranslationGroup.value)
-        
-        // Chercher tous les produits avec le même groupe de traduction
-        const groupSearchUrl = `${baseUrl}/products?${authParams}&meta_key=_wpml_import_translation_group&meta_value=${wpmlTranslationGroup.value}`
-        console.log('WPML: Recherche par groupe de traduction:', groupSearchUrl)
-        
-        try {
-          const groupResponse = await fetch(groupSearchUrl)
-          if (groupResponse.ok) {
-            const groupProducts = await groupResponse.json()
-            console.log('WPML: Produits du même groupe de traduction trouvés:', groupProducts.length)
-            
-            // Chercher le produit français parmi les résultats
-            for (const groupProduct of groupProducts) {
-              if (groupProduct.id !== productId) { // Exclure le produit original
-                console.log('WPML: Produit du groupe trouvé:', {
-                  id: groupProduct.id,
-                  name: groupProduct.name,
-                  meta_data: groupProduct.meta_data ? groupProduct.meta_data.length : 0
-                })
-                
-                // Vérifier si c'est le produit français
-                const groupProductLanguageMeta = groupProduct.meta_data?.find(meta => meta.key === '_wpml_language')
-                if (groupProductLanguageMeta && groupProductLanguageMeta.value === 'fr') {
-                  console.log('WPML: Produit français trouvé par groupe de traduction:', currentName, '→', groupProduct.name)
-                  return groupProduct.name
-                }
-                
-                // Si pas de langue spécifiée, vérifier si le nom est différent (probablement français)
-                if (groupProduct.name && groupProduct.name !== currentName) {
-                  console.log('WPML: Produit alternatif trouvé par groupe de traduction (nom différent):', currentName, '→', groupProduct.name)
-                  return groupProduct.name
-                }
-              }
-            }
+      try {
+        const response = await fetch(translateUrl)
+        if (response.ok) {
+          const data = await response.json()
+          // data[2] contient normalement la langue source détectée (ex: 'en')
+          const detected = Array.isArray(data) ? data[2] : undefined
+          console.log('Google Translate: Langue détectée:', detected)
+          
+          // Si ce n'est pas de l'anglais, ne pas traduire
+          if (detected && detected !== 'en') {
+            console.log('Google Translate: Source non-EN, pas de traduction. Titre conservé:', currentName)
+            return currentName
           }
-        } catch (error) {
-          console.log('WPML: Erreur lors de la recherche par groupe de traduction:', error.message)
-        }
-      }
-      
-      // Approche 2: Utiliser les bonnes clés WPML (wpml_post_language et wpml_translation_of)
-      const wpmlPostLanguage = product.meta_data.find(meta => meta.key === 'wpml_post_language')
-      const wpmlTranslationOf = product.meta_data.find(meta => meta.key === 'wpml_translation_of')
-      
-      if (wpmlPostLanguage) {
-        console.log('WPML: Langue du post trouvée:', wpmlPostLanguage.value)
-      }
-      
-      if (wpmlTranslationOf) {
-        console.log('WPML: ID du post parent trouvé:', wpmlTranslationOf.value)
-      }
-      
-      // Si ce produit a un post parent (wpml_translation_of), chercher ses traductions
-      if (wpmlTranslationOf && wpmlTranslationOf.value) {
-        const parentId = wpmlTranslationOf.value
-        console.log('WPML: Recherche des traductions du post parent:', parentId)
-        
-        // Chercher tous les produits qui ont ce post comme parent
-        const parentSearchUrl = `${baseUrl}/products?${authParams}&meta_key=wpml_translation_of&meta_value=${parentId}`
-        console.log('WPML: Recherche des traductions du parent:', parentSearchUrl)
-        
-        try {
-          const parentResponse = await fetch(parentSearchUrl)
-          if (parentResponse.ok) {
-            const parentTranslations = await parentResponse.json()
-            console.log('WPML: Traductions du parent trouvées:', parentTranslations.length)
-            
-            // Chercher le produit français parmi les traductions
-            for (const translation of parentTranslations) {
-              if (translation.id !== productId) { // Exclure le produit original
-                console.log('WPML: Traduction trouvée:', {
-                  id: translation.id,
-                  name: translation.name
-                })
-                
-                // Vérifier la langue du produit traduit
-                const translationLanguage = translation.meta_data?.find(meta => meta.key === 'wpml_post_language')
-                if (translationLanguage && translationLanguage.value === 'fr') {
-                  console.log('WPML: Produit français trouvé via wpml_translation_of:', currentName, '→', translation.name)
-                  return translation.name
-                }
-                
-                // Si pas de langue spécifiée, vérifier si le nom est différent
-                if (translation.name && translation.name !== currentName) {
-                  console.log('WPML: Produit alternatif trouvé via wpml_translation_of (nom différent):', currentName, '→', translation.name)
-                  return translation.name
-                }
-              }
+          
+          // Appliquer la traduction uniquement si on a un texte traduit
+          if (data && data[0] && data[0][0] && data[0][0][0]) {
+            const translatedName = data[0][0][0]
+            // Si la traduction est identique, conserver l'original
+            if (!translatedName || translatedName.trim() === currentName.trim()) {
+              console.log('Google Translate: Traduction identique/invalide, titre original conservé')
+              return currentName
             }
+            console.log('Google Translate: Traduction réussie:', currentName, '→', translatedName)
+            return translatedName
+          } else {
+            console.log('Google Translate: Format de réponse inattendu:', data)
           }
-        } catch (error) {
-          console.log('WPML: Erreur lors de la recherche des traductions du parent:', error.message)
+        } else {
+          console.log('Google Translate: Erreur HTTP:', response.status, response.statusText)
         }
+      } catch (error) {
+        console.log('Google Translate: Erreur lors de l\'appel API:', error.message)
       }
       
-      // Approche 3: Si ce produit est en anglais, chercher directement sa traduction française
-      if (wpmlPostLanguage && wpmlPostLanguage.value === 'en') {
-        console.log('WPML: Produit en anglais détecté, recherche de la traduction française')
-        
-        // Chercher le produit français qui a ce produit comme parent
-        const frenchSearchUrl = `${baseUrl}/products?${authParams}&meta_key=wpml_translation_of&meta_value=${productId}`
-        console.log('WPML: Recherche de la traduction française:', frenchSearchUrl)
-        
-        try {
-          const frenchResponse = await fetch(frenchSearchUrl)
-          if (frenchResponse.ok) {
-            const frenchProducts = await frenchResponse.json()
-            console.log('WPML: Produits français trouvés:', frenchProducts.length)
-            
-            for (const frenchProduct of frenchProducts) {
-              const frenchLanguage = frenchProduct.meta_data?.find(meta => meta.key === 'wpml_post_language')
-              if (frenchLanguage && frenchLanguage.value === 'fr') {
-                console.log('WPML: Produit français trouvé directement:', currentName, '→', frenchProduct.name)
-                return frenchProduct.name
-              }
-            }
-          }
-        } catch (error) {
-          console.log('WPML: Erreur lors de la recherche directe de la traduction française:', error.message)
-        }
-      }
-      
-      console.log('WPML: Aucune traduction trouvée après toutes les tentatives, titre original conservé:', currentName)
+      // Si la traduction échoue, retourner le nom original
+      console.log('Google Translate: Traduction échouée, nom original conservé:', currentName)
       return currentName
       
     } catch (error) {
-      console.log('WPML: Erreur générale lors de la récupération de la traduction, titre original conservé:', currentName, 'Erreur:', error.message)
+      console.log('Google Translate: Erreur générale, nom original conservé:', currentName, 'Erreur:', error.message)
       return currentName
     }
-    */
+  }
+
+  // Récupère le permalink d'un produit WooCommerce (avec cache)
+  async getProductPermalink(productId) {
+    try {
+      if (!this.isConfigured()) {
+        console.log('Permalink: Configuration WordPress manquante')
+        return null
+      }
+      if (!productId) return null
+      if (this.productPermalinkCache.has(productId)) {
+        return this.productPermalinkCache.get(productId)
+      }
+      const baseUrl = this.getBaseUrl()
+      const authParams = this.getAuthParams()
+      const url = `${baseUrl}/products/${productId}?${authParams}`
+      console.log('Permalink: Récupération via WooCommerce API:', url)
+      const response = await fetch(url)
+      if (!response.ok) {
+        console.log('Permalink: Erreur HTTP:', response.status, response.statusText)
+        return null
+      }
+      const product = await response.json()
+      const permalink = product?.permalink || null
+      if (permalink) {
+        this.productPermalinkCache.set(productId, permalink)
+      }
+      console.log('Permalink: Trouvé:', permalink)
+      return permalink
+    } catch (error) {
+      console.log('Permalink: Erreur lors de la récupération:', error.message)
+      return null
+    }
   }
 
   // Récupère les commandes avec filtres
@@ -272,6 +216,7 @@ class WordPressAPI {
       const processedOrders = await Promise.all(orders.map(async order => {
         const processedLineItems = await Promise.all(order.line_items?.map(async item => {
           const translatedName = await this.getProductTranslation(item.product_id, item.name)
+          const permalink = await this.getProductPermalink(item.product_id)
           return {
             id: item.id,
             name: translatedName,
@@ -280,6 +225,7 @@ class WordPressAPI {
             quantity: item.quantity,
             total: item.total,
             price: item.price,
+            permalink: permalink,
             meta_data: item.meta_data || []
           }
         }) || [])
