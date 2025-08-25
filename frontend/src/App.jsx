@@ -15,24 +15,21 @@ const queryClient = new QueryClient({
 })
 
 function App() {
-  const [activeTab, setActiveTab] = useState('commandes')
+  const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
 
   const tabs = [
-    { id: 'commandes', label: 'Commandes', icon: '📦' },
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' }
   ]
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'commandes':
-        return <OrderList onNavigateToType={setActiveTab} />
       case 'couture':
         return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
       case 'maille':
         return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
       default:
-        return <OrderList onNavigateToType={setActiveTab} />
+        return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
     }
   }
 

@@ -14,10 +14,10 @@ app.use(express.json())
 const mongoUrl = process.env.MONGO_URI || 'mongodb://localhost:27017'
 const dbName = 'maisoncleo'
 
-// Configuration WooCommerce (à ajouter dans .env)
-const WOOCOMMERCE_URL = process.env.WOOCOMMERCE_URL || 'https://maisoncleo.com'
-const WOOCOMMERCE_CONSUMER_KEY = process.env.WOOCOMMERCE_CONSUMER_KEY
-const WOOCOMMERCE_CONSUMER_SECRET = process.env.WOOCOMMERCE_CONSUMER_SECRET
+// Configuration WooCommerce (utiliser les variables existantes)
+const WOOCOMMERCE_URL = process.env.VITE_WORDPRESS_URL || 'https://maisoncleo.com'
+const WOOCOMMERCE_CONSUMER_KEY = process.env.VITE_WORDPRESS_CONSUMER_KEY
+const WOOCOMMERCE_CONSUMER_SECRET = process.env.VITE_WORDPRESS_CONSUMER_SECRET
 
 console.log('🔍 URL MongoDB configurée:', mongoUrl)
 console.log('🔍 Variables d\'environnement:', {
@@ -211,55 +211,77 @@ app.post('/api/woocommerce/products/permalink/batch', async (req, res) => {
 // POST /api/sync/orders - Synchroniser les commandes WooCommerce
 app.post('/api/sync/orders', async (req, res) => {
   try {
-    const { orders } = req.body
+    addSyncLog('🔄 Début de la synchronisation des commandes', 'info')
     
-    if (!orders || !Array.isArray(orders)) {
-      return res.status(400).json({ error: 'Données de commandes invalides' })
-    }
+    // Récupérer les commandes depuis WooCommerce
+    let woocommerceOrders = []
     
-    const syncResults = {
-      ordersCreated: 0,
-      ordersUpdated: 0,
-      itemsCreated: 0,
-      itemsUpdated: 0,
-      errors: []
-    }
-    
-    for (const order of orders) {
+    if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
       try {
-        // Synchroniser la commande
-        const orderResult = await syncOrderToDatabase(order)
-        if (orderResult.created) {
-          syncResults.ordersCreated++
-        } else {
-          syncResults.ordersUpdated++
-        }
+        const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
+        const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=50&status=processing,completed&orderby=date&order=desc`
         
-        // Synchroniser les articles
-        for (const item of order.line_items || []) {
-          const itemResult = await syncOrderItem(order.id, item)
-          if (itemResult.created) {
-            syncResults.itemsCreated++
-          } else {
-            syncResults.itemsUpdated++
-          }
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000)
+        })
+        
+        if (response.ok) {
+          woocommerceOrders = await response.json()
+        } else {
+          addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes`, 'warning')
         }
       } catch (error) {
-        syncResults.errors.push({
-          orderId: order.id,
-          error: error.message
-        })
+        addSyncLog(`⚠️ Erreur lors de la récupération des commandes WooCommerce: ${error.message}`, 'error')
       }
+    } else {
+      addSyncLog('⚠️ Clés WooCommerce non configurées, synchronisation impossible', 'error')
+      return res.status(500).json({ 
+        error: 'Configuration WooCommerce manquante',
+        message: 'Veuillez configurer les clés API WooCommerce'
+      })
     }
     
-    res.json({ 
-      success: true, 
-      message: 'Synchronisation terminée',
+    if (woocommerceOrders.length === 0) {
+      addSyncLog('ℹ️ Aucune commande à synchroniser', 'info')
+      return res.json({
+        success: true,
+        message: 'Aucune nouvelle commande',
+        results: {
+          ordersCreated: 0,
+          ordersUpdated: 0,
+          itemsCreated: 0,
+          itemsUpdated: 0
+        }
+      })
+    }
+    
+    // Synchroniser les commandes
+    addSyncLog('🔄 Début de la synchronisation avec la base de données...', 'info')
+    const syncResults = await syncOrdersToDatabase(woocommerceOrders)
+    
+    // Afficher le message approprié selon le résultat
+    if (syncResults.ordersCreated === 0 && syncResults.itemsCreated === 0) {
+      addSyncLog('ℹ️ Aucune nouvelle commande à traiter', 'info')
+    } else {
+      addSyncLog('✅ Synchronisation terminée avec succès', 'success')
+    }
+    
+    res.json({
+      success: true,
+      message: 'Synchronisation réussie',
       results: syncResults
     })
+    
   } catch (error) {
-    console.error('Erreur POST /sync/orders:', error)
-    res.status(500).json({ error: 'Erreur serveur' })
+    addSyncLog(`❌ Erreur lors de la synchronisation: ${error.message}`, 'error')
+    res.status(500).json({ 
+      error: 'Erreur lors de la synchronisation',
+      message: error.message 
+    })
   }
 })
 
@@ -425,31 +447,190 @@ app.put('/api/production/status', async (req, res) => {
 
 // Fonctions utilitaires
 
+// Fonction pour synchroniser toutes les commandes vers la base de données
+async function syncOrdersToDatabase(woocommerceOrders) {
+  const syncResults = {
+    ordersCreated: 0,
+    ordersUpdated: 0,
+    itemsCreated: 0,
+    itemsUpdated: 0,
+    errors: []
+  }
+  
+  // Récupérer les IDs des commandes déjà existantes
+  const ordersCollection = db.collection('orders_sync')
+  const existingOrderIds = await ordersCollection.distinct('order_id')
+  
+  addSyncLog(`📊 ${existingOrderIds.length} commandes déjà existantes en BDD`, 'info')
+  
+  // Filtrer pour ne traiter que les nouvelles commandes
+  const newOrders = woocommerceOrders.filter(order => !existingOrderIds.includes(order.id))
+  const existingOrders = woocommerceOrders.filter(order => existingOrderIds.includes(order.id))
+  
+  if (newOrders.length === 0) {
+    addSyncLog('ℹ️ Aucune nouvelle commande à traiter', 'info')
+    return syncResults
+  }
+  
+  addSyncLog(`🔄 Traitement de ${newOrders.length} nouvelles commandes...`, 'info')
+  
+  // Traiter seulement les nouvelles commandes
+  for (const order of newOrders) {
+    try {
+      addSyncLog(`✨ Création de la nouvelle commande #${order.number}`, 'success')
+      const orderResult = await syncOrderToDatabase(order)
+      if (orderResult.created) {
+        syncResults.ordersCreated++
+      }
+      
+      // Nouveaux articles - création complète
+      for (const item of order.line_items || []) {
+        const itemResult = await syncOrderItem(order.id, item)
+        if (itemResult.created) {
+          syncResults.itemsCreated++
+          
+          // Dispatcher automatiquement l'article vers la production
+          await dispatchItemToProduction(order.id, item.id, item.name)
+        }
+      }
+    } catch (error) {
+      addSyncLog(`❌ Erreur sur la commande #${order.number}: ${error.message}`, 'error')
+      syncResults.errors.push({
+        orderId: order.id,
+        error: error.message
+      })
+    }
+  }
+  
+  addSyncLog(`📊 Résultats: ${syncResults.ordersCreated} créées, ${syncResults.itemsCreated} articles créés`, 'info')
+  
+  // Dispatcher automatiquement les articles existants qui n'ont pas de statut de production
+  if (syncResults.itemsCreated > 0) {
+    addSyncLog('🔄 Dispatch automatique des articles vers la production...', 'info')
+    await dispatchExistingItemsToProduction()
+  }
+  
+  return syncResults
+}
+
+// Fonction pour dispatcher automatiquement un article vers la production
+async function dispatchItemToProduction(orderId, lineItemId, productName) {
+  try {
+    const statusCollection = db.collection('production_status')
+    
+    // Déterminer le type de production basé sur le nom du produit
+    const productionType = determineProductionType(productName)
+    
+    // Créer le statut de production avec "a_faire"
+    const productionStatus = {
+      order_id: parseInt(orderId),
+      line_item_id: parseInt(lineItemId),
+      status: 'a_faire',
+      production_type: productionType,
+      assigned_to: null,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+    
+    await statusCollection.insertOne(productionStatus)
+    
+    addSyncLog(`📋 Article dispatché vers ${productionType}`, 'info')
+  } catch (error) {
+    console.warn(`Erreur lors du dispatch automatique vers la production: ${error.message}`)
+  }
+}
+
+// Fonction pour déterminer le type de production d'un produit
+function determineProductionType(productName) {
+  const name = productName.toLowerCase()
+  
+  const mailleKeywords = [
+    'tricotée', 'tricoté', 'knitted', 'pull', 'gilet', 'cardigan', 
+    'sweat', 'hoodie', 'bonnet', 'écharpe', 'gants', 'chaussettes',
+    'maille', 'tricot', 'laine', 'coton', 'acrylique'
+  ]
+  
+  if (mailleKeywords.some(keyword => name.includes(keyword))) {
+    return 'maille'
+  } else {
+      return 'couture'
+}
+
+// Fonction pour dispatcher automatiquement les articles existants vers la production
+async function dispatchExistingItemsToProduction() {
+  try {
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+    
+    // Récupérer tous les articles qui n'ont pas encore de statut de production
+    const itemsWithoutStatus = await itemsCollection.aggregate([
+      {
+        $lookup: {
+          from: 'production_status',
+          localField: 'line_item_id',
+          foreignField: 'line_item_id',
+          as: 'status'
+        }
+      },
+      {
+        $match: {
+          status: { $size: 0 }
+        }
+      }
+    ]).toArray()
+    
+    if (itemsWithoutStatus.length > 0) {
+      addSyncLog(`📋 Dispatch de ${itemsWithoutStatus.length} articles existants...`, 'info')
+      
+      for (const item of itemsWithoutStatus) {
+        const productionType = determineProductionType(item.product_name)
+        
+        const productionStatus = {
+          order_id: parseInt(item.order_id),
+          line_item_id: parseInt(item.line_item_id),
+          status: 'a_faire',
+          production_type: productionType,
+          assigned_to: null,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+        
+        await statusCollection.insertOne(productionStatus)
+      }
+      
+      addSyncLog(`✅ ${itemsWithoutStatus.length} articles dispatchés avec succès`, 'success')
+    }
+  } catch (error) {
+    console.warn(`Erreur lors du dispatch des articles existants: ${error.message}`)
+  }
+}
+}
+
+// Fonction pour synchroniser une commande vers la base de données
 async function syncOrderToDatabase(order) {
   const ordersCollection = db.collection('orders_sync')
   
+  // Créer la nouvelle commande
   const orderData = {
     order_id: order.id,
     order_number: order.number,
     order_date: new Date(order.date_created),
-    customer_name: `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim(),
-    customer_email: order.billing?.email || '',
-    customer_phone: order.billing?.phone || '',
-    customer_address: `${order.billing?.address_1 || ''}, ${order.billing?.city || ''}, ${order.billing?.postcode || ''}`.trim(),
-    total: parseFloat(order.total) || 0,
+    customer_name: order.billing?.first_name + ' ' + order.billing?.last_name,
+    customer_email: order.billing?.email,
+    customer_phone: order.billing?.phone,
+    customer_address: `${order.billing?.address_1}, ${order.billing?.postcode} ${order.billing?.city}`,
+    customer_note: order.customer_note || '',
     status: order.status,
+    total: parseFloat(order.total) || 0,
+    created_at: new Date(),
     updated_at: new Date()
   }
   
-  const result = await ordersCollection.updateOne(
-    { order_id: order.id },
-    { $set: orderData },
-    { upsert: true }
-  )
+  const result = await ordersCollection.insertOne(orderData)
   
   return {
-    created: result.upsertedCount > 0,
-    updated: result.modifiedCount > 0
+    created: result.insertedCount > 0,
+    updated: false
   }
 }
 
@@ -480,6 +661,7 @@ async function syncOrderItem(orderId, item) {
     console.warn(`Erreur lors de la récupération du permalink pour le produit ${item.product_id}:`, error.message)
   }
   
+  // Créer le nouvel article
   const itemData = {
     order_id: orderId,
     line_item_id: item.id,
@@ -490,18 +672,15 @@ async function syncOrderItem(orderId, item) {
     price: parseFloat(item.price) || 0,
     permalink: permalink, // Stocker le vrai permalink
     meta_data: item.meta_data || [],
-    created_at: new Date()
+    created_at: new Date(),
+    updated_at: new Date()
   }
   
-  const result = await itemsCollection.updateOne(
-    { order_id: orderId, line_item_id: item.id },
-    { $set: itemData },
-    { upsert: true }
-  )
+  const result = await itemsCollection.insertOne(itemData)
   
   return {
-    created: result.upsertedCount > 0,
-    updated: result.modifiedCount > 0
+    created: result.insertedCount > 0,
+    updated: false
   }
 }
 
@@ -550,6 +729,41 @@ app.post('/api/production-status', async (req, res) => {
   }
 })
 
+// Variable globale pour stocker le dernier log de synchronisation
+let lastSyncLog = null
+
+// Fonction pour ajouter un log (remplace le précédent)
+function addSyncLog(message, type = 'info') {
+  const log = {
+    timestamp: new Date().toISOString(),
+    message: message,
+    type: type
+  }
+  
+  // Remplacer le log précédent au lieu d'accumuler
+  lastSyncLog = log
+  
+  console.log(`[${type.toUpperCase()}] ${message}`)
+}
+
+// GET /api/sync/logs - Récupérer le dernier log de synchronisation
+app.get('/api/sync/logs', (req, res) => {
+  res.json({
+    success: true,
+    log: lastSyncLog,
+    hasLog: lastSyncLog !== null
+  })
+})
+
+// POST /api/sync/logs/clear - Vider le log
+app.post('/api/sync/logs/clear', (req, res) => {
+  lastSyncLog = null
+  res.json({
+    success: true,
+    message: 'Log vidé avec succès'
+  })
+})
+
 // Démarrage du serveur
 async function startServer() {
   await connectToMongo()
@@ -566,6 +780,8 @@ async function startServer() {
     console.log(`   POST /api/production-status - Mettre à jour statut`)
     console.log(`   GET  /api/woocommerce/products/:productId/permalink - Permalink d'un produit`)
     console.log(`   POST /api/woocommerce/products/permalink/batch - Permalinks en lot`)
+    console.log(`   GET  /api/sync/logs - Logs de synchronisation`)
+    console.log(`   POST /api/sync/logs/clear - Vider les logs`)
   })
 }
 

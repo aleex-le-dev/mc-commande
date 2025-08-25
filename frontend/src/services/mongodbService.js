@@ -12,7 +12,7 @@ export const getProductionStatuses = async () => {
     return data.statuses || []
   } catch (error) {
     console.error('Erreur lors de la récupération des statuts:', error)
-    return []
+        return []
   }
 }
 
@@ -21,8 +21,8 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
   try {
     const response = await fetch(`${API_BASE_URL}/production/status`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
+        headers: {
+          'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         order_id: orderId,
@@ -30,15 +30,15 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
         status,
         notes
       })
-    })
-    
-    if (!response.ok) {
+      })
+
+      if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
+      }
+
+      const data = await response.json()
     return data
-  } catch (error) {
+    } catch (error) {
     console.error('Erreur lors de la mise à jour du statut:', error)
     throw error
   }
@@ -49,8 +49,8 @@ export const dispatchToProduction = async (orderId, lineItemId, productionType, 
   try {
     const response = await fetch(`${API_BASE_URL}/production/dispatch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+        headers: {
+          'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         order_id: orderId,
@@ -58,42 +58,43 @@ export const dispatchToProduction = async (orderId, lineItemId, productionType, 
         production_type: productionType,
         assigned_to: assignedTo
       })
-    })
-    
-    if (!response.ok) {
+      })
+
+      if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
+      }
+
+      const data = await response.json()
     return data
-  } catch (error) {
+    } catch (error) {
     console.error('Erreur lors du dispatch vers la production:', error)
     throw error
   }
 }
 
-// Synchroniser les commandes WooCommerce avec la base de données
-export const syncOrders = async (orders) => {
+// Synchroniser les commandes avec la base de données
+export const syncOrders = async (woocommerceOrders = []) => {
   try {
+    // Appeler le backend qui se chargera de récupérer les données WooCommerce
     const response = await fetch(`${API_BASE_URL}/sync/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orders })
-    })
-    
-    if (!response.ok) {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      body: JSON.stringify({ orders: woocommerceOrders })
+      })
+
+      if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
+      }
+
     const data = await response.json()
     return data
-  } catch (error) {
-    console.error('Erreur lors de la synchronisation:', error)
-    throw error
+    } catch (error) {
+    console.error('Erreur lors de la synchronisation des commandes:', error)
+      throw error
+    }
   }
-}
 
 // Récupérer toutes les commandes depuis la base de données
 export const getOrdersFromDatabase = async () => {
@@ -160,20 +161,57 @@ export const getProductPermalinksBatch = async (productIds) => {
   try {
     const response = await fetch(`${API_BASE_URL}/woocommerce/products/permalink/batch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+        headers: {
+          'Content-Type': 'application/json',
       },
       body: JSON.stringify({ productIds })
-    })
-    
-    if (!response.ok) {
+      })
+
+      if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
+      }
+
+      const data = await response.json()
     return data
   } catch (error) {
     console.error('Erreur lors de la récupération des permalinks en lot:', error)
     return { results: [], errors: [] }
+  }
+}
+
+// Récupérer le dernier log de synchronisation
+export const getSyncLogs = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sync/logs`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data
+    } catch (error) {
+    console.error('Erreur lors de la récupération des logs:', error)
+      return { log: null, hasLog: false }
+    }
+  }
+
+// Vider le log de synchronisation
+export const clearSyncLogs = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sync/logs/clear`, {
+      method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+    return data.success
+    } catch (error) {
+    console.error('Erreur lors du vidage des logs:', error)
+    return false
   }
 }
