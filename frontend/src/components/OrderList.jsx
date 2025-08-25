@@ -249,10 +249,14 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
   }
 
   useEffect(() => {
-    if (article.product_id) {
+    // Utiliser l'image stockée en base de données si disponible
+    if (article.image_url) {
+      setImageUrl(article.image_url)
+    } else if (article.product_id) {
+      // Sinon, essayer de récupérer l'image depuis WooCommerce
       fetchCardImage(article.product_id)
     }
-  }, [article.product_id])
+  }, [article.image_url, article.product_id])
 
   const fetchCardImage = async (productId) => {
     setIsImageLoading(true)
@@ -269,7 +273,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(5000) // Timeout plus court
       })
 
       if (response.ok) {
@@ -279,7 +283,8 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
         }
       }
     } catch (error) {
-      console.warn(`Erreur image carte pour produit ${productId}:`, error.message)
+      // Ignorer silencieusement les erreurs CORS ou réseau
+      console.debug(`Image non disponible pour le produit ${productId}`)
     } finally {
       setIsImageLoading(false)
     }
@@ -288,8 +293,6 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
   return (
     <div 
       className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-[420px]"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{ 
         animationDelay: `${index * 150}ms`,
         animation: 'fadeInUp 0.6s ease-out forwards'
@@ -631,24 +634,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     queryKey: ['db-orders', selectedType],
     queryFn: () => {
       if (propSelectedType && propSelectedType !== 'all') {
-        console.log(`🔍 OrderList: Appel getOrdersByProductionType(${propSelectedType})`)
         return getOrdersByProductionType(propSelectedType)
       }
-      console.log(`🔍 OrderList: Appel getOrdersFromDatabase()`)
       return getOrdersFromDatabase()
     },
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
     staleTime: 10000,
-  })
-  
-  // Debug: afficher les données reçues
-  console.log('🔍 OrderList dbOrders:', {
-    selectedType,
-    propSelectedType,
-    dbOrders,
-    dbOrdersLength: dbOrders?.length || 0,
-    isLoading: dbOrdersLoading,
-    error: dbOrdersError
   })
 
   // Récupérer les statuts de production
@@ -755,9 +746,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const prepareArticles = () => {
     if (!dbOrders) return []
     
-    const articles = []
+        const articles = []
     dbOrders.forEach((order, orderIndex) => {
-        
+      order.items?.forEach((item, itemIndex) => {
         // Utiliser le type de production depuis la base de données si disponible
         let productionType = 'couture' // par défaut
         
@@ -790,7 +781,6 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       })
     })
     
-    console.log('🔍 prepareArticles - Articles créés:', articles.length)
     return articles
   }
 
@@ -801,17 +791,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     return typeMatch
   })
   
-  // Debug: afficher les informations dans la console
-  console.log('🔍 Debug OrderList:', {
-    selectedType,
-    totalArticles: allArticles.length,
-    filteredArticles: filteredArticles.length,
-    sampleArticles: allArticles.slice(0, 3).map(a => ({
-      name: a.product_name,
-      productionType: a.productionType,
-      hasProductionStatus: !!a.production_status
-    }))
-  })
+
 
   if (dbOrdersLoading || statusesLoading) {
     return <LoadingSpinner />
