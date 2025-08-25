@@ -4,6 +4,7 @@ import { FiEye } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { fetchOrders } from '../services/wordpressApi'
+import LoadingSpinner from './LoadingSpinner'
 
 const OrderList = () => {
   const { data: orders, isLoading, error } = useQuery({
@@ -41,11 +42,7 @@ const OrderList = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (error) {
