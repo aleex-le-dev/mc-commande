@@ -420,8 +420,9 @@ const ParametresPanel = () => {
                           : ''
                       }`}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Nom du produit et quantité */}
+                        <div className="md:col-span-2">
                           <h4 className="font-medium text-gray-900">
                             {item.product_name || 'Nom du produit'}
                           </h4>
@@ -440,9 +441,36 @@ const ParametresPanel = () => {
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
+
+                        {/* URL de l'image */}
+                        <div className="md:col-span-1">
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-700">Image:</span>
+                            <div className="mt-1">
+                              {item.permalink ? (
+                                <a 
+                                  href={item.permalink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline text-xs break-all"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {item.permalink.length > 30 ? `${item.permalink.substring(0, 30)}...` : item.permalink}
+                                </a>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Aucune image</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Statut de production */}
+                        <div className="md:col-span-1">
                           <div className="text-sm text-gray-500">
-                            {item.production_status?.status || 'Aucun statut'}
+                            <span className="font-medium text-gray-700">Statut:</span>
+                            <div className="mt-1">
+                              {item.production_status?.status || 'Aucun statut'}
+                            </div>
                           </div>
                         </div>
                       </div>

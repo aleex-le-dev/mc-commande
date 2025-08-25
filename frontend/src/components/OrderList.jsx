@@ -13,6 +13,136 @@ import {
 } from '../services/mongodbService'
 import LoadingSpinner from './LoadingSpinner'
 
+// Composant pour afficher l'image du produit
+const ProductImage = ({ productId, productName, permalink }) => {
+  const [imageUrl, setImageUrl] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasError, setHasError] = useState(false)
+  const [errorDetails, setErrorDetails] = useState('')
+
+  useEffect(() => {
+    if (productId) {
+      // Reset l'état quand l'ID change
+      setImageUrl(null)
+      setHasError(false)
+      setErrorDetails('')
+      fetchProductImage(productId)
+    }
+  }, [productId])
+
+  const fetchProductImage = async (id) => {
+    if (!id) {
+      console.warn('ProductImage: Pas d\'ID de produit fourni')
+      setHasError(true)
+      setErrorDetails('Pas d\'ID')
+      return
+    }
+
+    setIsLoading(true)
+    setHasError(false)
+    setErrorDetails('')
+    
+    try {
+      // Récupérer la configuration WordPress depuis les variables d'environnement
+      const wordpressUrl = import.meta.env.VITE_WORDPRESS_URL
+      const consumerKey = import.meta.env.VITE_WORDPRESS_CONSUMER_KEY
+      const consumerSecret = import.meta.env.VITE_WORDPRESS_CONSUMER_SECRET
+
+      if (!wordpressUrl || !consumerKey || !consumerSecret) {
+        console.warn('ProductImage: Configuration WordPress manquante')
+        setHasError(true)
+        setErrorDetails('Config manquante')
+        return
+      }
+
+      const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
+      const url = `${wordpressUrl}/wp-json/wc/v3/products/${id}?${authParams}&_fields=id,images`
+      
+      console.log(`ProductImage: Tentative de récupération de l'image pour le produit ${id}`)
+      console.log(`ProductImage: URL appelée: ${url}`)
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000) // Augmenter le timeout
+      })
+
+      console.log(`ProductImage: Réponse HTTP ${response.status} pour le produit ${id}`)
+
+      if (response.ok) {
+        const product = await response.json()
+        console.log(`ProductImage: Données reçues pour le produit ${id}:`, {
+          hasImages: !!product?.images,
+          imagesCount: product?.images?.length || 0,
+          firstImage: product?.images?.[0]
+        })
+        
+        if (product?.images && product.images.length > 0 && product.images[0]?.src) {
+          console.log(`ProductImage: Image trouvée pour le produit ${id}: ${product.images[0].src}`)
+          setImageUrl(product.images[0].src)
+        } else {
+          console.warn(`ProductImage: Pas d'image pour le produit ${id}`)
+          setHasError(true)
+          setErrorDetails('Pas d\'image')
+        }
+      } else {
+        console.warn(`ProductImage: Erreur HTTP ${response.status} pour le produit ${id}`)
+        setHasError(true)
+        setErrorDetails(`HTTP ${response.status}`)
+      }
+    } catch (error) {
+      console.warn(`ProductImage: Erreur lors de la récupération de l'image pour le produit ${id}:`, error.message)
+      setHasError(true)
+      setErrorDetails(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+      </div>
+    )
+  }
+
+  if (hasError || !imageUrl) {
+    return (
+      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center group relative">
+        <span className="text-xs text-gray-500">🖼️</span>
+        {errorDetails && (
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+            {errorDetails}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <a
+      href={permalink || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-block"
+      title="Voir l'image du produit"
+    >
+      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-200 transition-colors">
+        <img 
+          src={imageUrl} 
+          alt={productName}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+        />
+      </div>
+    </a>
+  )
+}
+
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const [selectedType, setSelectedType] = useState(propSelectedType || 'all')
 
@@ -435,6 +565,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Production
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Image
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -446,6 +579,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr })}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {format(new Date(article.orderDate), 'HH:mm', { locale: fr })}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -508,6 +644,13 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${article.productionType === 'maille' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                             {article.productionType === 'maille' ? '🧶 Maille' : '✂️ Couture'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ProductImage 
+                            productId={article.product_id} 
+                            productName={article.product_name}
+                            permalink={article.permalink}
+                          />
                         </td>
                       </tr>
                     ))}

@@ -830,12 +830,13 @@ async function syncOrderToDatabase(order) {
 async function syncOrderItem(orderId, item) {
   const itemsCollection = db.collection('order_items')
   
-  // Récupérer le permalink depuis WooCommerce via notre API
+  // Récupérer le permalink et l'image depuis WooCommerce via notre API
   let permalink = null
+  let imageUrl = null
   try {
     if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
       const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
-      const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/products/${item.product_id}?${authParams}&_fields=id,permalink`
+      const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/products/${item.product_id}?${authParams}&_fields=id,permalink,images`
       
       const response = await fetch(url, {
         method: 'GET',
@@ -848,10 +849,14 @@ async function syncOrderItem(orderId, item) {
       if (response.ok) {
         const product = await response.json()
         permalink = product?.permalink || null
+        // Récupérer l'URL de la première image si disponible
+        if (product?.images && product.images.length > 0) {
+          imageUrl = product.images[0].src || null
+        }
       }
     }
   } catch (error) {
-    console.warn(`Erreur lors de la récupération du permalink pour le produit ${item.product_id}:`, error.message)
+    console.warn(`Erreur lors de la récupération des données pour le produit ${item.product_id}:`, error.message)
   }
   
   // Créer le nouvel article
@@ -864,6 +869,7 @@ async function syncOrderItem(orderId, item) {
       quantity: item.quantity,
       price: parseFloat(item.price) || 0,
       permalink: permalink, // Stocker le vrai permalink
+      image_url: imageUrl, // Stocker l'URL de l'image
       meta_data: item.meta_data || [],
       created_at: new Date(),
       updated_at: new Date()
