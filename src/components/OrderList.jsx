@@ -104,7 +104,18 @@ const OrderList = () => {
                 
                 // Priorité 1: shipping_lines (méthode de transport choisie par le client)
                 if (order.shipping_lines && order.shipping_lines.length > 0) {
-                  shippingMethod = order.shipping_lines[0].method_title || 'Transport non spécifié'
+                  const methodTitle = order.shipping_lines[0].method_title || ''
+                  
+                  // Si c'est "livraison gratuite" et que l'adresse est en France
+                  if (methodTitle.toLowerCase().includes('livraison gratuite') || methodTitle.toLowerCase().includes('free shipping')) {
+                    if (order.billing?.country === 'FR') {
+                      shippingMethod = `${methodTitle} (UPS)`
+                    } else {
+                      shippingMethod = `${methodTitle} (DHL)`
+                    }
+                  } else {
+                    shippingMethod = methodTitle
+                  }
                 }
                 // Priorité 2: shipping_method_title (fallback)
                 else if (order.shipping_method_title) {
