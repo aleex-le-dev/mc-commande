@@ -380,17 +380,17 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
           <div className="bg-blue-50 rounded p-2">
             {syncLogs.length > 0 && syncLogs[0] ? (
               <div className="text-xs">
-                <span className="text-blue-600 font-mono">
+                    <span className="text-blue-600 font-mono">
                   {new Date(syncLogs[0].timestamp).toLocaleTimeString()}
-                </span>
-                <span className={`ml-2 ${
+                    </span>
+                    <span className={`ml-2 ${
                   syncLogs[0].type === 'success' ? 'text-green-600' :
                   syncLogs[0].type === 'error' ? 'text-red-600' :
                   syncLogs[0].type === 'warning' ? 'text-yellow-600' :
-                  'text-blue-600'
-                }`}>
+                      'text-blue-600'
+                    }`}>
                   {syncLogs[0].message}
-                </span>
+                    </span>
               </div>
             ) : (
               <p className="text-xs text-blue-500 italic">En attente des logs...</p>

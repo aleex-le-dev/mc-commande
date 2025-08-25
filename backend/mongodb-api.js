@@ -267,7 +267,7 @@ app.post('/api/sync/orders', async (req, res) => {
     if (syncResults.ordersCreated === 0 && syncResults.itemsCreated === 0) {
       addSyncLog('ℹ️ Aucune nouvelle commande à traiter', 'info')
     } else {
-      addSyncLog('✅ Synchronisation terminée avec succès', 'success')
+    addSyncLog('✅ Synchronisation terminée avec succès', 'success')
     }
     
     res.json({
@@ -282,6 +282,111 @@ app.post('/api/sync/orders', async (req, res) => {
       error: 'Erreur lors de la synchronisation',
       message: error.message 
     })
+  }
+})
+
+// GET /api/orders/search/:orderNumber - Rechercher une commande par numéro
+app.get('/api/orders/search/:orderNumber', async (req, res) => {
+  try {
+    const { orderNumber } = req.params
+    
+    // Rechercher la commande par numéro
+    const order = await db.collection('orders_sync').findOne({ 
+      order_number: orderNumber 
+    })
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Commande non trouvée' 
+      })
+    }
+    
+    // Récupérer les articles de la commande
+    const itemsCollection = db.collection('order_items')
+    const items = await itemsCollection.find({ 
+      order_id: order.order_id 
+    }).toArray()
+    
+    if (items.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Aucun article trouvé pour cette commande' 
+      })
+    }
+    
+    // Récupérer les statuts de production pour chaque article
+    const statusCollection = db.collection('production_status')
+    const itemsWithStatus = await Promise.all(items.map(async (item) => {
+      const status = await statusCollection.findOne({
+        line_item_id: item.line_item_id
+      })
+      
+      return {
+        ...item,
+        production_status: status || {
+          status: 'a_faire',
+          production_type: null,
+          assigned_to: null
+        }
+      }
+    }))
+    
+    // Déterminer le type de production principal (le plus fréquent ou le premier trouvé)
+    let mainProductionType = null
+    const productionStatuses = itemsWithStatus
+      .map(item => item.production_status)
+      .filter(status => status && status.production_type)
+    
+    if (productionStatuses.length > 0) {
+      // Compter les types de production
+      const typeCounts = {}
+      productionStatuses.forEach(status => {
+        if (status.production_type) {
+          typeCounts[status.production_type] = (typeCounts[status.production_type] || 0) + 1
+        }
+      })
+      
+      // Prendre le type le plus fréquent, sinon le premier
+      if (Object.keys(typeCounts).length > 0) {
+        mainProductionType = Object.entries(typeCounts).reduce((a, b) => 
+          typeCounts[a[0]] > typeCounts[b[0]] ? a : b
+        )[0]
+      } else {
+        mainProductionType = productionStatuses[0]?.production_type || null
+      }
+    }
+    
+    // Construire la réponse avec les informations de production
+    const orderWithProduction = {
+      ...order,
+      production_type: mainProductionType,
+      line_item_id: items[0].line_item_id,
+      items: itemsWithStatus,
+      all_production_statuses: productionStatuses // Pour debug
+    }
+    
+    // Log pour debug
+    console.log(`🔍 Recherche commande ${orderNumber}:`, {
+      order_id: order.order_id,
+      total_items: itemsWithStatus.length,
+      production_type: mainProductionType,
+      items_with_status: itemsWithStatus.map(item => ({
+        line_item_id: item.line_item_id,
+        product_name: item.product_name,
+        has_production_status: !!item.production_status,
+        production_type: item.production_status?.production_type,
+        status: item.production_status?.status
+      }))
+    })
+    
+    res.json({ 
+      success: true, 
+      order: orderWithProduction 
+    })
+  } catch (error) {
+    console.error('Erreur GET /orders/search/:orderNumber:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
   }
 })
 
@@ -565,17 +670,17 @@ async function syncOrdersToDatabase(woocommerceOrders) {
   // Traiter seulement les nouvelles commandes
   for (const order of newOrders) {
     try {
-      addSyncLog(`✨ Création de la nouvelle commande #${order.number}`, 'success')
-      const orderResult = await syncOrderToDatabase(order)
-      if (orderResult.created) {
-        syncResults.ordersCreated++
-      }
-      
-      // Nouveaux articles - création complète
-      for (const item of order.line_items || []) {
-        const itemResult = await syncOrderItem(order.id, item)
-        if (itemResult.created) {
-          syncResults.itemsCreated++
+        addSyncLog(`✨ Création de la nouvelle commande #${order.number}`, 'success')
+        const orderResult = await syncOrderToDatabase(order)
+        if (orderResult.created) {
+          syncResults.ordersCreated++
+        }
+        
+        // Nouveaux articles - création complète
+        for (const item of order.line_items || []) {
+          const itemResult = await syncOrderItem(order.id, item)
+          if (itemResult.created) {
+            syncResults.itemsCreated++
           
           // Dispatcher automatiquement l'article vers la production
           await dispatchItemToProduction(order.id, item.id, item.name)
@@ -699,26 +804,26 @@ async function syncOrderToDatabase(order) {
   const ordersCollection = db.collection('orders_sync')
   
   // Créer la nouvelle commande
-  const orderData = {
-    order_id: order.id,
-    order_number: order.number,
-    order_date: new Date(order.date_created),
-    customer_name: order.billing?.first_name + ' ' + order.billing?.last_name,
-    customer_email: order.billing?.email,
-    customer_phone: order.billing?.phone,
-    customer_address: `${order.billing?.address_1}, ${order.billing?.postcode} ${order.billing?.city}`,
-    customer_note: order.customer_note || '',
-    status: order.status,
-    total: parseFloat(order.total) || 0,
-    created_at: new Date(),
-    updated_at: new Date()
-  }
-  
-  const result = await ordersCollection.insertOne(orderData)
-  
-  return {
-    created: result.insertedCount > 0,
-    updated: false
+    const orderData = {
+      order_id: order.id,
+      order_number: order.number,
+      order_date: new Date(order.date_created),
+      customer_name: order.billing?.first_name + ' ' + order.billing?.last_name,
+      customer_email: order.billing?.email,
+      customer_phone: order.billing?.phone,
+      customer_address: `${order.billing?.address_1}, ${order.billing?.postcode} ${order.billing?.city}`,
+      customer_note: order.customer_note || '',
+      status: order.status,
+      total: parseFloat(order.total) || 0,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+    
+    const result = await ordersCollection.insertOne(orderData)
+    
+    return {
+      created: result.insertedCount > 0,
+      updated: false
   }
 }
 
@@ -750,25 +855,25 @@ async function syncOrderItem(orderId, item) {
   }
   
   // Créer le nouvel article
-  const itemData = {
-    order_id: orderId,
-    line_item_id: item.id,
-    product_name: item.name,
-    product_id: item.product_id,
-    variation_id: item.variation_id,
-    quantity: item.quantity,
-    price: parseFloat(item.price) || 0,
-    permalink: permalink, // Stocker le vrai permalink
-    meta_data: item.meta_data || [],
-    created_at: new Date(),
-    updated_at: new Date()
-  }
-  
-  const result = await itemsCollection.insertOne(itemData)
-  
-  return {
-    created: result.insertedCount > 0,
-    updated: false
+    const itemData = {
+      order_id: orderId,
+      line_item_id: item.id,
+      product_name: item.name,
+      product_id: item.product_id,
+      variation_id: item.variation_id,
+      quantity: item.quantity,
+      price: parseFloat(item.price) || 0,
+      permalink: permalink, // Stocker le vrai permalink
+      meta_data: item.meta_data || [],
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+    
+    const result = await itemsCollection.insertOne(itemData)
+    
+    return {
+      created: result.insertedCount > 0,
+      updated: false
   }
 }
 
@@ -918,6 +1023,7 @@ async function startServer() {
     console.log(`📊 Endpoints disponibles:`)
     console.log(`   POST /api/sync/orders - Synchroniser les commandes`)
     console.log(`   GET  /api/orders - Récupérer toutes les commandes`)
+    console.log(`   GET  /api/orders/search/:orderNumber - Rechercher une commande par numéro`)
     console.log(`   GET  /api/orders/production/:type - Commandes par type de production`)
     console.log(`   POST /api/production/dispatch - Dispatcher vers production`)
     console.log(`   PUT  /api/production/redispatch - Redispatch vers un autre type`)
