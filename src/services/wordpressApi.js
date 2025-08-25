@@ -130,7 +130,6 @@ class WordPressAPI {
   async getProductPermalink(productId) {
     try {
       if (!this.isConfigured()) {
-        console.log('Permalink: Configuration WordPress manquante')
         return null
       }
       if (!productId) return null
@@ -140,10 +139,8 @@ class WordPressAPI {
       const baseUrl = this.getBaseUrl()
       const authParams = this.getAuthParams()
       const url = `${baseUrl}/products/${productId}?${authParams}`
-      console.log('Permalink: Récupération via WooCommerce API:', url)
       const response = await fetch(url)
       if (!response.ok) {
-        console.log('Permalink: Erreur HTTP:', response.status, response.statusText)
         return null
       }
       const product = await response.json()
@@ -151,10 +148,8 @@ class WordPressAPI {
       if (permalink) {
         this.productPermalinkCache.set(productId, permalink)
       }
-      console.log('Permalink: Trouvé:', permalink)
       return permalink
     } catch (error) {
-      console.log('Permalink: Erreur lors de la récupération:', error.message)
       return null
     }
   }
