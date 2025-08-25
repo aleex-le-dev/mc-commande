@@ -13,6 +13,27 @@ import {
 } from '../services/mongodbService'
 import LoadingSpinner from './LoadingSpinner'
 
+// Styles CSS personnalisés pour les cartes modernes
+const cardStyles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+`
+
 // Composant pour afficher l'image du produit
 const ProductImage = ({ productId, productName, permalink }) => {
   const [imageUrl, setImageUrl] = useState(null)
@@ -29,6 +50,8 @@ const ProductImage = ({ productId, productName, permalink }) => {
       fetchProductImage(productId)
     }
   }, [productId])
+
+
 
   const fetchProductImage = async (id) => {
     if (!id) {
@@ -143,8 +166,338 @@ const ProductImage = ({ productId, productName, permalink }) => {
   )
 }
 
+// Composant pour afficher et dérouler les notes
+const NoteExpander = ({ note }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  const toggleNote = () => {
+    if (isAnimating) return
+    setIsAnimating(true)
+    setIsExpanded(!isExpanded)
+    setTimeout(() => setIsAnimating(false), 300)
+  }
+
+  const closeNote = () => {
+    if (isAnimating) return
+    setIsAnimating(true)
+    setIsExpanded(false)
+    setTimeout(() => setIsAnimating(false), 300)
+  }
+
+  return (
+    <div className="mb-4">
+      {/* Bouton pour voir la note */}
+      <button
+        onClick={toggleNote}
+        className="w-full flex items-center justify-between p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-all duration-300 group"
+      >
+        <div className="flex items-center">
+          <span className="text-amber-600 mr-2">📝</span>
+          <span className="text-sm font-medium text-amber-800">Voir la note</span>
+        </div>
+        <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Note déroulée */}
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        isExpanded ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'
+      }`}>
+        <div className="relative bg-amber-50 border border-amber-200 rounded-lg p-4">
+          {/* Bouton de fermeture */}
+          <button
+            onClick={closeNote}
+            className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center bg-amber-200 hover:bg-amber-300 rounded-full transition-colors duration-200 group"
+          >
+            <svg className="w-4 h-4 text-amber-700 group-hover:text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          {/* Contenu de la note */}
+          <div className="pr-8">
+            <div className="text-sm text-amber-800 leading-relaxed">
+              <span className="font-medium">Note client:</span>
+              <div className="mt-2 italic">"{note}"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Composant carte d'article moderne
+const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen }) => {
+  const [imageUrl, setImageUrl] = useState(null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('command') // 'command' ou 'client'
+  const [copiedText, setCopiedText] = useState('')
+
+  const handleCopy = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedText(label)
+      setTimeout(() => setCopiedText(''), 2000)
+    } catch (err) {
+      console.error('Erreur lors de la copie:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (article.product_id) {
+      fetchCardImage(article.product_id)
+    }
+  }, [article.product_id])
+
+  const fetchCardImage = async (productId) => {
+    setIsImageLoading(true)
+    try {
+      const wordpressUrl = import.meta.env.VITE_WORDPRESS_URL
+      const consumerKey = import.meta.env.VITE_WORDPRESS_CONSUMER_KEY
+      const consumerSecret = import.meta.env.VITE_WORDPRESS_CONSUMER_SECRET
+
+      if (!wordpressUrl || !consumerKey || !consumerSecret) return
+
+      const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
+      const url = `${wordpressUrl}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,images`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000)
+      })
+
+      if (response.ok) {
+        const product = await response.json()
+        if (product?.images && product.images.length > 0) {
+          setImageUrl(product.images[0].src)
+        }
+      }
+    } catch (error) {
+      console.warn(`Erreur image carte pour produit ${productId}:`, error.message)
+    } finally {
+      setIsImageLoading(false)
+    }
+  }
+
+  return (
+    <div 
+      className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-[420px]"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ 
+        animationDelay: `${index * 150}ms`,
+        animation: 'fadeInUp 0.6s ease-out forwards'
+      }}
+    >
+      {/* Image de fond avec overlay moderne */}
+      <div className="relative h-60 overflow-hidden">
+        {/* Image de base */}
+        {imageUrl ? (
+          <img 
+            src={imageUrl} 
+            alt={article.product_name}
+            className="w-full h-full object-cover transition-transform duration-700"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center">
+            {isImageLoading ? (
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-600 border-t-transparent"></div>
+            ) : (
+              <div className="text-6xl text-slate-500">📦</div>
+            )}
+          </div>
+        )}
+        
+        {/* Bouton invisible cliquable sur toute l'image si permalink disponible */}
+        {article.permalink && (
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              window.open(article.permalink, '_blank')
+            }}
+            className="absolute inset-0 w-full h-full cursor-pointer bg-transparent hover:bg-black/5 transition-colors duration-200 z-10"
+            title="Cliquer pour voir le produit"
+          />
+        )}
+        
+        {/* Overlay gradient moderne */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
+        
+               {/* Numéro de commande - bien visible en haut à gauche */}
+       <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/80 backdrop-blur-sm text-white text-lg font-bold z-20">
+         #{article.orderNumber}
+       </div>
+        
+        {/* Icônes d'information sur le bord gauche */}
+        <div className="absolute left-4 top-20 space-y-2 z-20">
+          {/* Icône pour les infos commande */}
+          <button
+            onClick={() => setActiveTab('command')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+              activeTab === 'command' ? 'bg-blue-500/90 text-white' : 'bg-black/60 text-white hover:bg-black/80'
+            }`}
+            title="Informations commande"
+          >
+            📦
+          </button>
+          
+                   {/* Icône pour les infos client */}
+         <button
+           onClick={(e) => {
+             e.stopPropagation()
+             onOverlayOpen && onOverlayOpen()
+           }}
+           className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+             isOverlayOpen ? 'bg-green-500/90 text-white' : 'bg-black/60 text-white hover:bg-black/80'
+           }`}
+           title="Informations client"
+         >
+           👤
+         </button>
+        </div>
+      </div>
+
+      {/* Zone d'informations dynamique en bas */}
+      <div className="h-24 bg-white/95 backdrop-blur-md transition-all duration-300">
+        <div className="p-4">
+          {/* Informations principales pour tricoteuses */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+              {article.product_name}
+            </h3>
+            <div className="grid grid-cols-3 gap-2 text-sm text-gray-700">
+              <div className="text-center">
+                <div className="font-semibold">{article.quantity}</div>
+                <div className="text-xs text-gray-500">Quantité</div>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold">{getArticleSize(article.meta_data)}</div>
+                <div className="text-xs text-gray-500">Taille</div>
+              </div>
+              <div className="text-center">
+                <div className="font-semibold">{getArticleColor(article.meta_data) !== 'Non spécifiée' ? getArticleColor(article.meta_data) : 'N/A'}</div>
+                <div className="text-xs text-gray-500">Couleur</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay client qui glisse de la gauche */}
+      <div 
+        className={`absolute inset-0 bg-white/80 backdrop-blur-sm z-30 rounded-3xl ${
+          isOverlayOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="h-full p-8 flex flex-col">
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onOverlayOpen && onOverlayOpen()
+              }}
+              className="text-gray-400 hover:text-gray-600 text-2xl font-light hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200"
+            >
+              ×
+            </button>
+          </div>
+          
+          {/* Feedback de copie */}
+          {copiedText && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm font-medium text-center">
+              {copiedText}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">👤</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(article.customer, 'Client copié !')}
+                title="Cliquer pour copier"
+              >
+                {article.customer}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">📅</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr }), 'Date copiée !')}
+                title="Cliquer pour copier"
+              >
+                {format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr })}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">📧</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(article.customerEmail || 'Non renseigné', 'Email copié !')}
+                title="Cliquer pour copier"
+              >
+                {article.customerEmail || 'Non renseigné'}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">📱</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(article.customerPhone || 'Non renseigné', 'Téléphone copié !')}
+                title="Cliquer pour copier"
+              >
+                {article.customerPhone || 'Non renseigné'}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">🏠</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(article.customerAddress || 'Non renseignée', 'Adresse copiée !')}
+                title="Cliquer pour copier"
+              >
+                {article.customerAddress || 'Non renseignée'}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">🚚</span>
+              <div 
+                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                onClick={() => handleCopy(article.shippingMethod || 'Non renseigné', 'Transporteur copié !')}
+                title="Cliquer pour copier"
+              >
+                {article.shippingMethod || 'Non renseigné'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* Effet de brillance au survol */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
+    </div>
+  )
+}
+
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const [selectedType, setSelectedType] = useState(propSelectedType || 'all')
+  const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
 
   const [syncProgress, setSyncProgress] = useState({ isRunning: false, progress: 0, message: '' })
   const [syncLogs, setSyncLogs] = useState([])
@@ -156,6 +509,22 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       setSelectedType(propSelectedType)
     }
   }, [propSelectedType])
+
+  // Gérer l'ouverture des overlays (un seul à la fois)
+  const handleOverlayOpen = (cardId) => {
+    if (openOverlayCardId === cardId) {
+      // Si on clique sur la même carte, fermer l'overlay
+      setOpenOverlayCardId(null)
+    } else {
+      // Sinon, ouvrir l'overlay de cette carte
+      setOpenOverlayCardId(cardId)
+    }
+  }
+
+  // Fermer l'overlay au clic ailleurs
+  const handleClickOutside = () => {
+    setOpenOverlayCardId(null)
+  }
 
   // Synchronisation automatique au chargement de la page
   useEffect(() => {
@@ -386,24 +755,8 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const prepareArticles = () => {
     if (!dbOrders) return []
     
-    console.log('🔍 prepareArticles - dbOrders structure:', {
-      dbOrdersLength: dbOrders.length,
-      firstOrder: dbOrders[0],
-      hasItems: dbOrders[0]?.items,
-      itemsLength: dbOrders[0]?.items?.length
-    })
-    
     const articles = []
     dbOrders.forEach((order, orderIndex) => {
-      console.log(`🔍 Order ${orderIndex}:`, {
-        order_id: order.order_id,
-        hasItems: !!order.items,
-        itemsLength: order.items?.length || 0,
-        firstItem: order.items?.[0]
-      })
-      
-      order.items?.forEach((item, itemIndex) => {
-        console.log(`🔍 Item ${itemIndex} in Order ${orderIndex}:`, item)
         
         // Utiliser le type de production depuis la base de données si disponible
         let productionType = 'couture' // par défaut
@@ -428,6 +781,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
           customerPhone: order.customer_phone,
           customerAddress: order.customer_address,
           customerNote: order.customer_note,
+          shippingMethod: order.shipping_method || order.shipping_title || order.shipping_method_title || 'Livraison gratuite',
           permalink: item.permalink, // Utiliser le permalink stocké en BDD
           productionType: productionType,
           status: currentStatus,
@@ -478,6 +832,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   return (
     <div className="space-y-6">
+      {/* Injection des styles CSS pour les cartes */}
+      <style dangerouslySetInnerHTML={{ __html: cardStyles }} />
+      
       {/* Popup de progression de synchronisation */}
       {syncProgress.isRunning && (
         <div className="fixed top-4 right-4 z-50 p-4 bg-blue-100 text-blue-800 border border-blue-200 rounded-lg shadow-lg max-w-md">
@@ -540,124 +897,23 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         </h2>
       </div>
 
-      {/* Affichage des articles */}
-      <div className="space-y-4">
-            <div className="bg-white shadow-sm border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-              <thead className={`${propSelectedType === 'maille' ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        N° Commande
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Client
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Note
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Article
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Production
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Image
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                {filteredArticles.map((article, index) => (
-                  <tr key={`${article.orderId}-${article.line_item_id}`} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">#{article.orderNumber}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr })}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {format(new Date(article.orderDate), 'HH:mm', { locale: fr })}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{article.customer}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            📧 {article.customerEmail || 'Email non renseigné'}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            📞 {article.customerPhone || 'Téléphone non renseigné'}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            📍 {article.customerAddress || 'Adresse non renseignée'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs">
-                          {article.customerNote ? (
-                              <div className="p-2 bg-blue-50 rounded border-l-2 border-blue-200">
-                                "{article.customerNote}"
-                            </div>
-                          ) : (
-                            <div className="text-sm text-gray-400 italic">Aucune note</div>
-                          )}
-                      </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {article.permalink ? (
-                            <a
-                              href={article.permalink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-medium text-blue-600 hover:underline"
-                              title="Ouvrir la fiche produit"
-                            >
-                          {article.product_name}
-                            </a>
-                          ) : (
-                        <div className="text-sm font-medium text-gray-900">{article.product_name}</div>
-                          )}
-                          
-                          {/* Détails de l'article */}
-                          <div className="text-xs text-gray-500 mt-1">
-                        📏 Taille: {getArticleSize(article.meta_data)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                        📦 Qté: {article.quantity}
-                      </div>
-                      {getArticleColor(article.meta_data) !== 'Non spécifiée' && (
-                        <div className="text-xs text-gray-500">
-                          🎨 Couleur: {getArticleColor(article.meta_data)}
-                          </div>
-                      )}
-                          {getArticleOptions(article.meta_data) !== 'Aucune' && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Options: {getArticleOptions(article.meta_data)}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${article.productionType === 'maille' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {article.productionType === 'maille' ? '🧶 Maille' : '✂️ Couture'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <ProductImage 
-                            productId={article.product_id} 
-                            productName={article.product_name}
-                            permalink={article.permalink}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* Affichage des articles en cartes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" onClick={handleClickOutside}>
+        {filteredArticles.map((article, index) => {
+          const cardId = `${article.orderId}-${article.line_item_id}`
+          return (
+            <ArticleCard 
+              key={cardId}
+              article={article}
+              index={index}
+              getArticleSize={getArticleSize}
+              getArticleColor={getArticleColor}
+              getArticleOptions={getArticleOptions}
+              onOverlayOpen={() => handleOverlayOpen(cardId)}
+              isOverlayOpen={openOverlayCardId === cardId}
+            />
+          )
+        })}
           </div>
       
       {filteredArticles.length === 0 && (
