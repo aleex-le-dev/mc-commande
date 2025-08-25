@@ -152,7 +152,8 @@ class WordPressAPI {
           variation_id: item.variation_id,
           quantity: item.quantity,
           total: item.total,
-          price: item.price
+          price: item.price,
+          meta_data: item.meta_data || []
         })) || [],
         payment_method: order.payment_method,
         payment_method_title: order.payment_method_title,
