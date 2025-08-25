@@ -114,11 +114,14 @@ export const getOrdersFromDatabase = async () => {
 // Récupérer les commandes par type de production
 export const getOrdersByProductionType = async (productionType) => {
   try {
+    console.log(`🔍 Frontend: Récupération des commandes pour ${productionType}`)
     const response = await fetch(`${API_BASE_URL}/orders/production/${productionType}`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     const data = await response.json()
+    console.log(`🔍 Frontend: Données reçues pour ${productionType}:`, data)
+    console.log(`🔍 Frontend: Nombre d'orders:`, data.orders?.length || 0)
     return data.orders || []
   } catch (error) {
     console.error('Erreur lors de la récupération des commandes par type:', error)

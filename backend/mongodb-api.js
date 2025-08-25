@@ -334,11 +334,53 @@ app.get('/api/orders/production/:type', async (req, res) => {
   try {
     const { type } = req.params // 'couture' ou 'maille'
     const statusCollection = db.collection('production_status')
+    const itemsCollection = db.collection('order_items')
     
     // Récupérer les articles assignés à ce type de production
     const assignedItems = await statusCollection.find({
       production_type: type
     }).toArray()
+    
+    console.log(`📊 Articles trouvés pour ${type}:`, assignedItems.length)
+    
+    // Si aucun article n'est dispatché, essayer de dispatcher automatiquement
+    if (assignedItems.length === 0) {
+      console.log(`🔄 Aucun article dispatché pour ${type}, tentative de dispatch automatique...`)
+      
+      // Récupérer tous les articles
+      const allItems = await itemsCollection.find({}).toArray()
+      console.log(`📋 Total d'articles en base:`, allItems.length)
+      
+      // Dispatcher automatiquement les articles non dispatchés
+      for (const item of allItems) {
+        const existingStatus = await statusCollection.findOne({
+          order_id: item.order_id,
+          line_item_id: item.line_item_id
+        })
+        
+        if (!existingStatus) {
+          const productionType = determineProductionType(item.product_name)
+          console.log(`📋 Dispatch automatique: ${item.product_name} -> ${productionType}`)
+          
+          if (productionType === type) {
+            const productionStatus = {
+              order_id: parseInt(item.order_id),
+              line_item_id: parseInt(item.line_item_id),
+              status: 'a_faire',
+              production_type: productionType,
+              assigned_to: null,
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+            
+            await statusCollection.insertOne(productionStatus)
+            assignedItems.push(productionStatus)
+          }
+        }
+      }
+      
+      console.log(`✅ Articles dispatchés pour ${type}:`, assignedItems.length)
+    }
     
     // Récupérer les détails des commandes et articles
     const ordersWithDetails = await Promise.all(assignedItems.map(async (status) => {
@@ -348,12 +390,13 @@ app.get('/api/orders/production/:type', async (req, res) => {
         line_item_id: status.line_item_id
       })
       
+      // Retourner la structure attendue par le frontend
       return {
-        order,
-        item: {
+        ...order,
+        items: [{
           ...item,
           production_status: status
-        }
+        }]
       }
     }))
     
@@ -544,16 +587,17 @@ async function dispatchItemToProduction(orderId, lineItemId, productName) {
 function determineProductionType(productName) {
   const name = productName.toLowerCase()
   
+  // Seulement les mots spécifiquement liés au tricot/maille
   const mailleKeywords = [
-    'tricotée', 'tricoté', 'knitted', 'pull', 'gilet', 'cardigan', 
-    'sweat', 'hoodie', 'bonnet', 'écharpe', 'gants', 'chaussettes',
-    'maille', 'tricot', 'laine', 'coton', 'acrylique'
+    'tricotée', 'tricoté', 'knitted'
   ]
   
+  // Si le produit contient un de ces mots → maille, sinon → couture
   if (mailleKeywords.some(keyword => name.includes(keyword))) {
     return 'maille'
-  } else {
-      return 'couture'
+  }
+  
+  return 'couture'
 }
 
 // Fonction pour dispatcher automatiquement les articles existants vers la production
@@ -603,7 +647,6 @@ async function dispatchExistingItemsToProduction() {
   } catch (error) {
     console.warn(`Erreur lors du dispatch des articles existants: ${error.message}`)
   }
-}
 }
 
 // Fonction pour synchroniser une commande vers la base de données
@@ -764,6 +807,63 @@ app.post('/api/sync/logs/clear', (req, res) => {
   })
 })
 
+// GET /api/debug/status - Route de debug pour vérifier l'état de la base
+app.get('/api/debug/status', async (req, res) => {
+  try {
+    const ordersCollection = db.collection('orders_sync')
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+    
+    const totalOrders = await ordersCollection.countDocuments()
+    const totalItems = await itemsCollection.countDocuments()
+    const totalStatuses = await statusCollection.countDocuments()
+    
+    const statusesByType = await statusCollection.aggregate([
+      {
+        $group: {
+          _id: '$production_type',
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray()
+    
+    const itemsWithoutStatus = await itemsCollection.aggregate([
+      {
+        $lookup: {
+          from: 'production_status',
+          localField: 'line_item_id',
+          foreignField: 'line_item_id',
+          as: 'status'
+        }
+      },
+      {
+        $match: {
+          status: { $size: 0 }
+        }
+      }
+    ]).toArray()
+    
+    res.json({
+      success: true,
+      debug: {
+        totalOrders,
+        totalItems,
+        totalStatuses,
+        statusesByType,
+        itemsWithoutStatus: itemsWithoutStatus.length,
+        sampleItems: itemsWithoutStatus.slice(0, 3).map(item => ({
+          id: item.line_item_id,
+          name: item.product_name,
+          order_id: item.order_id
+        }))
+      }
+    })
+  } catch (error) {
+    console.error('Erreur debug:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
 // Démarrage du serveur
 async function startServer() {
   await connectToMongo()
@@ -782,6 +882,7 @@ async function startServer() {
     console.log(`   POST /api/woocommerce/products/permalink/batch - Permalinks en lot`)
     console.log(`   GET  /api/sync/logs - Logs de synchronisation`)
     console.log(`   POST /api/sync/logs/clear - Vider les logs`)
+    console.log(`   GET  /api/debug/status - Debug de l'état de la base`)
   })
 }
 

@@ -132,12 +132,24 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     queryKey: ['db-orders', selectedType],
     queryFn: () => {
       if (propSelectedType && propSelectedType !== 'all') {
+        console.log(`🔍 OrderList: Appel getOrdersByProductionType(${propSelectedType})`)
         return getOrdersByProductionType(propSelectedType)
       }
+      console.log(`🔍 OrderList: Appel getOrdersFromDatabase()`)
       return getOrdersFromDatabase()
     },
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
     staleTime: 10000,
+  })
+  
+  // Debug: afficher les données reçues
+  console.log('🔍 OrderList dbOrders:', {
+    selectedType,
+    propSelectedType,
+    dbOrders,
+    dbOrdersLength: dbOrders?.length || 0,
+    isLoading: dbOrdersLoading,
+    error: dbOrdersError
   })
 
   // Récupérer les statuts de production
@@ -244,10 +256,36 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const prepareArticles = () => {
     if (!dbOrders) return []
     
+    console.log('🔍 prepareArticles - dbOrders structure:', {
+      dbOrdersLength: dbOrders.length,
+      firstOrder: dbOrders[0],
+      hasItems: dbOrders[0]?.items,
+      itemsLength: dbOrders[0]?.items?.length
+    })
+    
     const articles = []
-    dbOrders.forEach(order => {
-      order.items?.forEach(item => {
-        const productionType = getProductionType(item.product_name)
+    dbOrders.forEach((order, orderIndex) => {
+      console.log(`🔍 Order ${orderIndex}:`, {
+        order_id: order.order_id,
+        hasItems: !!order.items,
+        itemsLength: order.items?.length || 0,
+        firstItem: order.items?.[0]
+      })
+      
+      order.items?.forEach((item, itemIndex) => {
+        console.log(`🔍 Item ${itemIndex} in Order ${orderIndex}:`, item)
+        
+        // Utiliser le type de production depuis la base de données si disponible
+        let productionType = 'couture' // par défaut
+        
+        if (item.production_status && item.production_status.production_type) {
+          productionType = item.production_status.production_type
+        } else {
+          // Fallback sur la détection automatique si pas de statut
+          const detectedType = getProductionType(item.product_name)
+          productionType = detectedType.type
+        }
+        
         const currentStatus = getArticleStatus(order.order_id, item.line_item_id)
         
         articles.push({
@@ -261,19 +299,34 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
           customerAddress: order.customer_address,
           customerNote: order.customer_note,
           permalink: item.permalink, // Utiliser le permalink stocké en BDD
-          productionType: productionType.type,
+          productionType: productionType,
           status: currentStatus,
           isDispatched: item.production_status && item.production_status.status !== 'a_faire'
         })
       })
     })
+    
+    console.log('🔍 prepareArticles - Articles créés:', articles.length)
     return articles
   }
 
   // Filtrer les articles
-  const filteredArticles = prepareArticles().filter(article => {
+  const allArticles = prepareArticles()
+  const filteredArticles = allArticles.filter(article => {
     const typeMatch = selectedType === 'all' || article.productionType === selectedType
     return typeMatch
+  })
+  
+  // Debug: afficher les informations dans la console
+  console.log('🔍 Debug OrderList:', {
+    selectedType,
+    totalArticles: allArticles.length,
+    filteredArticles: filteredArticles.length,
+    sampleArticles: allArticles.slice(0, 3).map(a => ({
+      name: a.product_name,
+      productionType: a.productionType,
+      hasProductionStatus: !!a.production_status
+    }))
   })
 
   if (dbOrdersLoading || statusesLoading) {
@@ -468,6 +521,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         <div className="text-center py-12">
           <p className="text-gray-500">Aucun article trouvé avec les filtres sélectionnés</p>
           <p className="text-sm text-gray-400 mt-2">
+            Total d'articles en base: {allArticles.length} | Type sélectionné: {selectedType}
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
             Actualisez la page pour synchroniser les nouvelles commandes
           </p>
         </div>
