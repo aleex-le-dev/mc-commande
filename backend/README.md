@@ -1,77 +1,78 @@
-# API MongoDB - Gestion de Production Maison Cléo
+# Backend MongoDB API - Maisoncléo
 
 ## 🚀 Installation
 
-1. **Installer les dépendances :**
-   ```bash
-   cd server
-   npm install
-   ```
+1. **Installer les dépendances**
+```bash
+npm install
+```
 
-2. **Configurer les variables d'environnement :**
-   - Créer un fichier `.env` dans le dossier `server/`
-   - Ajouter : `VITE_MONGODB_URL=mongodb://localhost:27017` (ou votre URL MongoDB)
+2. **Configuration des variables d'environnement**
+Créer un fichier `.env` basé sur `.env.example` :
 
-3. **Démarrer le serveur :**
-   ```bash
-   npm start
-   # ou en mode développement :
-   npm run dev
-   ```
+```env
+# Configuration MongoDB
+MONGO_URI=mongodb://localhost:27017
+
+# Configuration WooCommerce
+WOOCOMMERCE_URL=https://maisoncleo.com
+WOOCOMMERCE_CONSUMER_KEY=ck_votre_cle_consommateur
+WOOCOMMERCE_CONSUMER_SECRET=cs_votre_secret_consommateur
+
+# Port du serveur
+PORT=3001
+```
+
+3. **Démarrer le serveur**
+```bash
+npm start
+```
 
 ## 📊 Endpoints disponibles
 
-### GET `/api/production-status`
-Récupère tous les statuts de production
+### Synchronisation
+- `POST /api/sync/orders` - Synchroniser les commandes WooCommerce
 
-### GET `/api/production-status/:orderId/:lineItemId`
-Récupère le statut d'un article spécifique
+### Commandes
+- `GET /api/orders` - Récupérer toutes les commandes
+- `GET /api/orders/production/:type` - Commandes par type de production
 
-### POST `/api/production-status`
-Met à jour ou crée un statut de production
-```json
-{
-  "order_id": 123,
-  "line_item_id": 456,
-  "status": "en_cours",
-  "assigned_to": "tricoteuse1"
-}
-```
+### Production
+- `POST /api/production/dispatch` - Dispatcher vers production
+- `PUT /api/production/status` - Mettre à jour le statut
+- `GET /api/production-status` - Statuts de production
+- `POST /api/production-status` - Mettre à jour statut
 
-### GET `/api/production-status/type/:type`
-Récupère les statuts par type de production (maille/couture)
+### WooCommerce (Proxy)
+- `GET /api/woocommerce/products/:productId/permalink` - Permalink d'un produit
+- `POST /api/woocommerce/products/permalink/batch` - Permalinks en lot
 
-### GET `/api/production-status/stats`
-Récupère les statistiques de production
+## 🔧 Configuration WooCommerce
 
-## 🗄️ Structure de la base de données
+1. **Récupérer les clés API** depuis votre site WordPress :
+   - Aller dans WooCommerce > Réglages > Avancé > API REST
+   - Créer une nouvelle clé avec les permissions "Lecture/Écriture"
 
-**Collection :** `production_status`
+2. **Ajouter les clés dans le fichier `.env`**
 
-**Document :**
-```json
-{
-  "_id": "ObjectId",
-  "order_id": 123,
-  "line_item_id": 456,
-  "status": "a_faire|en_cours|termine",
-  "assigned_to": "utilisateur",
-  "updated_at": "2024-01-01T00:00:00.000Z"
-}
-```
+## 💡 Fonctionnalités
 
-## 🔄 Statuts disponibles
+- **Synchronisation automatique** des commandes WooCommerce
+- **Stockage en BDD** avec permalinks des produits
+- **Proxy WooCommerce** pour éviter les erreurs CORS
+- **Gestion de production** (maille/couture)
+- **Cache des permalinks** pour optimiser les performances
 
-- **`a_faire`** : Article en attente de production
-- **`en_cours`** : Article en cours de production
-- **`termine`** : Article terminé
+## 🚨 Dépannage
 
-## 🌐 Configuration CORS
+### Erreurs CORS
+- Les requêtes WooCommerce passent maintenant par le backend
+- Plus d'erreurs CORS côté frontend
 
-Le serveur accepte les requêtes depuis n'importe quelle origine (développement). Pour la production, configurer CORS selon vos besoins.
+### Erreurs 500 WooCommerce
+- Gestion d'erreurs robuste avec fallback
+- Timeouts configurés pour éviter les blocages
 
-## 📝 Notes
-
-- Le serveur démarre sur le port 3001 par défaut
-- Les statuts sont automatiquement créés lors de la première mise à jour
-- Toutes les dates sont stockées en UTC
+### Permalinks manquants
+- Vérifier la configuration WooCommerce
+- Vérifier que les produits existent dans WooCommerce

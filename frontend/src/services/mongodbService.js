@@ -1,160 +1,179 @@
-// Service MongoDB pour la gestion des statuts de production
-class MongoDBService {
-  constructor() {
-    this.mongoUrl = import.meta.env.VITE_MONGODB_URL
-    this.database = 'maisoncleo'
-    this.collection = 'production_status'
-  }
+// Service pour l'API MongoDB
+const API_BASE_URL = 'http://localhost:3001/api'
 
-  // Vérifie si la configuration MongoDB est disponible
-  isConfigured() {
-    return !!this.mongoUrl
-  }
-
-  // Récupère tous les statuts de production
-  async getProductionStatuses() {
-    try {
-      if (!this.isConfigured()) {
-        console.log('MongoDB: Configuration manquante')
-        return []
-      }
-
-      const response = await fetch(`${this.mongoUrl}/api/production-status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data.statuses || []
-    } catch (error) {
-      console.error('MongoDB: Erreur lors de la récupération des statuts:', error)
-      return []
+// Récupérer tous les statuts de production
+export const getProductionStatuses = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/production-status`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-  }
-
-  // Récupère le statut d'un article spécifique
-  async getArticleStatus(orderId, lineItemId) {
-    try {
-      if (!this.isConfigured()) return null
-
-      const response = await fetch(`${this.mongoUrl}/api/production-status/${orderId}/${lineItemId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      if (!response.ok) {
-        return null
-      }
-
-      const data = await response.json()
-      return data.status || null
-    } catch (error) {
-      console.error('MongoDB: Erreur lors de la récupération du statut:', error)
-      return null
-    }
-  }
-
-  // Met à jour le statut d'un article
-  async updateArticleStatus(orderId, lineItemId, status, assignedTo = null) {
-    try {
-      if (!this.isConfigured()) {
-        throw new Error('Configuration MongoDB manquante')
-      }
-
-      const statusData = {
-        order_id: orderId,
-        line_item_id: lineItemId,
-        status: status,
-        assigned_to: assignedTo,
-        updated_at: new Date().toISOString()
-      }
-
-      const response = await fetch(`${this.mongoUrl}/api/production-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(statusData)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('MongoDB: Statut mis à jour avec succès:', result)
-      return result
-    } catch (error) {
-      console.error('MongoDB: Erreur lors de la mise à jour du statut:', error)
-      throw error
-    }
-  }
-
-  // Récupère les statuts par type de production
-  async getStatusesByProductionType(productionType) {
-    try {
-      if (!this.isConfigured()) return []
-
-      const response = await fetch(`${this.mongoUrl}/api/production-status/type/${productionType}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      if (!response.ok) {
-        return []
-      }
-
-      const data = await response.json()
-      return data.statuses || []
-    } catch (error) {
-      console.error('MongoDB: Erreur lors de la récupération par type:', error)
-      return []
-    }
-  }
-
-  // Récupère les statistiques de production
-  async getProductionStats() {
-    try {
-      if (!this.isConfigured()) return {}
-
-      const response = await fetch(`${this.mongoUrl}/api/production-status/stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-
-      if (!response.ok) {
-        return {}
-      }
-
-      const data = await response.json()
-      return data.stats || {}
-    } catch (error) {
-      console.error('MongoDB: Erreur lors de la récupération des stats:', error)
-      return {}
-    }
+    const data = await response.json()
+    return data.statuses || []
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statuts:', error)
+    return []
   }
 }
 
-// Instance singleton
-const mongodbService = new MongoDBService()
+// Mettre à jour le statut d'un article
+export const updateArticleStatus = async (orderId, lineItemId, status, notes = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/production/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        line_item_id: lineItemId,
+        status,
+        notes
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du statut:', error)
+    throw error
+  }
+}
 
-// Fonctions d'export
-export const getProductionStatuses = () => mongodbService.getProductionStatuses()
-export const getArticleStatus = (orderId, lineItemId) => mongodbService.getArticleStatus(orderId, lineItemId)
-export const updateArticleStatus = (orderId, lineItemId, status, assignedTo) => mongodbService.updateArticleStatus(orderId, lineItemId, status, assignedTo)
-export const getStatusesByProductionType = (productionType) => mongodbService.getStatusesByProductionType(productionType)
-export const getProductionStats = () => mongodbService.getProductionStats()
+// Dispatcher un article vers la production
+export const dispatchToProduction = async (orderId, lineItemId, productionType, assignedTo = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/production/dispatch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        line_item_id: lineItemId,
+        production_type: productionType,
+        assigned_to: assignedTo
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur lors du dispatch vers la production:', error)
+    throw error
+  }
+}
 
-export default mongodbService
+// Synchroniser les commandes WooCommerce avec la base de données
+export const syncOrders = async (orders) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sync/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ orders })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur lors de la synchronisation:', error)
+    throw error
+  }
+}
+
+// Récupérer toutes les commandes depuis la base de données
+export const getOrdersFromDatabase = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.orders || []
+  } catch (error) {
+    console.error('Erreur lors de la récupération des commandes:', error)
+    return []
+  }
+}
+
+// Récupérer les commandes par type de production
+export const getOrdersByProductionType = async (productionType) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/production/${productionType}`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.orders || []
+  } catch (error) {
+    console.error('Erreur lors de la récupération des commandes par type:', error)
+    return []
+  }
+}
+
+// Récupérer les statistiques de production
+export const getProductionStats = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/production-status/stats`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.stats || {}
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statistiques:', error)
+    return {}
+  }
+}
+
+// Récupérer le permalink d'un produit via le backend
+export const getProductPermalink = async (productId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/woocommerce/products/${productId}/permalink`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.permalink
+  } catch (error) {
+    console.error('Erreur lors de la récupération du permalink:', error)
+    return null
+  }
+}
+
+// Récupérer les permalinks de plusieurs produits en lot
+export const getProductPermalinksBatch = async (productIds) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/woocommerce/products/permalink/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productIds })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur lors de la récupération des permalinks en lot:', error)
+    return { results: [], errors: [] }
+  }
+}

@@ -133,34 +133,72 @@ class WordPressAPI {
         return null
       }
       if (!productId) return null
+      
+      // Vérifier le cache d'abord
       if (this.productPermalinkCache.has(productId)) {
         return this.productPermalinkCache.get(productId)
       }
+      
       const baseUrl = this.getBaseUrl()
       const authParams = this.getAuthParams()
       const url = `${baseUrl}/products/${productId}?${authParams}`
-      const response = await fetch(url)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        // Timeout plus court pour éviter les requêtes qui traînent
+        signal: AbortSignal.timeout(3000)
+      })
+      
       if (!response.ok) {
+        // Si erreur 500 ou autre, ne pas retenter et retourner null
+        if (response.status >= 500) {
+          console.warn(`Erreur serveur pour le produit ${productId}: ${response.status}`)
+          return null
+        }
+        // Pour les autres erreurs (404, 401, etc.), retourner null
         return null
       }
+      
       const product = await response.json()
       const permalink = product?.permalink || null
+      
       if (permalink) {
         this.productPermalinkCache.set(productId, permalink)
       }
+      
       return permalink
     } catch (error) {
+      // Gérer les erreurs de timeout et CORS
+      if (error.name === 'TimeoutError') {
+        console.warn(`Timeout pour le produit ${productId}`)
+      } else if (error.name === 'TypeError' && error.message.includes('CORS')) {
+        console.warn(`Erreur CORS pour le produit ${productId}`)
+      } else {
+        console.warn(`Erreur lors de la récupération du permalink pour ${productId}:`, error.message)
+      }
+      
+      // En cas d'erreur, essayer de construire un permalink de base
+      if (this.config.wordpressUrl) {
+        const fallbackPermalink = `${this.config.wordpressUrl}/produit/${productId}/`
+        console.log(`Utilisation du permalink de base pour ${productId}: ${fallbackPermalink}`)
+        return fallbackPermalink
+      }
+      
       return null
     }
   }
 
   // Récupère les commandes avec filtres
-  async fetchOrders(filters = {}) {
+  async fetchOrders(filters = {}, options = {}) {
     try {
       if (!this.isConfigured()) {
         throw new Error('Veuillez configurer la connexion WordPress dans l\'onglet Configuration')
       }
 
+      const { skipPermalinks = false } = options
       const baseUrl = this.getBaseUrl()
       const authParams = this.getAuthParams()
       
@@ -168,49 +206,80 @@ class WordPressAPI {
       const queryParams = new URLSearchParams()
       queryParams.append('consumer_key', this.config.consumerKey)
       queryParams.append('consumer_secret', this.config.consumerSecret)
-      queryParams.append('per_page', '15') // Limite à 2 commandes pour le moment
+      queryParams.append('per_page', '15') // Limite à 15 commandes pour le moment
       queryParams.append('orderby', 'date')
       queryParams.append('order', 'desc')
-              // Supprimer la restriction _fields pour récupérer toutes les données
-              // queryParams.append('_fields', 'id,number,status,date_created,date_modified,total,total_tax,currency,billing,shipping,line_items,payment_method,payment_method_title,shipping_method,shipping_method_title,transaction_id,customer_id,customer_note,meta_data')
-        
-              // Ajout des filtres
-              if (filters.status && filters.status !== 'all') {
-                queryParams.append('status', filters.status)
-              }
-              
-              if (filters.dateFrom) {
-                queryParams.append('after', filters.dateFrom + 'T00:00:00')
-              }
-              
-              if (filters.dateTo) {
-                queryParams.append('before', filters.dateTo + 'T23:59:59')
-              }
-
-              if (filters.search) {
-                queryParams.append('search', filters.search)
-              }
-
-              const url = `${baseUrl}/orders?${queryParams.toString()}`
-              
-              const response = await fetch(url)
-              
-              if (!response.ok) {
-                if (response.status === 401) {
-                  throw new Error('Clés d\'API invalides. Vérifiez votre configuration.')
-                } else if (response.status === 404) {
-                  throw new Error('API WooCommerce non trouvée. Vérifiez que WooCommerce est installé.')
-                } else {
-                  throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`)
-                }
-              }
-
-              const orders = await response.json()
       
+      // Ajout des filtres
+      if (filters.status && filters.status !== 'all') {
+        queryParams.append('status', filters.status)
+      }
+      
+      if (filters.dateFrom) {
+        queryParams.append('after', filters.dateFrom + 'T00:00:00')
+      }
+      
+      if (filters.dateTo) {
+        queryParams.append('before', filters.dateTo + 'T23:59:59')
+      }
+
+      if (filters.search) {
+        queryParams.append('search', filters.search)
+      }
+
+      const url = `${baseUrl}/orders?${queryParams.toString()}`
+      
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Clés d\'API invalides. Vérifiez votre configuration.')
+        } else if (response.status === 404) {
+          throw new Error('API WooCommerce non trouvée. Vérifiez que WooCommerce est installé.')
+        } else {
+          throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`)
+        }
+      }
+
+      const orders = await response.json()
+  
       // Traitement des données pour un affichage optimisé
       const processedOrders = await Promise.all(orders.map(async order => {
         const processedLineItems = await Promise.all(order.line_items?.map(async item => {
-          const permalink = await this.getProductPermalink(item.product_id)
+          // Récupérer le permalink depuis WooCommerce
+          let permalink = null
+          try {
+            if (!skipPermalinks) {
+              // Essayer de récupérer le permalink depuis le cache d'abord
+              if (this.productPermalinkCache.has(item.product_id)) {
+                permalink = this.productPermalinkCache.get(item.product_id)
+              } else {
+                // Récupérer le permalink depuis WooCommerce
+                const productResponse = await fetch(`${baseUrl}/products/${item.product_id}?${authParams}`, {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                  },
+                  signal: AbortSignal.timeout(3000) // Timeout plus court
+                })
+                
+                if (productResponse.ok) {
+                  const product = await productResponse.json()
+                  permalink = product?.permalink || null
+                  if (permalink) {
+                    this.productPermalinkCache.set(item.product_id, permalink)
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            // En cas d'erreur, construire un permalink de base
+            if (this.config.wordpressUrl) {
+              permalink = `${this.config.wordpressUrl}/produit/${item.product_id}/`
+            }
+            console.warn(`Erreur permalink pour produit ${item.product_id}, utilisation du lien de base:`, error.message)
+          }
+          
           return {
             id: item.id,
             name: item.name, // Nom original sans traduction
