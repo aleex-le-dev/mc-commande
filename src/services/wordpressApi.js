@@ -76,52 +76,45 @@ class WordPressAPI {
       const queryParams = new URLSearchParams()
       queryParams.append('consumer_key', this.config.consumerKey)
       queryParams.append('consumer_secret', this.config.consumerSecret)
-      queryParams.append('per_page', '2') // Limite à 2 commandes pour le debug
+      queryParams.append('per_page', '4') // Limite à 2 commandes pour le moment
       queryParams.append('orderby', 'date')
       queryParams.append('order', 'desc')
-      // Supprimer la restriction _fields pour récupérer toutes les données
-      // queryParams.append('_fields', 'id,number,status,date_created,date_modified,total,total_tax,currency,billing,shipping,line_items,payment_method,payment_method_title,shipping_method,shipping_method_title,transaction_id,customer_id,customer_note,meta_data')
+              // Supprimer la restriction _fields pour récupérer toutes les données
+              // queryParams.append('_fields', 'id,number,status,date_created,date_modified,total,total_tax,currency,billing,shipping,line_items,payment_method,payment_method_title,shipping_method,shipping_method_title,transaction_id,customer_id,customer_note,meta_data')
+        
+              // Ajout des filtres
+              if (filters.status && filters.status !== 'all') {
+                queryParams.append('status', filters.status)
+              }
+              
+              if (filters.dateFrom) {
+                queryParams.append('after', filters.dateFrom + 'T00:00:00')
+              }
+              
+              if (filters.dateTo) {
+                queryParams.append('before', filters.dateTo + 'T23:59:59')
+              }
 
-      // Ajout des filtres
-      if (filters.status && filters.status !== 'all') {
-        queryParams.append('status', filters.status)
-      }
-      
-      if (filters.dateFrom) {
-        queryParams.append('after', filters.dateFrom + 'T00:00:00')
-      }
-      
-      if (filters.dateTo) {
-        queryParams.append('before', filters.dateTo + 'T23:59:59')
-      }
+              if (filters.search) {
+                queryParams.append('search', filters.search)
+              }
 
-      if (filters.search) {
-        queryParams.append('search', filters.search)
-      }
+              const url = `${baseUrl}/orders?${queryParams.toString()}`
+              
+              const response = await fetch(url)
+              
+              if (!response.ok) {
+                if (response.status === 401) {
+                  throw new Error('Clés d\'API invalides. Vérifiez votre configuration.')
+                } else if (response.status === 404) {
+                  throw new Error('API WooCommerce non trouvée. Vérifiez que WooCommerce est installé.')
+                } else {
+                  throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`)
+                }
+              }
 
-      const url = `${baseUrl}/orders?${queryParams.toString()}`
+              const orders = await response.json()
       
-      const response = await fetch(url)
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Clés d\'API invalides. Vérifiez votre configuration.')
-        } else if (response.status === 404) {
-          throw new Error('API WooCommerce non trouvée. Vérifiez que WooCommerce est installé.')
-        } else {
-          throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`)
-        }
-      }
-
-      const orders = await response.json()
-      
-      // Debug: afficher la première commande brute
-      if (orders.length > 0) {
-        console.log('=== PREMIÈRE COMMANDE BRUTE ===')
-        console.log(orders[0])
-        console.log('=== FIN PREMIÈRE COMMANDE ===')
-      }
-
       // Traitement des données pour un affichage optimisé
       return orders.map(order => ({
         id: order.id,
@@ -168,6 +161,7 @@ class WordPressAPI {
         payment_method_title: order.payment_method_title,
         shipping_method: order.shipping_method || '',
         shipping_method_title: order.shipping_method_title || '',
+        shipping_lines: order.shipping_lines || [],
         transaction_id: order.transaction_id,
         customer_id: order.customer_id,
         customer_note: order.customer_note,

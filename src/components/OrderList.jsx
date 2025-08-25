@@ -77,10 +77,10 @@ const OrderList = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  N°
+                  N° Commande
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                  Date Commande
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
@@ -89,13 +89,7 @@ const OrderList = () => {
                   Article
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Production
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Statut
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
                 </th>
               </tr>
             </thead>
@@ -103,43 +97,35 @@ const OrderList = () => {
               {orders?.map((order) => {
                 // Récupérer le transporteur une seule fois par commande
                 // Essayer plusieurs sources possibles
-                let shippingMethod = order.shipping_method_title || 
-                                   order.shipping_method ||
-                                   order.meta_data?.find(meta => 
-                                     meta.key === '_shipping_method' || 
-                                     meta.key === 'shipping_method' ||
-                                     meta.key === '_shipping_method_title' ||
-                                     meta.key === 'shipping_method_title' ||
-                                     meta.key === 'shipping_method_title' ||
-                                     meta.key === 'shipping_method'
-                                   )?.value ||
-                                   'Transport non spécifié'
+                let shippingMethod = 'Transport non spécifié'
                 
-                // Debug détaillé pour la commande
-                console.log(`=== COMMANDE ${order.id} ===`)
-                console.log('Order complet:', order)
-                console.log('shipping_method_title:', order.shipping_method_title)
-                console.log('shipping_method:', order.shipping_method)
-                console.log('shipping object:', order.shipping)
-                console.log('meta_data:', order.meta_data)
-                console.log('=== DÉTAIL META_DATA ===')
-                order.meta_data?.forEach((meta, index) => {
-                  console.log(`${index}: ${meta.key} = ${meta.value}`)
-                })
-                console.log('shippingMethod calculé:', shippingMethod)
-                console.log('========================')
+                // Priorité 1: shipping_lines (méthode de transport choisie par le client)
+                if (order.shipping_lines && order.shipping_lines.length > 0) {
+                  shippingMethod = order.shipping_lines[0].method_title || 'Transport non spécifié'
+                }
+                // Priorité 2: shipping_method_title (fallback)
+                else if (order.shipping_method_title) {
+                  shippingMethod = order.shipping_method_title
+                }
+                // Priorité 3: shipping_method (fallback)
+                else if (order.shipping_method) {
+                  shippingMethod = order.shipping_method
+                }
+                // Priorité 4: meta_data (dernier recours)
+                else {
+                  const metaShipping = order.meta_data?.find(meta => 
+                    meta.key === '_shipping_method' || 
+                    meta.key === 'shipping_method' ||
+                    meta.key === '_shipping_method_title' ||
+                    meta.key === 'shipping_method_title'
+                  )?.value
+                  if (metaShipping) {
+                    shippingMethod = metaShipping
+                  }
+                }
                 
                 return order.line_items?.map((item, itemIndex) => {
                   const productionType = getProductionType(item.name)
-                  
-                  // Debug: afficher les meta_data dans la console
-                  console.log(`Article: ${item.name}`, item.meta_data)
-                  console.log(`Commande ${order.id} - Transport:`, {
-                    shipping_method: order.shipping_method,
-                    shipping_method_title: order.shipping_method_title,
-                    meta_data: order.meta_data,
-                    full_order: order
-                  })
                   
                   // Extraction de la taille et des options depuis les meta_data
                   const size = item.meta_data?.find(meta => 
@@ -177,6 +163,16 @@ const OrderList = () => {
                           {order.billing?.first_name} {order.billing?.last_name}
                         </div>
                         <div className="text-sm text-gray-500">{order.billing?.email}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          📞 {order.billing?.phone || 'Téléphone non renseigné'}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          📍 {order.billing?.address_1}
+                          {order.billing?.address_2 && `, ${order.billing.address_2}`}
+                          {order.billing?.city && `, ${order.billing.city}`}
+                          {order.billing?.postcode && ` ${order.billing.postcode}`}
+                          {order.billing?.country && `, ${order.billing.country}`}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{item.name}</div>
@@ -194,26 +190,13 @@ const OrderList = () => {
                           Qté: {item.quantity}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Prix: {parseFloat(item.price).toFixed(2)} €
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
                           🚚 {shippingMethod}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${productionType.color}`}>
-                          {productionType.type}
-                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          <FiEye className="w-4 h-4" />
-                        </button>
                       </td>
                     </tr>
                   )
