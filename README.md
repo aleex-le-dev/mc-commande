@@ -15,22 +15,22 @@ maisoncleo/
 ## 🚀 Installation et Démarrage
 
 ### 1. Installation complète
-```bash
+   ```bash
 npm run install:all
 ```
 
 ### 2. Démarrage en développement
 
 #### **Option A : Lancer séparément (recommandé)**
-```bash
+   ```bash
 # Terminal 1 - Backend
 cd backend
 npm run dev
 
 # Terminal 2 - Frontend  
 cd frontend
-npm run dev
-```
+   npm run dev
+   ```
 
 #### **Option B : Lancer ensemble**
 ```bash

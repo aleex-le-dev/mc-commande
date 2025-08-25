@@ -26,29 +26,13 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'commandes':
-        return <OrderList />
+        return <OrderList onNavigateToType={setActiveTab} />
       case 'couture':
-        return (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="text-6xl mb-4">🧵</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Module Couture</h2>
-              <p className="text-gray-600">Fonctionnalités à venir...</p>
-            </div>
-          </div>
-        )
+        return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
       case 'maille':
-        return (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="text-6xl mb-4">🪡</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Module Maille</h2>
-              <p className="text-gray-600">Fonctionnalités à venir...</p>
-            </div>
-          </div>
-        )
+        return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
       default:
-        return <OrderList />
+        return <OrderList onNavigateToType={setActiveTab} />
     }
   }
 

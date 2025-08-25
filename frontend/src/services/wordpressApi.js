@@ -168,7 +168,7 @@ class WordPressAPI {
       const queryParams = new URLSearchParams()
       queryParams.append('consumer_key', this.config.consumerKey)
       queryParams.append('consumer_secret', this.config.consumerSecret)
-      queryParams.append('per_page', '4') // Limite à 2 commandes pour le moment
+      queryParams.append('per_page', '15') // Limite à 2 commandes pour le moment
       queryParams.append('orderby', 'date')
       queryParams.append('order', 'desc')
               // Supprimer la restriction _fields pour récupérer toutes les données
@@ -210,11 +210,10 @@ class WordPressAPI {
       // Traitement des données pour un affichage optimisé
       const processedOrders = await Promise.all(orders.map(async order => {
         const processedLineItems = await Promise.all(order.line_items?.map(async item => {
-          const translatedName = await this.getProductTranslation(item.product_id, item.name)
           const permalink = await this.getProductPermalink(item.product_id)
           return {
             id: item.id,
-            name: translatedName,
+            name: item.name, // Nom original sans traduction
             product_id: item.product_id,
             variation_id: item.variation_id,
             quantity: item.quantity,
