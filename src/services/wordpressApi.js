@@ -76,9 +76,11 @@ class WordPressAPI {
       const queryParams = new URLSearchParams()
       queryParams.append('consumer_key', this.config.consumerKey)
       queryParams.append('consumer_secret', this.config.consumerSecret)
-      queryParams.append('per_page', '100') // Limite à 100 commandes par page
+      queryParams.append('per_page', '2') // Limite à 2 commandes pour le debug
       queryParams.append('orderby', 'date')
       queryParams.append('order', 'desc')
+      // Supprimer la restriction _fields pour récupérer toutes les données
+      // queryParams.append('_fields', 'id,number,status,date_created,date_modified,total,total_tax,currency,billing,shipping,line_items,payment_method,payment_method_title,shipping_method,shipping_method_title,transaction_id,customer_id,customer_note,meta_data')
 
       // Ajout des filtres
       if (filters.status && filters.status !== 'all') {
@@ -113,6 +115,13 @@ class WordPressAPI {
 
       const orders = await response.json()
       
+      // Debug: afficher la première commande brute
+      if (orders.length > 0) {
+        console.log('=== PREMIÈRE COMMANDE BRUTE ===')
+        console.log(orders[0])
+        console.log('=== FIN PREMIÈRE COMMANDE ===')
+      }
+
       // Traitement des données pour un affichage optimisé
       return orders.map(order => ({
         id: order.id,
@@ -157,6 +166,8 @@ class WordPressAPI {
         })) || [],
         payment_method: order.payment_method,
         payment_method_title: order.payment_method_title,
+        shipping_method: order.shipping_method || '',
+        shipping_method_title: order.shipping_method_title || '',
         transaction_id: order.transaction_id,
         customer_id: order.customer_id,
         customer_note: order.customer_note,

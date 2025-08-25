@@ -77,10 +77,10 @@ const OrderList = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  N° Commande
+                  N°
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date Commande
+                  Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Client
@@ -100,12 +100,46 @@ const OrderList = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders?.map((order) => 
-                order.line_items?.map((item, itemIndex) => {
+              {orders?.map((order) => {
+                // Récupérer le transporteur une seule fois par commande
+                // Essayer plusieurs sources possibles
+                let shippingMethod = order.shipping_method_title || 
+                                   order.shipping_method ||
+                                   order.meta_data?.find(meta => 
+                                     meta.key === '_shipping_method' || 
+                                     meta.key === 'shipping_method' ||
+                                     meta.key === '_shipping_method_title' ||
+                                     meta.key === 'shipping_method_title' ||
+                                     meta.key === 'shipping_method_title' ||
+                                     meta.key === 'shipping_method'
+                                   )?.value ||
+                                   'Transport non spécifié'
+                
+                // Debug détaillé pour la commande
+                console.log(`=== COMMANDE ${order.id} ===`)
+                console.log('Order complet:', order)
+                console.log('shipping_method_title:', order.shipping_method_title)
+                console.log('shipping_method:', order.shipping_method)
+                console.log('shipping object:', order.shipping)
+                console.log('meta_data:', order.meta_data)
+                console.log('=== DÉTAIL META_DATA ===')
+                order.meta_data?.forEach((meta, index) => {
+                  console.log(`${index}: ${meta.key} = ${meta.value}`)
+                })
+                console.log('shippingMethod calculé:', shippingMethod)
+                console.log('========================')
+                
+                return order.line_items?.map((item, itemIndex) => {
                   const productionType = getProductionType(item.name)
                   
                   // Debug: afficher les meta_data dans la console
                   console.log(`Article: ${item.name}`, item.meta_data)
+                  console.log(`Commande ${order.id} - Transport:`, {
+                    shipping_method: order.shipping_method,
+                    shipping_method_title: order.shipping_method_title,
+                    meta_data: order.meta_data,
+                    full_order: order
+                  })
                   
                   // Extraction de la taille et des options depuis les meta_data
                   const size = item.meta_data?.find(meta => 
@@ -163,7 +197,7 @@ const OrderList = () => {
                           Prix: {parseFloat(item.price).toFixed(2)} €
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          🚚 Transport
+                          🚚 {shippingMethod}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -184,7 +218,7 @@ const OrderList = () => {
                     </tr>
                   )
                 }) || []
-              )}
+              })}
             </tbody>
           </table>
         </div>
