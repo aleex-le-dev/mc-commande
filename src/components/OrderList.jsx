@@ -83,6 +83,9 @@ const OrderList = () => {
                   Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Note
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Article
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -177,10 +180,22 @@ const OrderList = () => {
                         <div className="text-xs text-gray-500 mt-1">
                           📍 {order.billing?.address_1}
                           {order.billing?.address_2 && `, ${order.billing.address_2}`}
-                          {order.billing?.city && `, ${order.billing.city}`}
-                          {order.billing?.postcode && ` ${order.billing.postcode}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {order.billing?.postcode && order.billing?.city && `${order.billing.postcode} ${order.billing.city}`}
                           {order.billing?.country && `, ${order.billing.country}`}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {order.customer_note ? (
+                          <div className="text-sm text-gray-900 max-w-xs">
+                            <div className="mt-1 p-2 bg-blue-50 rounded border-l-2 border-blue-200">
+                              "{order.customer_note}"
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400 italic">Aucune note</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{item.name}</div>
