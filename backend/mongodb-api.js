@@ -430,7 +430,6 @@ app.post('/api/production/dispatch', async (req, res) => {
           status: 'en_cours',
           production_type,
           assigned_to: assigned_to || null,
-          created_at: new Date(),
           updated_at: new Date()
         }
       },
@@ -444,6 +443,52 @@ app.post('/api/production/dispatch', async (req, res) => {
     })
   } catch (error) {
     console.error('Erreur POST /production/dispatch:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// PUT /api/production/redispatch - Redispatch un article vers un autre type de production
+app.put('/api/production/redispatch', async (req, res) => {
+  try {
+    const { order_id, line_item_id, new_production_type } = req.body
+    
+    if (!order_id || !line_item_id || !new_production_type) {
+      return res.status(400).json({ error: 'Paramètres manquants' })
+    }
+    
+    const statusCollection = db.collection('production_status')
+    
+    // Vérifier que l'article existe
+    const existingStatus = await statusCollection.findOne({
+      order_id: parseInt(order_id),
+      line_item_id: parseInt(line_item_id)
+    })
+    
+    if (!existingStatus) {
+      return res.status(404).json({ error: 'Article non trouvé' })
+    }
+    
+    // Mettre à jour le type de production
+    const result = await statusCollection.updateOne(
+      {
+        order_id: parseInt(order_id),
+        line_item_id: parseInt(line_item_id)
+      },
+      {
+        $set: {
+          production_type: new_production_type,
+          updated_at: new Date()
+        }
+      }
+    )
+    
+    res.json({ 
+      success: true, 
+      message: `Article redispatché vers ${new_production_type}`,
+      result 
+    })
+  } catch (error) {
+    console.error('Erreur PUT /production/redispatch:', error)
     res.status(500).json({ error: 'Erreur serveur' })
   }
 })
@@ -875,6 +920,7 @@ async function startServer() {
     console.log(`   GET  /api/orders - Récupérer toutes les commandes`)
     console.log(`   GET  /api/orders/production/:type - Commandes par type de production`)
     console.log(`   POST /api/production/dispatch - Dispatcher vers production`)
+    console.log(`   PUT  /api/production/redispatch - Redispatch vers un autre type`)
     console.log(`   PUT  /api/production/status - Mettre à jour le statut`)
     console.log(`   GET  /api/production-status - Statuts de production`)
     console.log(`   POST /api/production-status - Mettre à jour statut`)
