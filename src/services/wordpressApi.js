@@ -16,7 +16,6 @@ class WordPressAPI {
 
     // Si toutes les variables d'environnement sont définies, les utiliser
     if (envConfig.wordpressUrl && envConfig.consumerKey && envConfig.consumerSecret) {
-      console.log('Configuration chargée depuis les variables d\'environnement')
       return envConfig
     }
 
@@ -24,7 +23,6 @@ class WordPressAPI {
     try {
       const saved = localStorage.getItem('wordpressConfig')
       if (saved) {
-        console.log('Configuration chargée depuis le localStorage')
         return JSON.parse(saved)
       }
     } catch (error) {
