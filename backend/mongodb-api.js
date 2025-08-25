@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const { MongoClient, ObjectId } = require('mongodb')
 const cors = require('cors')
@@ -10,9 +11,15 @@ app.use(cors())
 app.use(express.json())
 
 // Configuration MongoDB
-const mongoUrl = process.env.VITE_MONGODB_URL || 'mongodb://localhost:27017'
+const mongoUrl = process.env.MONGO_URI || 'mongodb://localhost:27017'
 const dbName = 'maisoncleo'
 const collectionName = 'production_status'
+
+console.log('🔍 URL MongoDB configurée:', mongoUrl)
+console.log('🔍 Variables d\'environnement:', {
+  MONGO_URI: process.env.MONGO_URI ? '✅ Définie' : '❌ Manquante',
+  PORT: process.env.PORT || '3001 (défaut)'
+})
 
 let db
 
@@ -22,7 +29,7 @@ async function connectToMongo() {
     const client = new MongoClient(mongoUrl)
     await client.connect()
     db = client.db(dbName)
-    console.log('✅ Connecté à MongoDB')
+    console.log('✅ Connecté à MongoDB Atlas')
   } catch (error) {
     console.error('❌ Erreur de connexion MongoDB:', error)
   }

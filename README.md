@@ -20,22 +20,32 @@ npm run install:all
 ```
 
 ### 2. Démarrage en développement
+
+#### **Option A : Lancer séparément (recommandé)**
 ```bash
-# Démarrer frontend + backend simultanément
+# Terminal 1 - Backend
+cd backend
 npm run dev
 
-# Ou séparément :
-npm run dev:frontend    # Port 5173 (Vite)
-npm run dev:backend     # Port 3001 (Express)
+# Terminal 2 - Frontend  
+cd frontend
+npm run dev
+```
+
+#### **Option B : Lancer ensemble**
+```bash
+npm run dev:all
 ```
 
 ### 3. Production
 ```bash
 # Build du frontend
+cd frontend
 npm run build
 
 # Démarrer le backend
-npm run start:backend
+cd backend
+npm start
 ```
 
 ## 📱 Frontend (React)
@@ -130,8 +140,7 @@ cd backend && npm install package-name
 ```
 
 ### Scripts disponibles
-- `npm run dev` - Démarrage complet
-- `npm run build` - Build production
+- `npm run dev:all` - Démarrage complet (frontend + backend)
 - `npm run install:all` - Installation complète
 
 ## 📝 Notes
@@ -140,3 +149,4 @@ cd backend && npm install package-name
 - MongoDB doit être accessible sur l'URL configurée
 - WooCommerce API doit être configurée avec les bonnes clés
 - CORS est configuré pour le développement
+- **Chaque dossier peut fonctionner indépendamment avec `npm run dev`**
