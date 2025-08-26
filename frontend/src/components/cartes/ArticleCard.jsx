@@ -179,6 +179,17 @@ const ArticleCard = React.memo(({
             )}
           </div>
         )}
+
+        {/* Lien vers la fiche produit - uniquement sur l'image */}
+        <a
+          href={article.permalink || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { if (!article.permalink) e.preventDefault() }}
+          className="absolute inset-0 z-10 cursor-pointer"
+          title="Voir la fiche produit"
+          aria-label="Voir la fiche produit"
+        />
         
         {/* Bouton lien vers la commande complète */}
         <a
