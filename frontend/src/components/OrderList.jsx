@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { FixedSizeGrid as Grid } from 'react-window'
 import { 
   getProductionStatuses, 
   updateArticleStatus, 
@@ -202,8 +203,8 @@ const NoteExpander = ({ note }) => {
   )
 }
 
-// Composant carte d'article moderne
-const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen, isHighlighted, searchTerm }) => {
+// Composant carte d'article moderne optimisé
+const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen, isHighlighted, searchTerm }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
@@ -342,25 +343,23 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
           </div>
         )}
         
-        {/* Bouton lien discret pour le produit (remplace l'overlay plein écran) */}
-        {article.permalink && (
-          <a
-            href={article.permalink}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="absolute top-3 right-3 z-30 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
-            title="Ouvrir le produit"
-            aria-label="Ouvrir le produit"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 3h7v7" />
-              <path d="M10 14L21 3" />
-              <path d="M21 14v7h-7" />
-              <path d="M3 10l11 11" />
-            </svg>
-          </a>
-        )}
+        {/* Bouton lien vers la commande complète (remplace l'overlay plein écran) */}
+        <a
+          href={`https://maisoncleo.com/wp-admin/post.php?post=${article.orderNumber}&action=edit`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-3 right-3 z-30 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
+          title="Voir la commande complète"
+          aria-label="Voir la commande complète"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 3h7v7" />
+            <path d="M10 14L21 3" />
+            <path d="M21 14v7h-7" />
+            <path d="M3 10l11 11" />
+          </svg>
+        </a>
         
         {/* Overlay gradient moderne */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
@@ -567,7 +566,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
     </div>
   )
-}
+})
 
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const [selectedType, setSelectedType] = useState(propSelectedType || 'all')
@@ -587,7 +586,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   }, [propSelectedType])
 
   // Gérer l'ouverture des overlays (un seul à la fois)
-  const handleOverlayOpen = (cardId) => {
+  const handleOverlayOpen = useCallback((cardId) => {
     if (openOverlayCardId === cardId) {
       // Si on clique sur la même carte, fermer l'overlay
       setOpenOverlayCardId(null)
@@ -595,12 +594,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       // Sinon, ouvrir l'overlay de cette carte
       setOpenOverlayCardId(cardId)
     }
-  }
+  }, [openOverlayCardId])
 
   // Fermer l'overlay au clic ailleurs
-  const handleClickOutside = () => {
+  const handleClickOutside = useCallback(() => {
     setOpenOverlayCardId(null)
-  }
+  }, [])
 
   // Synchronisation automatique au chargement de la page
   useEffect(() => {
@@ -724,7 +723,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   })
 
   // Fonction pour déterminer le type de production
-  const getProductionType = (productName) => {
+  const getProductionType = useCallback((productName) => {
     const name = productName.toLowerCase()
     
     const mailleKeywords = ['tricotée', 'tricoté', 'knitted', 'pull', 'gilet', 'cardigan', 'sweat', 'hoodie', 'bonnet', 'écharpe', 'gants', 'chaussettes']
@@ -734,20 +733,20 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     } else {
       return { type: 'couture', color: 'bg-blue-100 text-blue-800' }
     }
-  }
+  }, [])
 
   // Fonction pour obtenir la couleur du statut
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     const colors = {
       'a_faire': 'bg-gray-100 text-gray-800',
       'en_cours': 'bg-yellow-100 text-yellow-800',
       'termine': 'bg-green-100 text-green-800'
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
-  }
+  }, [])
 
   // Fonction pour récupérer le statut d'un article
-  const getArticleStatus = (orderId, lineItemId) => {
+  const getArticleStatus = useCallback((orderId, lineItemId) => {
     if (!productionStatuses) return 'a_faire'
     
     const status = productionStatuses.find(s => 
@@ -755,10 +754,10 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     )
     
     return status ? status.status : 'a_faire'
-  }
+  }, [productionStatuses])
 
   // Fonction pour extraire la taille d'un article
-  const getArticleSize = (metaData) => {
+  const getArticleSize = useCallback((metaData) => {
     if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
     
     const sizeMeta = metaData.find(meta => 
@@ -770,10 +769,10 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     )
     
     return sizeMeta ? sizeMeta.value : 'Non spécifiée'
-  }
+  }, [])
 
   // Fonction pour extraire les options d'un article
-  const getArticleOptions = (metaData) => {
+  const getArticleOptions = useCallback((metaData) => {
     if (!metaData || !Array.isArray(metaData)) return 'Aucune'
     
     const options = metaData
@@ -798,10 +797,10 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       .join(', ')
     
     return options || 'Aucune'
-  }
+  }, [])
 
   // Fonction pour extraire la couleur d'un article
-  const getArticleColor = (metaData) => {
+  const getArticleColor = useCallback((metaData) => {
     if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
     
     const colorMeta = metaData.find(meta => 
@@ -813,13 +812,13 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     )
     
     return colorMeta ? colorMeta.value : 'Non spécifiée'
-  }
+  }, [])
 
   // Préparer les données des articles avec statuts
-  const prepareArticles = () => {
+  const prepareArticles = useMemo(() => {
     if (!dbOrders) return []
     
-        const articles = []
+    const articles = []
     dbOrders.forEach((order, orderIndex) => {
       order.items?.forEach((item, itemIndex) => {
         // Utiliser le type de production depuis la base de données si disponible
@@ -857,21 +856,23 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     })
     
     return articles
-  }
+  }, [dbOrders, getProductionType, getArticleStatus])
 
   // Filtrer les articles
-  const allArticles = prepareArticles()
+  const allArticles = prepareArticles
   const term = searchTerm.toLowerCase().trim()
-  const filteredArticles = allArticles.filter(article => {
-    const typeMatch = selectedType === 'all' || article.productionType === selectedType
-    if (!typeMatch) return false
-    if (!term) return true
-    return (
-      `${article.orderNumber}`.toLowerCase().includes(term) ||
-      (article.customer || '').toLowerCase().includes(term) ||
-      (article.product_name || '').toLowerCase().includes(term)
-    )
-  })
+  const filteredArticles = useMemo(() => {
+    return allArticles.filter(article => {
+      const typeMatch = selectedType === 'all' || article.productionType === selectedType
+      if (!typeMatch) return false
+      if (!term) return true
+      return (
+        `${article.orderNumber}`.toLowerCase().includes(term) ||
+        (article.customer || '').toLowerCase().includes(term) ||
+        (article.product_name || '').toLowerCase().includes(term)
+      )
+    })
+  }, [allArticles, selectedType, term])
   
 
 
@@ -970,35 +971,57 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         </div>
       </div>
 
-      {/* Debug: afficher les valeurs */}
-      <div className="text-xs text-gray-500 mb-2">
-        Debug: searchTerm="{searchTerm}"
-      </div>
-
-      {/* Affichage des articles en cartes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" onClick={handleClickOutside}>
-        {filteredArticles.map((article, index) => {
-          const cardId = `${article.orderId}-${article.line_item_id}`
-          return (
-            <ArticleCard 
-              key={cardId}
-              article={article}
-              index={index}
-              getArticleSize={getArticleSize}
-              getArticleColor={getArticleColor}
-              getArticleOptions={getArticleOptions}
-              onOverlayOpen={() => handleOverlayOpen(cardId)}
-              isOverlayOpen={openOverlayCardId === cardId}
-              isHighlighted={searchTerm && (
-                `${article.orderNumber}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (article.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (article.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-              )}
-              searchTerm={searchTerm}
-            />
-          )
-        })}
-          </div>
+      {/* Affichage des articles en cartes avec virtualisation */}
+      {filteredArticles.length > 0 && (
+        <div className="h-[800px] w-full">
+          <Grid
+            columnCount={Math.min(4, Math.ceil(window.innerWidth / 400))}
+            columnWidth={400}
+            height={800}
+            rowCount={Math.ceil(filteredArticles.length / Math.min(4, Math.ceil(window.innerWidth / 400)))}
+            rowHeight={450}
+            width={window.innerWidth}
+            itemData={{
+              articles: filteredArticles,
+              getArticleSize,
+              getArticleColor,
+              getArticleOptions,
+              handleOverlayOpen,
+              openOverlayCardId,
+              searchTerm
+            }}
+          >
+            {({ columnIndex, rowIndex, style, data }) => {
+              const columnCount = Math.min(4, Math.ceil(window.innerWidth / 400))
+              const index = rowIndex * columnCount + columnIndex
+              const article = data.articles[index]
+              if (!article) return null
+              
+              const cardId = `${article.orderId}-${article.line_item_id}`
+              return (
+                <div style={style} className="p-3">
+                  <ArticleCard 
+                    key={cardId}
+                    article={article}
+                    index={index}
+                    getArticleSize={data.getArticleSize}
+                    getArticleColor={data.getArticleColor}
+                    getArticleOptions={data.getArticleOptions}
+                    onOverlayOpen={() => data.handleOverlayOpen(cardId)}
+                    isOverlayOpen={data.openOverlayCardId === cardId}
+                    isHighlighted={data.searchTerm && (
+                      `${article.orderNumber}`.toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+                      (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+                      (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
+                    )}
+                    searchTerm={data.searchTerm}
+                  />
+                </div>
+              )
+            }}
+          </Grid>
+        </div>
+      )}
       
       {filteredArticles.length === 0 && (
         <div className="text-center py-12">
