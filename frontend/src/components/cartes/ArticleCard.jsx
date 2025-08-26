@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import ImageLoader from './ImageLoader'
+import imageService from '../../services/imageService'
 
 // Composant carte d'article moderne optimisé
 const ArticleCard = React.memo(({ 
@@ -14,10 +16,11 @@ const ArticleCard = React.memo(({
   isHighlighted, 
   searchTerm 
 }) => {
-  const [imageUrl, setImageUrl] = useState(null)
-  const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
+  const [imageUrl, setImageUrl] = useState(null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
+  const [isFromCache, setIsFromCache] = useState(false)
   const noteBtnRef = useRef(null)
   const notePopoverRef = useRef(null)
 
@@ -61,53 +64,50 @@ const ArticleCard = React.memo(({
   const memoizedImageUrl = useMemo(() => article.image_url, [article.image_url])
   const memoizedProductId = useMemo(() => article.product_id, [article.product_id])
 
+  // Charger l'image quand les props changent
   useEffect(() => {
-    // Utiliser l'image stockée en base de données si disponible
-    if (memoizedImageUrl) {
-      setImageUrl(memoizedImageUrl)
-    } else if (memoizedProductId) {
-      // Sinon, essayer de récupérer l'image depuis WooCommerce
-      fetchCardImage(memoizedProductId)
-    }
-  }, [memoizedImageUrl, memoizedProductId])
+    const loadImage = async () => {
+      if (memoizedImageUrl) {
+        // Si on a déjà l'URL de l'image, l'utiliser directement
+        setIsImageLoading(true)
+        try {
+          const optimizedUrl = await imageService.getImageFromUrl(memoizedImageUrl)
+          setImageUrl(optimizedUrl)
+        } catch (error) {
+          console.warn('Erreur lors de l\'optimisation de l\'URL:', error)
+          // En cas d'erreur, utiliser l'URL originale
+          setImageUrl(memoizedImageUrl)
+        } finally {
+          setIsImageLoading(false)
+        }
+      } else if (memoizedProductId) {
+        // ESSAI INSTANTANÉ D'ABORD
+        const instantImage = imageService.getImageSync(memoizedProductId)
+        if (instantImage) {
+          // Image trouvée instantanément en cache mémoire !
+          setImageUrl(instantImage)
+          setIsFromCache(true)
+          setIsImageLoading(false)
+          return
+        }
 
-  const fetchCardImage = async (productId) => {
-    setIsImageLoading(true)
-    try {
-      // 1) Tenter via le backend (image stockée en BDD)
-      const backendUrl = 'http://localhost:3001/api/images/' + productId
-      const backendResp = await fetch(backendUrl, { method: 'GET', signal: AbortSignal.timeout(5000) })
-      if (backendResp.ok) {
-        setImageUrl(backendUrl)
-        return
-      }
-
-      // 2) Fallback WordPress si indisponible (peut échouer CORS, mais non bloquant)
-      const wordpressUrl = import.meta.env.VITE_WORDPRESS_URL
-      const consumerKey = import.meta.env.VITE_WORDPRESS_CONSUMER_KEY
-      const consumerSecret = import.meta.env.VITE_WORDPRESS_CONSUMER_SECRET
-      if (wordpressUrl && consumerKey && consumerSecret) {
-        const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
-        const url = `${wordpressUrl}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,images`
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(5000)
-        })
-        if (response.ok) {
-          const product = await response.json()
-          if (product?.images && product.images.length > 0) {
-            setImageUrl(product.images[0].src)
-          }
+        // Si pas en cache, charger de manière asynchrone
+        setIsImageLoading(true)
+        setIsFromCache(false)
+        try {
+          const url = await imageService.getImage(memoizedProductId, { forceWordPress: true })
+          setImageUrl(url)
+        } catch (error) {
+          console.warn('Erreur lors du chargement de l\'image:', error)
+          setImageUrl(null)
+        } finally {
+          setIsImageLoading(false)
         }
       }
-    } catch (error) {
-      // Ignorer silencieusement les erreurs CORS ou réseau
-      console.debug(`Image non disponible pour le produit ${productId}`)
-    } finally {
-      setIsImageLoading(false)
     }
-  }
+
+    loadImage()
+  }, [memoizedImageUrl, memoizedProductId])
 
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
@@ -165,17 +165,41 @@ const ArticleCard = React.memo(({
       <div className="relative h-60 overflow-hidden">
         {/* Image de base */}
         {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={article.product_name}
-            className="w-full h-full object-cover"
-          />
+          <div className="relative">
+            <ImageLoader 
+              src={imageUrl} 
+              alt={article.product_name}
+              className="w-full h-full object-cover"
+              fallback="📦"
+              maxRetries={3}
+              retryDelay={1000}
+              onLoad={() => console.debug('Image chargée avec succès')}
+              onError={(retryCount) => console.warn('Erreur image, tentative:', retryCount)}
+            />
+            
+            {/* Indicateur de cache */}
+            {isFromCache && (
+              <div className="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full shadow-lg z-20">
+                ⚡ Cache
+              </div>
+            )}
+            
+            {/* Indicateur d'image par défaut */}
+            {imageUrl && imageUrl.startsWith('data:image/') && (
+              <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded-full shadow-lg z-20">
+                🎨 Par défaut
+              </div>
+            )}
+          </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center">
             {isImageLoading ? (
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-600 border-t-transparent"></div>
             ) : (
-              <div className="text-6xl text-slate-500">📦</div>
+              <div className="text-center">
+                <div className="text-4xl text-slate-500 mb-2">📦</div>
+                <div className="text-sm text-slate-600">Aucune image</div>
+              </div>
             )}
           </div>
         )}

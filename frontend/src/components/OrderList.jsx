@@ -1,5 +1,6 @@
 import React from 'react'
 import LoadingSpinner from './LoadingSpinner'
+import ImagePreloader from './ImagePreloader'
 import { 
   SyncProgress, 
   OrderHeader, 
@@ -31,7 +32,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     searchTerm,
     setSearchTerm,
     filteredArticles,
-          openOverlayCardId,
+    openOverlayCardId,
     handleOverlayOpen
   } = useOrderFilters(propSelectedType, prepareArticles)
 
@@ -74,6 +75,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         handleOverlayOpen={handleOverlayOpen}
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
+      />
+
+      {/* Préchargeur d'images en arrière-plan */}
+      <ImagePreloader 
+        articles={filteredArticles}
+        onPreloadComplete={() => console.log('Toutes les images sont préchargées et disponibles instantanément !')}
       />
     </div>
   )
