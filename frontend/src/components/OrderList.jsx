@@ -256,6 +256,26 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
     }
   }
 
+  // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
+  const renderFormattedAddress = (address) => {
+    if (!address || typeof address !== 'string') {
+      return 'Non renseignée'
+    }
+    const parts = address.split(',').map(p => p.trim()).filter(Boolean)
+    if (parts.length >= 2) {
+      const streetPart = parts.slice(0, -1).join(', ')
+      const zipCityPart = parts[parts.length - 1]
+      return (
+        <span>
+          <span>{streetPart}</span>
+          <br />
+          <span>{zipCityPart}</span>
+        </span>
+      )
+    }
+    return <span>{address}</span>
+  }
+
   return (
     <div 
       className="group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px]"
@@ -465,11 +485,11 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 <path d="M9 20v-6h6v6" />
               </svg>
               <div 
-                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors whitespace-nowrap"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.customerAddress || 'Non renseignée', 'Adresse copiée !')}
                 title="Cliquer pour copier"
               >
-                {article.customerAddress || 'Non renseignée'}
+                {renderFormattedAddress(article.customerAddress)}
               </div>
             </div>
             
