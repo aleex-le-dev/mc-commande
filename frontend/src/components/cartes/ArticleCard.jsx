@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -18,6 +18,29 @@ const ArticleCard = React.memo(({
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
+  const noteBtnRef = useRef(null)
+  const notePopoverRef = useRef(null)
+
+  // Fermer la note sur demande globale (pour garantir une seule note ouverte)
+  useEffect(() => {
+    const handleGlobalClose = () => setIsNoteOpen(false)
+    window.addEventListener('mc-close-notes', handleGlobalClose)
+    return () => window.removeEventListener('mc-close-notes', handleGlobalClose)
+  }, [])
+
+  // Fermer la note si clic en dehors (n'importe où dans le document)
+  useEffect(() => {
+    if (!isNoteOpen) return
+    const handleClickOutside = (event) => {
+      const btn = noteBtnRef.current
+      const pop = notePopoverRef.current
+      if (pop && pop.contains(event.target)) return
+      if (btn && btn.contains(event.target)) return
+      setIsNoteOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside, true)
+    return () => document.removeEventListener('mousedown', handleClickOutside, true)
+  }, [isNoteOpen])
 
   const handleCopy = useCallback(async (text, label) => {
     try {
@@ -249,7 +272,8 @@ const ArticleCard = React.memo(({
             <>
               <button
                 type="button"
-                onClick={() => setIsNoteOpen(v => !v)}
+                onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
+                ref={noteBtnRef}
                 className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-50 border-amber-200'}`}
                 aria-haspopup="dialog"
                 aria-expanded={isNoteOpen}
@@ -392,25 +416,26 @@ const ArticleCard = React.memo(({
 
       {/* Popover global de note, pleine largeur de la carte */}
       {isNoteOpen && article.customerNote && (
-        <div className="absolute left-0 right-0 bottom-20 px-3 z-50">
-          <div className="w-full max-h-80 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
-            <div className="flex items-start justify-between mb-2 relative">
-              <span className="text-sm font-semibold text-amber-800">Note client</span>
-              <button
-                type="button"
-                onClick={() => setIsNoteOpen(false)}
-                className="text-4xl absolute -top-8 -right-2 text-amber-500 hover:text-amber-700"
-                aria-label="Fermer"
-              >
-                ×
-              </button>
-            </div>
-            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-              {article.customerNote}
+        <>
+          <div className="absolute left-0 right-0 bottom-20 px-3 z-50">
+            <div ref={notePopoverRef} className="w-full max-h-80 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
+              <div className="flex items-start justify-end mb-2 relative">
+                <button
+                  type="button"
+                  onClick={() => setIsNoteOpen(false)}
+                  className="text-4xl absolute -top-8 -right-2 text-amber-500 hover:text-amber-700"
+                  aria-label="Fermer"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {article.customerNote}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
