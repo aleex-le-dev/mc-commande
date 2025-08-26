@@ -1127,6 +1127,61 @@ app.post('/api/production-status', async (req, res) => {
   }
 })
 
+// PUT /api/production-status/:lineItemId/type - Mettre à jour le type de production d'un article
+app.put('/api/production-status/:lineItemId/type', async (req, res) => {
+  try {
+    const { lineItemId } = req.params
+    const { production_type } = req.body
+    
+    if (!production_type) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Type de production requis' 
+      })
+    }
+    
+    if (!['couture', 'maille'].includes(production_type)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Type de production invalide. Doit être "couture" ou "maille"' 
+      })
+    }
+    
+    // Mettre à jour le type de production pour cet article spécifique
+    const statusCollection = db.collection('production_status')
+    const result = await statusCollection.updateOne(
+      { line_item_id: parseInt(lineItemId) },
+      { 
+        $set: { 
+          production_type: production_type,
+          updated_at: new Date()
+        } 
+      }
+    )
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Aucun article trouvé avec cet ID' 
+      })
+    }
+    
+    console.log(`✅ Type de production mis à jour pour l'article ${lineItemId}: ${production_type}`)
+    
+    res.json({ 
+      success: true, 
+      message: `Type de production mis à jour pour l'article ${lineItemId}`,
+      lineItemId: parseInt(lineItemId),
+      production_type,
+      modifiedCount: result.modifiedCount
+    })
+    
+  } catch (error) {
+    console.error('Erreur PUT /production-status/:lineItemId/type:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
 
