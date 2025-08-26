@@ -465,7 +465,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 <path d="M9 20v-6h6v6" />
               </svg>
               <div 
-                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors whitespace-nowrap"
                 onClick={() => handleCopy(article.customerAddress || 'Non renseignée', 'Adresse copiée !')}
                 title="Cliquer pour copier"
               >
@@ -482,7 +482,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 <circle cx="17" cy="17" r="2" />
               </svg>
               <div 
-                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors whitespace-nowrap"
                 onClick={() => handleCopy(article.shippingMethod || 'Non renseigné', 'Transporteur copié !')}
                 title="Cliquer pour copier"
               >
