@@ -17,6 +17,7 @@ const ArticleCard = React.memo(({
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
+  const [isNoteOpen, setIsNoteOpen] = useState(false)
 
   const handleCopy = useCallback(async (text, label) => {
     try {
@@ -128,7 +129,7 @@ const ArticleCard = React.memo(({
 
   return (
     <div 
-      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
+      className={`group relative bg-white rounded-3xl overflow-visible shadow-lg h-[420px] ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
       style={{ 
         animationName: searchTerm ? 'none' : 'fadeInUp',
         animationDuration: searchTerm ? '0s' : '0.6s',
@@ -235,7 +236,7 @@ const ArticleCard = React.memo(({
         </div>
       </div>
 
-      {/* Date de commande en bas à gauche de la carte entière */}
+      {/* Date / heure / note */}
       <div className="absolute bottom-0 left-0 p-3 z-10">
         <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium">
           <span className="bg-gray-100 px-2 py-1 rounded-md">
@@ -244,6 +245,21 @@ const ArticleCard = React.memo(({
           <span className="bg-gray-100 px-2 py-1 rounded-md">
             {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
           </span>
+          {article.customerNote && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsNoteOpen(v => !v)}
+                className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-50 border-amber-200'}`}
+                aria-haspopup="dialog"
+                aria-expanded={isNoteOpen}
+                aria-label="Afficher la note"
+              >
+                <span className="mr-1">📝</span>
+                Note
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -373,6 +389,29 @@ const ArticleCard = React.memo(({
 
       {/* Effet de brillance au survol */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
+
+      {/* Popover global de note, pleine largeur de la carte */}
+      {isNoteOpen && article.customerNote && (
+        <div className="absolute left-0 right-0 bottom-20 px-3 z-50">
+          <div className="w-full max-h-80 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
+            <div className="flex items-start justify-between mb-2 relative">
+              <span className="text-sm font-semibold text-amber-800">Note client</span>
+              <button
+                type="button"
+                onClick={() => setIsNoteOpen(false)}
+                className="text-4xl absolute -top-8 -right-2 text-amber-500 hover:text-amber-700"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
+            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {article.customerNote}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 })
