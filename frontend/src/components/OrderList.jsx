@@ -209,7 +209,7 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
 
-  const handleCopy = async (text, label) => {
+  const handleCopy = useCallback(async (text, label) => {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedText(label)
@@ -217,7 +217,12 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
     } catch (err) {
       console.error('Erreur lors de la copie:', err)
     }
-  }
+  }, [])
+
+  const handleOverlayToggle = useCallback((e) => {
+    e.stopPropagation()
+    onOverlayOpen && onOverlayOpen()
+  }, [onOverlayOpen])
 
   useEffect(() => {
     // Utiliser l'image stockée en base de données si disponible
@@ -373,11 +378,8 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
         <div className="absolute left-4 top-20 z-40 pointer-events-auto">
           {/* Icône pour les infos client (fond transparent + nouveau pictogramme) */}
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onOverlayOpen && onOverlayOpen()
-            }}
-            className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 ${
+            onClick={handleOverlayToggle}
+            className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 ${
               isOverlayOpen ? 'bg-white/90 text-black border-white ring-2 ring-white/60' : ''
             }`}
             aria-label="Informations client"
@@ -435,10 +437,7 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
         >
         <div className="relative h-full p-6 flex flex-col">
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onOverlayOpen && onOverlayOpen()
-            }}
+            onClick={handleOverlayToggle}
             className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-4xl font-light hover:font-bold w-8 h-8 flex items-center justify-center"
             aria-label="Fermer"
             title="Fermer"
@@ -572,7 +571,6 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const [selectedType, setSelectedType] = useState(propSelectedType || 'all')
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [highlightTerm, setHighlightTerm] = useState('')
 
   const [syncProgress, setSyncProgress] = useState({ isRunning: false, progress: 0, message: '' })
   const [syncLogs, setSyncLogs] = useState([])
@@ -587,19 +585,118 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   // Gérer l'ouverture des overlays (un seul à la fois)
   const handleOverlayOpen = useCallback((cardId) => {
-    if (openOverlayCardId === cardId) {
-      // Si on clique sur la même carte, fermer l'overlay
-      setOpenOverlayCardId(null)
-    } else {
-      // Sinon, ouvrir l'overlay de cette carte
-      setOpenOverlayCardId(cardId)
-    }
-  }, [openOverlayCardId])
+    setOpenOverlayCardId(prevId => prevId === cardId ? null : cardId)
+  }, [])
 
   // Fermer l'overlay au clic ailleurs
   const handleClickOutside = useCallback(() => {
     setOpenOverlayCardId(null)
   }, [])
+
+  // Fonction pour déterminer le type de production
+  const getProductionType = useCallback((productName) => {
+    const name = productName.toLowerCase()
+    
+    const mailleKeywords = ['tricotée', 'tricoté', 'knitted', 'pull', 'gilet', 'cardigan', 'sweat', 'hoodie', 'bonnet', 'écharpe', 'gants', 'chaussettes']
+    
+    if (mailleKeywords.some(keyword => name.includes(keyword))) {
+      return { type: 'maille', color: 'bg-purple-100 text-purple-800' }
+    } else {
+      return { type: 'couture', color: 'bg-blue-100 text-blue-800' }
+    }
+  }, [])
+
+  // Fonction pour obtenir la couleur du statut
+  const getStatusColor = useCallback((status) => {
+    const colors = {
+      'a_faire': 'bg-gray-100 text-gray-800',
+      'en_cours': 'bg-yellow-100 text-yellow-800',
+      'termine': 'bg-green-100 text-green-800'
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }, [])
+
+  // Fonction pour extraire la taille d'un article
+  const getArticleSize = useCallback((metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
+    
+    const sizeMeta = metaData.find(meta => 
+      meta.key && (
+        meta.key.toLowerCase().includes('taille') ||
+        meta.key.toLowerCase().includes('size') ||
+        meta.key.toLowerCase().includes('dimension')
+      )
+    )
+    
+    return sizeMeta ? sizeMeta.value : 'Non spécifiée'
+  }, [])
+
+  // Fonction pour extraire les options d'un article
+  const getArticleOptions = useCallback((metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return 'Aucune'
+    
+    const options = metaData
+      .filter(meta => 
+        meta.key && 
+        !meta.key.toLowerCase().includes('taille') && 
+        !meta.key.toLowerCase().includes('size') &&
+        !meta.key.toLowerCase().includes('couleur') &&
+        !meta.key.toLowerCase().includes('color') &&
+        meta.key !== '_qty' &&
+        meta.key !== '_tax_class' &&
+        meta.key !== '_product_id' &&
+        meta.key !== '_variation_id' &&
+        meta.key !== '_line_subtotal' &&
+        meta.key !== '_line_subtotal_tax' &&
+        meta.key !== '_line_total' &&
+        meta.key !== '_line_tax' &&
+        meta.key !== '_line_tax_data' &&
+        meta.key !== '_reduced_stock'
+      )
+      .map(meta => `${meta.key}: ${meta.value}`)
+      .join(', ')
+    
+    return options || 'Aucune'
+  }, [])
+
+  // Fonction pour extraire la couleur d'un article
+  const getArticleColor = useCallback((metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
+    
+    const colorMeta = metaData.find(meta => 
+      meta.key && (
+        meta.key.toLowerCase().includes('couleur') ||
+        meta.key.toLowerCase().includes('color') ||
+        meta.key.toLowerCase().includes('colour')
+      )
+    )
+    
+    return colorMeta ? colorMeta.value : 'Non spécifiée'
+  }, [])
+
+  // Mémoriser les fonctions pour éviter les re-renders
+  const memoizedGetArticleSize = useCallback(getArticleSize, [getArticleSize])
+  const memoizedGetArticleColor = useCallback(getArticleColor, [getArticleColor])
+  const memoizedGetArticleOptions = useCallback(getArticleOptions, [getArticleOptions])
+
+  // Récupérer les statuts de production
+  const { data: productionStatuses, isLoading: statusesLoading } = useQuery({
+    queryKey: ['production-statuses'],
+    queryFn: getProductionStatuses,
+    refetchInterval: 10000,
+    staleTime: 5000
+  })
+
+  // Fonction pour récupérer le statut d'un article
+  const getArticleStatus = useCallback((orderId, lineItemId) => {
+    if (!productionStatuses) return 'a_faire'
+    
+    const status = productionStatuses.find(s => 
+      s.order_id === orderId && s.line_item_id === lineItemId
+    )
+    
+    return status ? status.status : 'a_faire'
+  }, [productionStatuses])
 
   // Synchronisation automatique au chargement de la page
   useEffect(() => {
@@ -713,106 +810,6 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
     staleTime: 10000,
   })
-
-  // Récupérer les statuts de production
-  const { data: productionStatuses, isLoading: statusesLoading } = useQuery({
-    queryKey: ['production-statuses'],
-    queryFn: getProductionStatuses,
-    refetchInterval: 10000,
-    staleTime: 5000
-  })
-
-  // Fonction pour déterminer le type de production
-  const getProductionType = useCallback((productName) => {
-    const name = productName.toLowerCase()
-    
-    const mailleKeywords = ['tricotée', 'tricoté', 'knitted', 'pull', 'gilet', 'cardigan', 'sweat', 'hoodie', 'bonnet', 'écharpe', 'gants', 'chaussettes']
-    
-    if (mailleKeywords.some(keyword => name.includes(keyword))) {
-      return { type: 'maille', color: 'bg-purple-100 text-purple-800' }
-    } else {
-      return { type: 'couture', color: 'bg-blue-100 text-blue-800' }
-    }
-  }, [])
-
-  // Fonction pour obtenir la couleur du statut
-  const getStatusColor = useCallback((status) => {
-    const colors = {
-      'a_faire': 'bg-gray-100 text-gray-800',
-      'en_cours': 'bg-yellow-100 text-yellow-800',
-      'termine': 'bg-green-100 text-green-800'
-    }
-    return colors[status] || 'bg-gray-100 text-gray-800'
-  }, [])
-
-  // Fonction pour récupérer le statut d'un article
-  const getArticleStatus = useCallback((orderId, lineItemId) => {
-    if (!productionStatuses) return 'a_faire'
-    
-    const status = productionStatuses.find(s => 
-      s.order_id === orderId && s.line_item_id === lineItemId
-    )
-    
-    return status ? status.status : 'a_faire'
-  }, [productionStatuses])
-
-  // Fonction pour extraire la taille d'un article
-  const getArticleSize = useCallback((metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
-    
-    const sizeMeta = metaData.find(meta => 
-      meta.key && (
-        meta.key.toLowerCase().includes('taille') ||
-        meta.key.toLowerCase().includes('size') ||
-        meta.key.toLowerCase().includes('dimension')
-      )
-    )
-    
-    return sizeMeta ? sizeMeta.value : 'Non spécifiée'
-  }, [])
-
-  // Fonction pour extraire les options d'un article
-  const getArticleOptions = useCallback((metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return 'Aucune'
-    
-    const options = metaData
-      .filter(meta => 
-        meta.key && 
-        !meta.key.toLowerCase().includes('taille') && 
-        !meta.key.toLowerCase().includes('size') &&
-        !meta.key.toLowerCase().includes('couleur') &&
-        !meta.key.toLowerCase().includes('color') &&
-        meta.key !== '_qty' &&
-        meta.key !== '_tax_class' &&
-        meta.key !== '_product_id' &&
-        meta.key !== '_variation_id' &&
-        meta.key !== '_line_subtotal' &&
-        meta.key !== '_line_subtotal_tax' &&
-        meta.key !== '_line_total' &&
-        meta.key !== '_line_tax' &&
-        meta.key !== '_line_tax_data' &&
-        meta.key !== '_reduced_stock'
-      )
-      .map(meta => `${meta.key}: ${meta.value}`)
-      .join(', ')
-    
-    return options || 'Aucune'
-  }, [])
-
-  // Fonction pour extraire la couleur d'un article
-  const getArticleColor = useCallback((metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
-    
-    const colorMeta = metaData.find(meta => 
-      meta.key && (
-        meta.key.toLowerCase().includes('couleur') ||
-        meta.key.toLowerCase().includes('color') ||
-        meta.key.toLowerCase().includes('colour')
-      )
-    )
-    
-    return colorMeta ? colorMeta.value : 'Non spécifiée'
-  }, [])
 
   // Préparer les données des articles avec statuts
   const prepareArticles = useMemo(() => {
@@ -983,9 +980,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
             width={window.innerWidth}
             itemData={{
               articles: filteredArticles,
-              getArticleSize,
-              getArticleColor,
-              getArticleOptions,
+              getArticleSize: memoizedGetArticleSize,
+              getArticleColor: memoizedGetArticleColor,
+              getArticleOptions: memoizedGetArticleOptions,
               handleOverlayOpen,
               openOverlayCardId,
               searchTerm
@@ -998,6 +995,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
               if (!article) return null
               
               const cardId = `${article.orderId}-${article.line_item_id}`
+              const isHighlighted = data.searchTerm && (
+                `${article.orderNumber}`.toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+                (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+                (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
+              )
+              
               return (
                 <div style={style} className="p-3">
                   <ArticleCard 
@@ -1009,11 +1012,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
                     getArticleOptions={data.getArticleOptions}
                     onOverlayOpen={() => data.handleOverlayOpen(cardId)}
                     isOverlayOpen={data.openOverlayCardId === cardId}
-                    isHighlighted={data.searchTerm && (
-                      `${article.orderNumber}`.toLowerCase().includes(data.searchTerm.toLowerCase()) ||
-                      (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
-                      (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
-                    )}
+                    isHighlighted={isHighlighted}
                     searchTerm={data.searchTerm}
                   />
                 </div>
