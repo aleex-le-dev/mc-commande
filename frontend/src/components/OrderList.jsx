@@ -277,13 +277,13 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
       const zipCityPart = parts[parts.length - 1]
       return (
         <span>
-          <span>{streetPart}</span>
+          <span>{highlightText(streetPart, searchTerm)}</span>
           <br />
-          <span>{zipCityPart}</span>
+          <span>{highlightText(zipCityPart, searchTerm)}</span>
         </span>
       )
     }
-    return <span>{address}</span>
+    return <span>{highlightText(address, searchTerm)}</span>
   }
 
   // Fonction simple de surlignage avec logs de debug
@@ -314,13 +314,13 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
 
   return (
     <div 
-      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] ${isHighlighted ? 'border-2 border-accent animate-pink-blink' : ''}`}
+      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
       style={{ 
-        animationName: 'fadeInUp',
-        animationDuration: '0.6s',
-        animationTimingFunction: 'ease-out',
-        animationFillMode: 'forwards',
-        animationDelay: `${index * 150}ms`
+        animationName: searchTerm ? 'none' : 'fadeInUp',
+        animationDuration: searchTerm ? '0s' : '0.6s',
+        animationTimingFunction: searchTerm ? undefined : 'ease-out',
+        animationFillMode: searchTerm ? undefined : 'forwards',
+        animationDelay: searchTerm ? '0ms' : `${index * 150}ms`
       }}
     >
       {/* Image de fond avec overlay moderne */}
@@ -466,7 +466,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 onClick={() => handleCopy(article.customer, 'Client copié !')}
                 title="Cliquer pour copier"
               >
-                {article.customer}
+                {highlightText(article.customer, searchTerm)}
               </div>
             </div>
             
@@ -481,7 +481,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 onClick={() => handleCopy(format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr }), 'Date copiée !')}
                 title="Cliquer pour copier"
               >
-                {format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr })}
+                {highlightText(format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr }), searchTerm)}
               </div>
             </div>
             
@@ -498,7 +498,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 onClick={() => handleCopy(article.customerEmail || 'Non renseigné', 'Email copié !')}
                 title="Cliquer pour copier"
               >
-                {article.customerEmail || 'Non renseigné'}
+                {highlightText(article.customerEmail || 'Non renseigné', searchTerm)}
               </div>
             </div>
             
@@ -512,7 +512,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 onClick={() => handleCopy(article.customerPhone || 'Non renseigné', 'Téléphone copié !')}
                 title="Cliquer pour copier"
               >
-                {article.customerPhone || 'Non renseigné'}
+                {highlightText(article.customerPhone || 'Non renseigné', searchTerm)}
               </div>
             </div>
             
@@ -550,9 +550,9 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                   const isFree = title.includes('gratuit') || title.includes('free')
                   if (isFree) {
                     const carrier = article.shippingCarrier || ((article.customerCountry || '').toUpperCase() === 'FR' ? 'UPS' : 'DHL')
-                    return `Livraison gratuite (${carrier})`
+                    return highlightText(`Livraison gratuite (${carrier})`, searchTerm)
                   }
-                  return article.shippingMethod || 'Non renseigné'
+                  return highlightText(article.shippingMethod || 'Non renseigné', searchTerm)
                 })()}
               </div>
             </div>
@@ -958,7 +958,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
            'Gestion de Production'} ({filteredArticles.length} articles)
         </h2>
         <div className="w-full sm:w-80">
-          <form onSubmit={(e)=>{e.preventDefault(); setHighlightTerm(searchTerm)}}>
+          <form onSubmit={(e)=>{e.preventDefault(); /* surlignage en direct */}}>
             <input
               type="text"
               value={searchTerm}
@@ -968,6 +968,11 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
             />
           </form>
         </div>
+      </div>
+
+      {/* Debug: afficher les valeurs */}
+      <div className="text-xs text-gray-500 mb-2">
+        Debug: searchTerm="{searchTerm}"
       </div>
 
       {/* Affichage des articles en cartes */}
@@ -984,12 +989,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
               getArticleOptions={getArticleOptions}
               onOverlayOpen={() => handleOverlayOpen(cardId)}
               isOverlayOpen={openOverlayCardId === cardId}
-              isHighlighted={highlightTerm && (
-                `${article.orderNumber}`.toLowerCase().includes(highlightTerm.toLowerCase()) ||
-                (article.customer || '').toLowerCase().includes(highlightTerm.toLowerCase()) ||
-                (article.product_name || '').toLowerCase().includes(highlightTerm.toLowerCase())
+              isHighlighted={searchTerm && (
+                `${article.orderNumber}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (article.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (article.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
               )}
-              searchTerm={highlightTerm}
+              searchTerm={searchTerm}
             />
           )
         })}
