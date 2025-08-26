@@ -42,7 +42,7 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         {/* Navigation principale */}
         <nav className="bg-white shadow-lg border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               {/* Logo et titre */}
               <div className="flex items-center">
@@ -55,39 +55,35 @@ function App() {
                 </div>
               </div>
 
-              {/* Onglets de navigation */}
-              <div className="hidden md:block">
+              {/* Onglets centrés */}
+              <div className="flex-1 flex justify-center">
                 <div className="flex space-x-1">
-                  {tabs.map((tab) => (
+                  {tabs.filter(tab => tab.id !== 'parametres').map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                         activeTab === tab.id
-                          ? 'bg-blue-100 text-blue-700 shadow-sm'
+                          ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <span className="mr-2 text-lg">{tab.icon}</span>
+                      <span className="mr-1">{tab.icon}</span>
                       {tab.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-
-            </div>
-
-            {/* Navigation mobile */}
-            <div className="md:hidden">
-              <div className="flex space-x-1 pb-4">
-                {tabs.map((tab) => (
+              {/* Paramètres à droite */}
+              <div className="flex items-center">
+                {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                       activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700'
+                        ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
@@ -101,7 +97,7 @@ function App() {
         </nav>
 
         {/* Contenu principal */}
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main className="w-full py-6 px-4 sm:px-6 lg:px-8">
           {renderContent()}
         </main>
       </div>

@@ -4,7 +4,7 @@ import {
   CardStyles, 
   SyncProgress, 
   OrderHeader, 
-  OrderGrid,
+  SimpleFlexGrid,
   useOrderData,
   useSyncProgress,
   useOrderFilters
@@ -32,7 +32,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     searchTerm,
     setSearchTerm,
     filteredArticles,
-    openOverlayCardId,
+          openOverlayCardId,
     handleOverlayOpen
   } = useOrderFilters(propSelectedType, prepareArticles)
 
@@ -69,8 +69,8 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         onSearchChange={setSearchTerm}
       />
 
-      {/* Affichage des articles en cartes avec virtualisation */}
-      <OrderGrid 
+      {/* Affichage des articles en cartes avec flexbox et flex-wrap */}
+      <SimpleFlexGrid 
         filteredArticles={filteredArticles}
         getArticleSize={getArticleSize}
         getArticleColor={getArticleColor}

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { FixedSizeGrid as Grid } from 'react-window'
 import ArticleCard from './ArticleCard'
 
-// Composant pour la grille d'articles avec virtualisation
+// Composant pour la grille d'articles avec flexbox et virtualisation
 const OrderGrid = ({ 
   filteredArticles, 
   getArticleSize, 
@@ -12,17 +12,31 @@ const OrderGrid = ({
   openOverlayCardId, 
   searchTerm 
 }) => {
+  // Calculer le nombre de colonnes basé sur la largeur de l'écran
+  const getColumnCount = () => {
+    const screenWidth = window.innerWidth
+    if (screenWidth >= 1600) return 5      // Très grand écran
+    if (screenWidth >= 1200) return 4      // Grand écran
+    if (screenWidth >= 900) return 3       // Écran moyen
+    if (screenWidth >= 600) return 2       // Petit écran
+    return 1                                // Très petit écran
+  }
+
   // Mémoriser la grille pour éviter les recréations
   const memoizedGrid = useMemo(() => {
     if (filteredArticles.length === 0) return null
     
+    const columnCount = getColumnCount()
+    const columnWidth = Math.floor((window.innerWidth - 48) / columnCount) // 48px pour les marges
+    const rowHeight = 450
+    
     return (
       <Grid
-        columnCount={Math.min(4, Math.ceil(window.innerWidth / 400))}
-        columnWidth={400}
+        columnCount={columnCount}
+        columnWidth={columnWidth}
         height={800}
-        rowCount={Math.ceil(filteredArticles.length / Math.min(4, Math.ceil(window.innerWidth / 400)))}
-        rowHeight={450}
+        rowCount={Math.ceil(filteredArticles.length / columnCount)}
+        rowHeight={rowHeight}
         width={window.innerWidth}
         itemData={{
           articles: filteredArticles,
@@ -31,12 +45,13 @@ const OrderGrid = ({
           getArticleOptions,
           handleOverlayOpen,
           openOverlayCardId,
-          searchTerm
+          searchTerm,
+          columnCount,
+          columnWidth
         }}
       >
         {({ columnIndex, rowIndex, style, data }) => {
-          const columnCount = Math.min(4, Math.ceil(window.innerWidth / 400))
-          const index = rowIndex * columnCount + columnIndex
+          const index = rowIndex * data.columnCount + columnIndex
           const article = data.articles[index]
           if (!article) return null
           
@@ -83,8 +98,11 @@ const OrderGrid = ({
   }
 
   return (
-    <div className="h-[800px] w-full">
-      {memoizedGrid}
+    <div className="w-full">
+      {/* Grille virtualisée avec flexbox-like layout */}
+      <div className="relative">
+        {memoizedGrid}
+      </div>
     </div>
   )
 }

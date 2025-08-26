@@ -5,7 +5,7 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
   if (!syncProgress.isRunning) return null
 
   return (
-    <div className="fixed top-4 right-4 z-50 p-4 bg-blue-100 text-blue-800 border border-blue-200 rounded-lg shadow-lg max-w-md">
+    <div className="fixed top-4 right-4 z-50 p-4 bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)] rounded-lg shadow-lg max-w-md">
       <div className="mb-3">
         <p className="font-medium">
           <svg 
@@ -32,23 +32,23 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
       </div>
       
       {/* Log en temps réel */}
-      <div className="bg-blue-50 rounded p-2">
+      <div className="bg-white rounded p-2">
         {syncLogs.length > 0 && syncLogs[0] ? (
           <div className="text-xs">
-            <span className="text-blue-600 font-mono">
+            <span className="text-[var(--rose-clair-text)] font-mono">
               {new Date(syncLogs[0].timestamp).toLocaleTimeString()}
             </span>
             <span className={`ml-2 ${
               syncLogs[0].type === 'success' ? 'text-green-600' :
               syncLogs[0].type === 'error' ? 'text-red-600' :
               syncLogs[0].type === 'warning' ? 'text-yellow-600' :
-              'text-blue-600'
+              'text-[var(--rose-clair-text)]'
             }`}>
               {syncLogs[0].message}
             </span>
           </div>
         ) : (
-          <p className="text-xs text-blue-500 italic">En attente des logs...</p>
+          <p className="text-xs text-[var(--rose-clair-text)] italic">En attente des logs...</p>
         )}
       </div>
     </div>

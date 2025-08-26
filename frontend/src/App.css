@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+:root {
+  --rose-clair: #fdf2f8;
+  --rose-clair-hover: #fce7f3;
+  --rose-clair-border: #fbcfe8;
+  --rose-clair-text: #be185d;
+}
+
 /* Styles personnalisés pour l'application */
 body {
   margin: 0;
