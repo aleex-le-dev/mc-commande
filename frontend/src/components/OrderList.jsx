@@ -66,59 +66,20 @@ const ProductImage = ({ productId, productName, permalink }) => {
     setErrorDetails('')
     
     try {
-      // Récupérer la configuration WordPress depuis les variables d'environnement
-      const wordpressUrl = import.meta.env.VITE_WORDPRESS_URL
-      const consumerKey = import.meta.env.VITE_WORDPRESS_CONSUMER_KEY
-      const consumerSecret = import.meta.env.VITE_WORDPRESS_CONSUMER_SECRET
-
-      if (!wordpressUrl || !consumerKey || !consumerSecret) {
-        console.warn('ProductImage: Configuration WordPress manquante')
-        setHasError(true)
-        setErrorDetails('Config manquante')
-        return
-      }
-
-      const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
-      const url = `${wordpressUrl}/wp-json/wc/v3/products/${id}?${authParams}&_fields=id,images`
-      
-      console.log(`ProductImage: Tentative de récupération de l'image pour le produit ${id}`)
-      console.log(`ProductImage: URL appelée: ${url}`)
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(10000) // Augmenter le timeout
-      })
-
-      console.log(`ProductImage: Réponse HTTP ${response.status} pour le produit ${id}`)
-
-      if (response.ok) {
-        const product = await response.json()
-        console.log(`ProductImage: Données reçues pour le produit ${id}:`, {
-          hasImages: !!product?.images,
-          imagesCount: product?.images?.length || 0,
-          firstImage: product?.images?.[0]
-        })
-        
-        if (product?.images && product.images.length > 0 && product.images[0]?.src) {
-          console.log(`ProductImage: Image trouvée pour le produit ${id}: ${product.images[0].src}`)
-          setImageUrl(product.images[0].src)
-        } else {
-          console.warn(`ProductImage: Pas d'image pour le produit ${id}`)
-          setHasError(true)
-          setErrorDetails('Pas d\'image')
-        }
+      // Charger depuis le backend (image stockée en BDD) pour éviter CORS
+      const backendUrl = 'http://localhost:3001/api/images/' + id
+      const resp = await fetch(backendUrl, { method: 'GET', signal: AbortSignal.timeout(8000) })
+      if (resp.ok) {
+        // Utiliser l'URL directe de l'endpoint comme src
+        setImageUrl(backendUrl)
       } else {
-        console.warn(`ProductImage: Erreur HTTP ${response.status} pour le produit ${id}`)
+        // Fallback silencieux: garder l'icône placeholder
         setHasError(true)
-        setErrorDetails(`HTTP ${response.status}`)
+        setErrorDetails('Image non trouvée')
       }
     } catch (error) {
-      console.warn(`ProductImage: Erreur lors de la récupération de l'image pour le produit ${id}:`, error.message)
       setHasError(true)
-      setErrorDetails(error.message)
+      setErrorDetails('Erreur image')
     } finally {
       setIsLoading(false)
     }
@@ -235,7 +196,6 @@ const NoteExpander = ({ note }) => {
 const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('command') // 'command' ou 'client'
   const [copiedText, setCopiedText] = useState('')
 
   const handleCopy = async (text, label) => {
@@ -261,25 +221,31 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
   const fetchCardImage = async (productId) => {
     setIsImageLoading(true)
     try {
+      // 1) Tenter via le backend (image stockée en BDD)
+      const backendUrl = 'http://localhost:3001/api/images/' + productId
+      const backendResp = await fetch(backendUrl, { method: 'GET', signal: AbortSignal.timeout(5000) })
+      if (backendResp.ok) {
+        setImageUrl(backendUrl)
+        return
+      }
+
+      // 2) Fallback WordPress si indisponible (peut échouer CORS, mais non bloquant)
       const wordpressUrl = import.meta.env.VITE_WORDPRESS_URL
       const consumerKey = import.meta.env.VITE_WORDPRESS_CONSUMER_KEY
       const consumerSecret = import.meta.env.VITE_WORDPRESS_CONSUMER_SECRET
-
-      if (!wordpressUrl || !consumerKey || !consumerSecret) return
-
-      const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
-      const url = `${wordpressUrl}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,images`
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(5000) // Timeout plus court
-      })
-
-      if (response.ok) {
-        const product = await response.json()
-        if (product?.images && product.images.length > 0) {
-          setImageUrl(product.images[0].src)
+      if (wordpressUrl && consumerKey && consumerSecret) {
+        const authParams = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
+        const url = `${wordpressUrl}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,images`
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(5000)
+        })
+        if (response.ok) {
+          const product = await response.json()
+          if (product?.images && product.images.length > 0) {
+            setImageUrl(product.images[0].src)
+          }
         }
       }
     } catch (error) {
@@ -292,7 +258,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
 
   return (
     <div 
-      className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-[420px]"
+      className="group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px]"
       style={{ 
         animationDelay: `${index * 150}ms`,
         animation: 'fadeInUp 0.6s ease-out forwards'
@@ -305,7 +271,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
           <img 
             src={imageUrl} 
             alt={article.product_name}
-            className="w-full h-full object-cover transition-transform duration-700"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center">
@@ -317,17 +283,24 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
           </div>
         )}
         
-        {/* Bouton invisible cliquable sur toute l'image si permalink disponible */}
+        {/* Bouton lien discret pour le produit (remplace l'overlay plein écran) */}
         {article.permalink && (
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              window.open(article.permalink, '_blank')
-            }}
-            className="absolute inset-0 w-full h-full cursor-pointer bg-transparent hover:bg-black/5 transition-colors duration-200 z-10"
-            title="Cliquer pour voir le produit"
-          />
+          <a
+            href={article.permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-3 right-3 z-30 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
+            title="Ouvrir le produit"
+            aria-label="Ouvrir le produit"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 3h7v7" />
+              <path d="M10 14L21 3" />
+              <path d="M21 14v7h-7" />
+              <path d="M3 10l11 11" />
+            </svg>
+          </a>
         )}
         
         {/* Overlay gradient moderne */}
@@ -338,32 +311,35 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
          #{article.orderNumber}
        </div>
         
-        {/* Icônes d'information sur le bord gauche */}
-        <div className="absolute left-4 top-20 space-y-2 z-20">
-          {/* Icône pour les infos commande */}
+        {/* Icône d'information client sur le bord gauche */}
+        <div className="absolute left-4 top-20 z-40 pointer-events-auto">
+          {/* Icône pour les infos client (fond transparent + nouveau pictogramme) */}
           <button
-            onClick={() => setActiveTab('command')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-              activeTab === 'command' ? 'bg-blue-500/90 text-white' : 'bg-black/60 text-white hover:bg-black/80'
+            onClick={(e) => {
+              e.stopPropagation()
+              onOverlayOpen && onOverlayOpen()
+            }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 ${
+              isOverlayOpen ? 'bg-white/90 text-black border-white ring-2 ring-white/60' : ''
             }`}
-            title="Informations commande"
+            aria-label="Informations client"
+            title="Informations client"
           >
-            📦
+            {/* SVG User icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              className="w-5 h-5"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21a8 8 0 0 0-16 0" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </button>
-          
-                   {/* Icône pour les infos client */}
-         <button
-           onClick={(e) => {
-             e.stopPropagation()
-             onOverlayOpen && onOverlayOpen()
-           }}
-           className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-             isOverlayOpen ? 'bg-green-500/90 text-white' : 'bg-black/60 text-white hover:bg-black/80'
-           }`}
-           title="Informations client"
-         >
-           👤
-         </button>
         </div>
       </div>
 
@@ -393,25 +369,24 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
         </div>
       </div>
 
-      {/* Overlay client qui glisse de la gauche */}
-      <div 
-        className={`absolute inset-0 bg-white/80 backdrop-blur-sm z-30 rounded-3xl ${
-          isOverlayOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="h-full p-8 flex flex-col">
-          <div className="flex justify-end mb-6">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onOverlayOpen && onOverlayOpen()
-              }}
-              className="text-gray-400 hover:text-gray-600 text-2xl font-light hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200"
-            >
-              ×
-            </button>
-          </div>
+      {/* Overlay client affiché instantanément sans transition */}
+      {isOverlayOpen && (
+        <div 
+          className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 rounded-3xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+        <div className="relative h-full p-6 flex flex-col">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onOverlayOpen && onOverlayOpen()
+            }}
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-4xl font-light hover:font-bold w-8 h-8 flex items-center justify-center"
+            aria-label="Fermer"
+            title="Fermer"
+          >
+            ×
+          </button>
           
           {/* Feedback de copie */}
           {copiedText && (
@@ -420,11 +395,15 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
             </div>
           )}
           
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">👤</span>
+          <div className="space-y-4 pr-16 -ml-2">
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icone utilisateur (uniforme 20px) */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-700 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20a8 8 0 0 1 16 0" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.customer, 'Client copié !')}
                 title="Cliquer pour copier"
               >
@@ -432,10 +411,14 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">📅</span>
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icone calendrier (uniforme 20px) */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-700 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="17" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(format(new Date(article.orderDate), 'dd/MM/yyyy', { locale: fr }), 'Date copiée !')}
                 title="Cliquer pour copier"
               >
@@ -443,10 +426,16 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">📧</span>
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icône email plus contrastée */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-800 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M3 7l9 6 9-6" />
+                <path d="M3 19l6-6" />
+                <path d="M21 19l-6-6" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.customerEmail || 'Non renseigné', 'Email copié !')}
                 title="Cliquer pour copier"
               >
@@ -454,10 +443,13 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">📱</span>
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icone téléphone (uniforme 20px) */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-700 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v2a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4 1.1h2a2 2 0 0 1 2 1.72c.12.9.33 1.77.61 2.61a2 2 0 0 1-.45 2.11L7 8.09a16 16 0 0 0 6 6l.55-.76a2 2 0 0 1 2.11-.45c.84.28 1.71.49 2.61.61A2 2 0 0 1 22 16.92z" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.customerPhone || 'Non renseigné', 'Téléphone copié !')}
                 title="Cliquer pour copier"
               >
@@ -465,10 +457,15 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">🏠</span>
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icône adresse (maison) pour éviter le cercle intérieur */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-700 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 10.5L12 3l9 7.5" />
+                <path d="M5 10v10h14V10" />
+                <path d="M9 20v-6h6v6" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.customerAddress || 'Non renseignée', 'Adresse copiée !')}
                 title="Cliquer pour copier"
               >
@@ -476,10 +473,16 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">🚚</span>
+            <div className="flex items-center space-x-3 w-full">
+              {/* Icone livraison (uniforme 20px) */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7 text-gray-700 flex-shrink-0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7h11v8H3z" />
+                <path d="M14 10h4l3 3v2h-7z" />
+                <circle cx="7" cy="17" r="2" />
+                <circle cx="17" cy="17" r="2" />
+              </svg>
               <div 
-                className="text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="flex-1 min-w-0 text-base font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors"
                 onClick={() => handleCopy(article.shippingMethod || 'Non renseigné', 'Transporteur copié !')}
                 title="Cliquer pour copier"
               >
@@ -488,7 +491,8 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
 
 

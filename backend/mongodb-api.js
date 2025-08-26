@@ -64,6 +64,10 @@ async function createCollectionsAndIndexes() {
     await statusCollection.createIndex({ order_id: 1, line_item_id: 1 }, { unique: true })
     await statusCollection.createIndex({ production_type: 1 })
     await statusCollection.createIndex({ status: 1 })
+
+    // Collection des images produits pour éviter les problèmes CORS
+    const imagesCollection = db.collection('product_images')
+    await imagesCollection.createIndex({ product_id: 1 }, { unique: true })
     
     console.log('✅ Collections et index créés')
   } catch (error) {
@@ -650,40 +654,26 @@ async function syncOrdersToDatabase(woocommerceOrders) {
     errors: []
   }
   
-  // Récupérer les IDs des commandes déjà existantes
-  const ordersCollection = db.collection('orders_sync')
-  const existingOrderIds = await ordersCollection.distinct('order_id')
+  addSyncLog(`🔄 Traitement de ${woocommerceOrders.length} commandes (création/mise à jour)...`, 'info')
   
-  addSyncLog(`📊 ${existingOrderIds.length} commandes déjà existantes en BDD`, 'info')
-  
-  // Filtrer pour ne traiter que les nouvelles commandes
-  const newOrders = woocommerceOrders.filter(order => !existingOrderIds.includes(order.id))
-  const existingOrders = woocommerceOrders.filter(order => existingOrderIds.includes(order.id))
-  
-  if (newOrders.length === 0) {
-    addSyncLog('ℹ️ Aucune nouvelle commande à traiter', 'info')
-    return syncResults
-  }
-  
-  addSyncLog(`🔄 Traitement de ${newOrders.length} nouvelles commandes...`, 'info')
-  
-  // Traiter seulement les nouvelles commandes
-  for (const order of newOrders) {
+  // Traiter toutes les commandes en upsert
+  for (const order of woocommerceOrders) {
     try {
-        addSyncLog(`✨ Création de la nouvelle commande #${order.number}`, 'success')
-        const orderResult = await syncOrderToDatabase(order)
-        if (orderResult.created) {
-          syncResults.ordersCreated++
-        }
-        
-        // Nouveaux articles - création complète
-        for (const item of order.line_items || []) {
-          const itemResult = await syncOrderItem(order.id, item)
-          if (itemResult.created) {
-            syncResults.itemsCreated++
-          
-          // Dispatcher automatiquement l'article vers la production
+      const orderResult = await syncOrderToDatabase(order)
+      if (orderResult.created) {
+        syncResults.ordersCreated++
+      } else if (orderResult.updated) {
+        syncResults.ordersUpdated++
+      }
+
+      for (const item of order.line_items || []) {
+        const itemResult = await syncOrderItem(order.id, item)
+        if (itemResult.created) {
+          syncResults.itemsCreated++
+          // Dispatcher automatiquement uniquement les nouveaux articles
           await dispatchItemToProduction(order.id, item.id, item.name)
+        } else if (itemResult.updated) {
+          syncResults.itemsUpdated++
         }
       }
     } catch (error) {
@@ -695,7 +685,7 @@ async function syncOrdersToDatabase(woocommerceOrders) {
     }
   }
   
-  addSyncLog(`📊 Résultats: ${syncResults.ordersCreated} créées, ${syncResults.itemsCreated} articles créés`, 'info')
+  addSyncLog(`📊 Résultats: ${syncResults.ordersCreated} commandes créées, ${syncResults.ordersUpdated} mises à jour, ${syncResults.itemsCreated} articles créés, ${syncResults.itemsUpdated} mis à jour`, 'info')
   
   // Dispatcher automatiquement les articles existants qui n'ont pas de statut de production
   if (syncResults.itemsCreated > 0) {
@@ -803,32 +793,35 @@ async function dispatchExistingItemsToProduction() {
 async function syncOrderToDatabase(order) {
   const ordersCollection = db.collection('orders_sync')
   
-  // Créer la nouvelle commande
-    const orderData = {
-      order_id: order.id,
+  // Upsert commande
+  const now = new Date()
+  const update = {
+    $set: {
       order_number: order.number,
       order_date: new Date(order.date_created),
-      customer_name: order.billing?.first_name + ' ' + order.billing?.last_name,
-      customer_email: order.billing?.email,
-      customer_phone: order.billing?.phone,
-      customer_address: `${order.billing?.address_1}, ${order.billing?.postcode} ${order.billing?.city}`,
+      customer_name: `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim(),
+      customer_email: order.billing?.email || null,
+      customer_phone: order.billing?.phone || null,
+      customer_address: `${order.billing?.address_1 || ''}, ${order.billing?.postcode || ''} ${order.billing?.city || ''}`.trim(),
       customer_note: order.customer_note || '',
       status: order.status,
       total: parseFloat(order.total) || 0,
-      created_at: new Date(),
-      updated_at: new Date()
+      updated_at: now
+    },
+    $setOnInsert: {
+      order_id: order.id,
+      created_at: now
     }
-    
-    const result = await ordersCollection.insertOne(orderData)
-    
-    return {
-      created: result.insertedCount > 0,
-      updated: false
   }
+  const result = await ordersCollection.updateOne({ order_id: order.id }, update, { upsert: true })
+  const created = result.upsertedCount === 1
+  const updated = !created && result.matchedCount === 1 && result.modifiedCount > 0
+  return { created, updated }
 }
 
 async function syncOrderItem(orderId, item) {
   const itemsCollection = db.collection('order_items')
+  const imagesCollection = db.collection('product_images')
   
   // Récupérer le permalink et l'image depuis WooCommerce via notre API
   let permalink = null
@@ -858,30 +851,80 @@ async function syncOrderItem(orderId, item) {
   } catch (error) {
     console.warn(`Erreur lors de la récupération des données pour le produit ${item.product_id}:`, error.message)
   }
+
+  // Télécharger et stocker l'image en base pour un accès sans CORS
+  if (imageUrl && item.product_id) {
+    try {
+      const imgResp = await fetch(imageUrl)
+      if (imgResp.ok) {
+        const contentType = imgResp.headers.get('content-type') || 'image/jpeg'
+        const arrayBuffer = await imgResp.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        await imagesCollection.updateOne(
+          { product_id: parseInt(item.product_id) },
+          {
+            $set: {
+              product_id: parseInt(item.product_id),
+              content_type: contentType,
+              data: buffer,
+              updated_at: new Date()
+            },
+            $setOnInsert: { created_at: new Date() }
+          },
+          { upsert: true }
+        )
+      }
+    } catch (e) {
+      console.warn(`Impossible de stocker l'image du produit ${item.product_id}: ${e.message}`)
+    }
+  }
   
-  // Créer le nouvel article
-    const itemData = {
-      order_id: orderId,
-      line_item_id: item.id,
+  // Upsert article
+  const now = new Date()
+  const update = {
+    $set: {
       product_name: item.name,
       product_id: item.product_id,
       variation_id: item.variation_id,
       quantity: item.quantity,
       price: parseFloat(item.price) || 0,
-      permalink: permalink, // Stocker le vrai permalink
-      image_url: imageUrl, // Stocker l'URL de l'image
+      permalink: permalink,
+      image_url: imageUrl,
       meta_data: item.meta_data || [],
-      created_at: new Date(),
-      updated_at: new Date()
+      updated_at: now
+    },
+    $setOnInsert: {
+      order_id: orderId,
+      line_item_id: item.id,
+      created_at: now
     }
-    
-    const result = await itemsCollection.insertOne(itemData)
-    
-    return {
-      created: result.insertedCount > 0,
-      updated: false
   }
+  const result = await itemsCollection.updateOne({ order_id: orderId, line_item_id: item.id }, update, { upsert: true })
+  const created = result.upsertedCount === 1
+  const updated = !created && result.matchedCount === 1 && result.modifiedCount > 0
+  return { created, updated }
 }
+
+// Endpoint pour servir les images stockées (évite les CORS)
+app.get('/api/images/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params
+    const imagesCollection = db.collection('product_images')
+    const doc = await imagesCollection.findOne({ product_id: parseInt(productId) })
+
+    if (!doc || !doc.data) {
+      return res.status(404).json({ error: 'Image non trouvée' })
+    }
+
+    res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+    return res.end(doc.data.buffer)
+  } catch (error) {
+    console.error('Erreur GET /api/images/:productId:', error)
+    return res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
 
 // Routes existantes pour la compatibilité
 app.get('/api/production-status', async (req, res) => {
