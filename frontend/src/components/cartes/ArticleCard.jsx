@@ -235,6 +235,18 @@ const ArticleCard = React.memo(({
         </div>
       </div>
 
+      {/* Date de commande en bas à gauche de la carte entière */}
+      <div className="absolute bottom-0 left-0 p-3 z-10">
+        <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium">
+          <span className="bg-gray-100 px-2 py-1 rounded-md">
+            {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
+          </span>
+          <span className="bg-gray-100 px-2 py-1 rounded-md">
+            {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
+          </span>
+        </div>
+      </div>
+
       {/* Overlay client affiché instantanément sans transition */}
       {isOverlayOpen && (
         <div 
