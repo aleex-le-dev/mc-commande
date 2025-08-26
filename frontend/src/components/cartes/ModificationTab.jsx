@@ -70,7 +70,7 @@ const ModificationTab = () => {
                   id="orderNumber"
                   value={searchOrderNumber}
                   onChange={(e) => setSearchOrderNumber(e.target.value)}
-                  placeholder="12345"
+                  placeholder="390019"
                   className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]"
                 />
               </div>

@@ -394,6 +394,54 @@ app.get('/api/orders/search/:orderNumber', async (req, res) => {
   }
 })
 
+// PUT /api/orders/:orderId/status - Mettre à jour le statut d'une commande
+app.put('/api/orders/:orderId/status', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const { status: newStatus } = req.body
+    
+    if (!newStatus) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Statut requis' 
+      })
+    }
+    
+    // Mettre à jour le statut dans la collection production_status
+    const statusCollection = db.collection('production_status')
+    const result = await statusCollection.updateMany(
+      { order_id: parseInt(orderId) },
+      { 
+        $set: { 
+          status: newStatus,
+          updated_at: new Date()
+        } 
+      }
+    )
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Aucune commande trouvée avec cet ID' 
+      })
+    }
+    
+    console.log(`✅ Statut mis à jour pour la commande ${orderId}: ${newStatus}`)
+    
+    res.json({ 
+      success: true, 
+      message: `Statut mis à jour pour ${result.modifiedCount} article(s)`,
+      orderId: parseInt(orderId),
+      newStatus,
+      modifiedCount: result.modifiedCount
+    })
+    
+  } catch (error) {
+    console.error('Erreur PUT /orders/:orderId/status:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
 // GET /api/orders - Récupérer toutes les commandes avec articles et statuts
 app.get('/api/orders', async (req, res) => {
   try {

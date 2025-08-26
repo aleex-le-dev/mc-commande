@@ -247,7 +247,7 @@ export const testSync = async () => {
 // Récupérer une commande par numéro
 export const getOrderByNumber = async (orderNumber) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderNumber}`)
+    const response = await fetch(`${API_BASE_URL}/orders/search/${orderNumber}`)
     if (!response.ok) {
       if (response.status === 404) {
         return null // Commande non trouvée
