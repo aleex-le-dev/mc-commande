@@ -171,10 +171,33 @@ class ImageService {
       // Créer une image par défaut stylée au lieu de convertir
       const defaultImage = this.createStyledDefaultImageFromUrl(imageUrl)
       this.proxyCache.set(imageUrl, defaultImage)
+      
+      // Sauvegarder en base de données pour la prochaine fois
+      const productId = this.extractProductIdFromUrl(imageUrl)
+      if (productId) {
+        await this.saveToLocalDB(productId, imageUrl, defaultImage)
+      }
+      
       return defaultImage
     } catch (error) {
       console.warn('Erreur lors de l\'optimisation de l\'URL:', error)
       return this.getDefaultImage()
+    }
+  }
+
+  /**
+   * Extrait un ID de produit d'une URL d'image
+   */
+  extractProductIdFromUrl(imageUrl) {
+    try {
+      // Essayer d'extraire un ID depuis l'URL
+      const urlParts = imageUrl.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+      // Chercher un pattern d'ID dans le nom de fichier
+      const idMatch = fileName.match(/(\d+)/)
+      return idMatch ? idMatch[1] : null
+    } catch (error) {
+      return null
     }
   }
 

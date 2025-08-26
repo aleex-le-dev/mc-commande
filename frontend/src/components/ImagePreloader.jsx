@@ -26,7 +26,7 @@ const ImagePreloader = ({ articles, onPreloadComplete }) => {
     const preloadPromises = articlesList.map(async (article, index) => {
       try {
         if (article.image_url) {
-          // URL directe disponible
+          // URL directe disponible - générer une image par défaut stylée
           await imageService.getImageFromUrl(article.image_url)
         } else if (article.product_id) {
           // Essayer de récupérer depuis WordPress et sauvegarder
