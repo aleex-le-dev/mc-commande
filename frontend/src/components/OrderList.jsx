@@ -224,15 +224,19 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
     onOverlayOpen && onOverlayOpen()
   }, [onOverlayOpen])
 
+  // Mémoriser l'image URL pour éviter les re-renders
+  const memoizedImageUrl = useMemo(() => article.image_url, [article.image_url])
+  const memoizedProductId = useMemo(() => article.product_id, [article.product_id])
+
   useEffect(() => {
     // Utiliser l'image stockée en base de données si disponible
-    if (article.image_url) {
-      setImageUrl(article.image_url)
-    } else if (article.product_id) {
+    if (memoizedImageUrl) {
+      setImageUrl(memoizedImageUrl)
+    } else if (memoizedProductId) {
       // Sinon, essayer de récupérer l'image depuis WooCommerce
-      fetchCardImage(article.product_id)
+      fetchCardImage(memoizedProductId)
     }
-  }, [article.image_url, article.product_id])
+  }, [memoizedImageUrl, memoizedProductId])
 
   const fetchCardImage = async (productId) => {
     setIsImageLoading(true)
@@ -734,7 +738,13 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
             const logs = await getSyncLogs()
             // Prendre seulement le dernier log au lieu de tous
             if (logs && logs.log) {
-              setSyncLogs([logs.log])
+              setSyncLogs(prev => {
+                // Éviter les mises à jour si le log est identique
+                if (prev.length > 0 && prev[0]?.message === logs.log.message) {
+                  return prev
+                }
+                return [logs.log]
+              })
             }
           } catch (error) {
             console.warn('Erreur lors de la récupération des logs:', error)
@@ -749,7 +759,13 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         // Récupérer le dernier log final
         const finalLogs = await getSyncLogs()
         if (finalLogs && finalLogs.log) {
-          setSyncLogs([finalLogs.log])
+          setSyncLogs(prev => {
+            // Éviter les mises à jour si le log est identique
+            if (prev.length > 0 && prev[0]?.message === finalLogs.log.message) {
+              return prev
+            }
+            return [finalLogs.log]
+          })
         }
         
         // Étape 6: Afficher le résultat dans le popup de progression
@@ -870,6 +886,62 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       )
     })
   }, [allArticles, selectedType, term])
+
+  // Mémoriser la grille pour éviter les recréations
+  const memoizedGrid = useMemo(() => {
+    if (filteredArticles.length === 0) return null
+    
+    return (
+      <Grid
+        columnCount={Math.min(4, Math.ceil(window.innerWidth / 400))}
+        columnWidth={400}
+        height={800}
+        rowCount={Math.ceil(filteredArticles.length / Math.min(4, Math.ceil(window.innerWidth / 400)))}
+        rowHeight={450}
+        width={window.innerWidth}
+        itemData={{
+          articles: filteredArticles,
+          getArticleSize: memoizedGetArticleSize,
+          getArticleColor: memoizedGetArticleColor,
+          getArticleOptions: memoizedGetArticleOptions,
+          handleOverlayOpen,
+          openOverlayCardId,
+          searchTerm
+        }}
+      >
+        {({ columnIndex, rowIndex, style, data }) => {
+          const columnCount = Math.min(4, Math.ceil(window.innerWidth / 400))
+          const index = rowIndex * columnCount + columnIndex
+          const article = data.articles[index]
+          if (!article) return null
+          
+          const cardId = `${article.orderId}-${article.line_item_id}`
+          const isHighlighted = data.searchTerm && (
+            `${article.orderNumber}`.toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+            (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
+            (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
+          )
+          
+          return (
+            <div style={style} className="p-3">
+              <ArticleCard 
+                key={cardId}
+                article={article}
+                index={index}
+                getArticleSize={data.getArticleSize}
+                getArticleColor={data.getArticleColor}
+                getArticleOptions={data.getArticleOptions}
+                onOverlayOpen={() => data.handleOverlayOpen(cardId)}
+                isOverlayOpen={data.openOverlayCardId === cardId}
+                isHighlighted={isHighlighted}
+                searchTerm={data.searchTerm}
+              />
+            </div>
+          )
+        }}
+      </Grid>
+    )
+  }, [filteredArticles, memoizedGetArticleSize, memoizedGetArticleColor, memoizedGetArticleOptions, handleOverlayOpen, openOverlayCardId, searchTerm])
   
 
 
@@ -971,54 +1043,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       {/* Affichage des articles en cartes avec virtualisation */}
       {filteredArticles.length > 0 && (
         <div className="h-[800px] w-full">
-          <Grid
-            columnCount={Math.min(4, Math.ceil(window.innerWidth / 400))}
-            columnWidth={400}
-            height={800}
-            rowCount={Math.ceil(filteredArticles.length / Math.min(4, Math.ceil(window.innerWidth / 400)))}
-            rowHeight={450}
-            width={window.innerWidth}
-            itemData={{
-              articles: filteredArticles,
-              getArticleSize: memoizedGetArticleSize,
-              getArticleColor: memoizedGetArticleColor,
-              getArticleOptions: memoizedGetArticleOptions,
-              handleOverlayOpen,
-              openOverlayCardId,
-              searchTerm
-            }}
-          >
-            {({ columnIndex, rowIndex, style, data }) => {
-              const columnCount = Math.min(4, Math.ceil(window.innerWidth / 400))
-              const index = rowIndex * columnCount + columnIndex
-              const article = data.articles[index]
-              if (!article) return null
-              
-              const cardId = `${article.orderId}-${article.line_item_id}`
-              const isHighlighted = data.searchTerm && (
-                `${article.orderNumber}`.toLowerCase().includes(data.searchTerm.toLowerCase()) ||
-                (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
-                (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
-              )
-              
-              return (
-                <div style={style} className="p-3">
-                  <ArticleCard 
-                    key={cardId}
-                    article={article}
-                    index={index}
-                    getArticleSize={data.getArticleSize}
-                    getArticleColor={data.getArticleColor}
-                    getArticleOptions={data.getArticleOptions}
-                    onOverlayOpen={() => data.handleOverlayOpen(cardId)}
-                    isOverlayOpen={data.openOverlayCardId === cardId}
-                    isHighlighted={isHighlighted}
-                    searchTerm={data.searchTerm}
-                  />
-                </div>
-              )
-            }}
-          </Grid>
+          {memoizedGrid}
         </div>
       )}
       
