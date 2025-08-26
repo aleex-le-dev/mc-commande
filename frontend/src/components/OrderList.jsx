@@ -1,7 +1,6 @@
 import React from 'react'
 import LoadingSpinner from './LoadingSpinner'
 import { 
-  CardStyles, 
   SyncProgress, 
   OrderHeader, 
   SimpleFlexGrid,
@@ -55,9 +54,6 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   return (
     <div className="space-y-6">
-      {/* Injection des styles CSS pour les cartes */}
-      <CardStyles />
-      
       {/* Popup de progression de synchronisation */}
       <SyncProgress syncProgress={syncProgress} syncLogs={syncLogs} />
 

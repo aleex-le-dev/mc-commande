@@ -1,20 +1,24 @@
-// Export des composants cartes
-export { default as ArticleCard } from './ArticleCard'
-export { default as ProductImage } from './ProductImage'
-export { default as NoteExpander } from './NoteExpander'
-export { default as SyncProgress } from './SyncProgress'
-export { default as OrderHeader } from './OrderHeader'
-export { default as OrderGrid } from './OrderGrid'
-export { default as FlexOrderGrid } from './FlexOrderGrid'
-export { default as SimpleFlexGrid } from './SimpleFlexGrid'
-export { default as CardStyles } from './CardStyles'
+// Composants de grille
+export { default as OrderGrid } from './OrderGrid.jsx'
+export { default as FlexOrderGrid } from './FlexOrderGrid.jsx'
+export { default as SimpleFlexGrid } from './SimpleFlexGrid.jsx'
 
-// Export des hooks
-export { useOrderData } from './hooks/useOrderData'
-export { useSyncProgress } from './hooks/useSyncProgress'
-export { useOrderFilters } from './hooks/useOrderFilters'
+// Composants d'interface
+export { default as ArticleCard } from './ArticleCard.jsx'
+export { default as OrderHeader } from './OrderHeader.jsx'
+export { default as SyncProgress } from './SyncProgress.jsx'
+
+// Composants d'onglets Admin
+export { default as StatusTab } from './StatusTab.jsx'
+export { default as ModificationTab } from './ModificationTab.jsx'
+export { default as TricoteusesTab } from './TricoteusesTab.jsx'
+
+// Hooks personnalisés
+export { useOrderData } from './hooks/useOrderData.js'
+export { useSyncProgress } from './hooks/useSyncProgress.js'
+export { useOrderFilters } from './hooks/useOrderFilters.js'
 
 // Documentation disponible :
-// - README.md : Vue d'ensemble des composants
-// - GRID_OPTIONS.md : Comparaison des options de grille
-// - GRID_DEMO.md : Démonstration visuelle et exemples
+// - README.md : Structure et organisation du dossier cartes
+// - GRID_OPTIONS.md : Options de grille disponibles
+// - GRID_DEMO.md : Démonstrations visuelles des grilles

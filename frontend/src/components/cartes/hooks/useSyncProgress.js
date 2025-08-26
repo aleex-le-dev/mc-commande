@@ -6,8 +6,8 @@ export const useSyncProgress = (performSync) => {
   const [syncProgress, setSyncProgress] = useState({ isRunning: false, progress: 0, message: '' })
   const [syncLogs, setSyncLogs] = useState([])
 
-  // Fonction pour effectuer la synchronisation automatique
-  const performAutoSync = useCallback(async () => {
+  // Fonction pour effectuer la synchronisation manuelle
+  const performManualSync = useCallback(async () => {
     try {
       // Afficher le popup de progression
       setSyncProgress({ 
@@ -52,7 +52,7 @@ export const useSyncProgress = (performSync) => {
         } catch (error) {
           // Erreur silencieuse lors de la récupération des logs
         }
-      }, 200) // Plus rapide pour voir les logs en temps réel
+      }, 1000) // Ralenti à 1 seconde pour éviter les appels en boucle
       
       const syncResult = await performSync()
       
@@ -107,14 +107,25 @@ export const useSyncProgress = (performSync) => {
     }
   }, [performSync])
 
-  // Effectuer la synchronisation automatique au chargement
+  // Récupérer les logs initiaux une seule fois au chargement
   useEffect(() => {
-    performAutoSync()
-  }, [performAutoSync])
+    const fetchInitialLogs = async () => {
+      try {
+        const logs = await getSyncLogs()
+        if (logs && logs.log) {
+          setSyncLogs([logs.log])
+        }
+      } catch (error) {
+        // Erreur silencieuse lors de la récupération initiale
+      }
+    }
+    
+    fetchInitialLogs()
+  }, []) // Dépendances vides = exécution unique au chargement
 
   return {
     syncProgress,
     syncLogs,
-    performAutoSync
+    performManualSync
   }
 }

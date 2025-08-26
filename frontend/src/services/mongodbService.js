@@ -215,3 +215,70 @@ export const clearSyncLogs = async () => {
     return false
   }
 }
+
+// Test de connexion à la base de données
+export const testConnection = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/test/connection`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Test de synchronisation
+export const testSync = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/test/sync`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Récupérer une commande par numéro
+export const getOrderByNumber = async (orderNumber) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderNumber}`)
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null // Commande non trouvée
+      }
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.order
+  } catch (error) {
+    throw new Error(`Erreur lors de la récupération: ${error.message}`)
+  }
+}
+
+// Mettre à jour le statut d'une commande
+export const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    throw new Error(`Erreur lors de la mise à jour: ${error.message}`)
+  }
+}
