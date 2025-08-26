@@ -793,36 +793,73 @@ async function dispatchExistingItemsToProduction() {
 async function syncOrderToDatabase(order) {
   const ordersCollection = db.collection('orders_sync')
   
-  // Upsert commande
+  // Insert-only: ne pas modifier une commande existante
   const now = new Date()
-  const update = {
-    $set: {
-      order_number: order.number,
-      order_date: new Date(order.date_created),
-      customer_name: `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim(),
-      customer_email: order.billing?.email || null,
-      customer_phone: order.billing?.phone || null,
-      customer_address: `${order.billing?.address_1 || ''}, ${order.billing?.postcode || ''} ${order.billing?.city || ''}`.trim(),
-      customer_note: order.customer_note || '',
-      status: order.status,
-      total: parseFloat(order.total) || 0,
-      updated_at: now
-    },
-    $setOnInsert: {
-      order_id: order.id,
-      created_at: now
-    }
+  // Extraire les infos transporteur depuis WooCommerce
+  const firstShippingLine = Array.isArray(order.shipping_lines) && order.shipping_lines.length > 0 
+    ? order.shipping_lines[0] 
+    : null
+  const shippingMethodId = firstShippingLine?.method_id || null
+  const shippingMethodTitle = firstShippingLine?.method_title || null
+  // Déterminer le transporteur (DHL/UPS/Colissimo, etc.) en inspectant id, title et meta
+  let shippingCarrier = null
+  const lowerTitle = (shippingMethodTitle || '').toLowerCase()
+  const lowerId = (shippingMethodId || '').toLowerCase()
+  const metaValues = (firstShippingLine?.meta_data || [])
+    .map(m => `${m?.key || ''} ${m?.value || ''}`.toLowerCase())
+    .join(' ')
+  if (/(dhl)/.test(lowerTitle) || /(dhl)/.test(lowerId) || /(dhl)/.test(metaValues)) {
+    shippingCarrier = 'DHL'
+  } else if (/(ups)/.test(lowerTitle) || /(ups)/.test(lowerId) || /(ups)/.test(metaValues)) {
+    shippingCarrier = 'UPS'
+  } else if (/(colissimo|la poste)/.test(lowerTitle) || /(colissimo|laposte)/.test(lowerId) || /(colissimo|la poste)/.test(metaValues)) {
+    shippingCarrier = 'Colissimo'
   }
-  const result = await ordersCollection.updateOne({ order_id: order.id }, update, { upsert: true })
-  const created = result.upsertedCount === 1
-  const updated = !created && result.matchedCount === 1 && result.modifiedCount > 0
-  return { created, updated }
+  // Si livraison gratuite, déduire UPS en France sinon DHL
+  const isFreeShipping = /(free|gratuit)/.test(lowerTitle) || /(free|gratuit)/.test(lowerId)
+  if (!shippingCarrier && isFreeShipping) {
+    const country = (order.shipping?.country || order.billing?.country || '').toUpperCase()
+    shippingCarrier = country === 'FR' ? 'UPS' : 'DHL'
+  }
+  const resolvedShippingTitle = shippingMethodTitle || shippingMethodId || null
+  // Vérifier si la commande existe déjà
+  const existing = await ordersCollection.findOne({ order_id: order.id })
+  if (existing) {
+    return { created: false, updated: false }
+  }
+  await ordersCollection.insertOne({
+    order_id: order.id,
+    order_number: order.number,
+    order_date: new Date(order.date_created),
+    customer_name: `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim(),
+    customer_email: order.billing?.email || null,
+    customer_phone: order.billing?.phone || null,
+    customer_address: `${order.billing?.address_1 || ''}, ${order.billing?.postcode || ''} ${order.billing?.city || ''}`.trim(),
+    customer_country: (order.shipping?.country || order.billing?.country || null),
+    customer_note: order.customer_note || '',
+    status: order.status,
+    total: parseFloat(order.total) || 0,
+    // Champs transporteur pour l'affichage frontend
+    shipping_method: shippingMethodId,
+    shipping_title: resolvedShippingTitle,
+    shipping_method_title: shippingMethodTitle,
+    shipping_carrier: shippingCarrier,
+    created_at: now,
+    updated_at: now
+  })
+  return { created: true, updated: false }
 }
 
 async function syncOrderItem(orderId, item) {
   const itemsCollection = db.collection('order_items')
   const imagesCollection = db.collection('product_images')
   
+  // Insert-only: ne pas modifier un article existant
+  const existing = await itemsCollection.findOne({ order_id: orderId, line_item_id: item.id })
+  if (existing) {
+    return { created: false, updated: false }
+  }
+
   // Récupérer le permalink et l'image depuis WooCommerce via notre API
   let permalink = null
   let imageUrl = null

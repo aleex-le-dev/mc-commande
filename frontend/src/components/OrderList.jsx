@@ -15,6 +15,9 @@ import LoadingSpinner from './LoadingSpinner'
 
 // Styles CSS personnalisés pour les cartes modernes
 const cardStyles = `
+  :root {
+    --accent-pink: 236, 72, 153; /* RGB du rose réutilisable */
+  }
   @keyframes fadeInUp {
     from {
       opacity: 0;
@@ -25,6 +28,13 @@ const cardStyles = `
       transform: translateY(0);
     }
   }
+  @keyframes pinkBlink {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-pink), 0.0); }
+    50% { box-shadow: 0 0 0 4px rgba(var(--accent-pink), 0.35); }
+  }
+  .animate-pink-blink { animation: pinkBlink 1s ease-in-out infinite; }
+  .border-accent { border-color: rgba(var(--accent-pink), 0.75); }
+  .highlight-accent { background-color: rgba(var(--accent-pink), 0.25); color: rgb(var(--accent-pink)); border-radius: 0.25rem; padding: 0 0.15rem; }
   
   .line-clamp-2 {
     display: -webkit-box;
@@ -193,7 +203,7 @@ const NoteExpander = ({ note }) => {
 }
 
 // Composant carte d'article moderne
-const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen }) => {
+const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArticleOptions, onOverlayOpen, isOverlayOpen, isHighlighted, searchTerm }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [copiedText, setCopiedText] = useState('')
@@ -276,12 +286,41 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
     return <span>{address}</span>
   }
 
+  // Fonction simple de surlignage avec logs de debug
+  const highlightText = (text, searchTerm) => {
+    console.log('🔍 highlightText appelé avec:', { text, searchTerm })
+    if (!searchTerm || !text) {
+      console.log('❌ Pas de terme ou texte, retour:', text)
+      return text
+    }
+    
+    const term = searchTerm.toLowerCase().trim()
+    const source = text.toLowerCase()
+    console.log('🔍 Comparaison:', { term, source })
+    
+    if (source.includes(term)) {
+      console.log('✅ Terme trouvé, surlignage appliqué')
+      const parts = text.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+      return parts.map((part, i) => 
+        part.toLowerCase() === term ? 
+          <span key={i} className="highlight-accent">{part}</span> : 
+          <span key={i}>{part}</span>
+      )
+    }
+    
+    console.log('❌ Terme non trouvé')
+    return text
+  }
+
   return (
     <div 
-      className="group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px]"
+      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] ${isHighlighted ? 'border-2 border-accent animate-pink-blink' : ''}`}
       style={{ 
-        animationDelay: `${index * 150}ms`,
-        animation: 'fadeInUp 0.6s ease-out forwards'
+        animationName: 'fadeInUp',
+        animationDuration: '0.6s',
+        animationTimingFunction: 'ease-out',
+        animationFillMode: 'forwards',
+        animationDelay: `${index * 150}ms`
       }}
     >
       {/* Image de fond avec overlay moderne */}
@@ -327,7 +366,7 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
         
                {/* Numéro de commande - bien visible en haut à gauche */}
-       <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/80 backdrop-blur-sm text-white text-lg font-bold z-20">
+       <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-20">
          #{article.orderNumber}
        </div>
         
@@ -369,20 +408,20 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
           {/* Informations principales pour tricoteuses */}
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-              {article.product_name}
+              {highlightText(article.product_name, searchTerm)}
             </h3>
-            <div className="grid grid-cols-3 gap-2 text-sm text-gray-700">
+            <div className="grid grid-cols-3 gap-3 text-base text-gray-700">
               <div className="text-center">
-                <div className="font-semibold">{article.quantity}</div>
-                <div className="text-xs text-gray-500">Quantité</div>
+                <div className="text-sm text-gray-500">Quantité</div>
+                <div className="text-lg font-semibold">{article.quantity}</div>
               </div>
               <div className="text-center">
-                <div className="font-semibold">{getArticleSize(article.meta_data)}</div>
-                <div className="text-xs text-gray-500">Taille</div>
+                <div className="text-sm text-gray-500">Taille</div>
+                <div className="text-lg font-semibold">{getArticleSize(article.meta_data)}</div>
               </div>
               <div className="text-center">
-                <div className="font-semibold">{getArticleColor(article.meta_data) !== 'Non spécifiée' ? getArticleColor(article.meta_data) : 'N/A'}</div>
-                <div className="text-xs text-gray-500">Couleur</div>
+                <div className="text-sm text-gray-500">Couleur</div>
+                <div className="text-lg font-semibold">{getArticleColor(article.meta_data) !== 'Non spécifiée' ? getArticleColor(article.meta_data) : 'N/A'}</div>
               </div>
             </div>
           </div>
@@ -506,7 +545,15 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
                 onClick={() => handleCopy(article.shippingMethod || 'Non renseigné', 'Transporteur copié !')}
                 title="Cliquer pour copier"
               >
-                {article.shippingMethod || 'Non renseigné'}
+                {(() => {
+                  const title = (article.shippingMethod || '').toLowerCase()
+                  const isFree = title.includes('gratuit') || title.includes('free')
+                  if (isFree) {
+                    const carrier = article.shippingCarrier || ((article.customerCountry || '').toUpperCase() === 'FR' ? 'UPS' : 'DHL')
+                    return `Livraison gratuite (${carrier})`
+                  }
+                  return article.shippingMethod || 'Non renseigné'
+                })()}
               </div>
             </div>
           </div>
@@ -525,6 +572,8 @@ const ArticleCard = ({ article, index, getArticleSize, getArticleColor, getArtic
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
   const [selectedType, setSelectedType] = useState(propSelectedType || 'all')
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [highlightTerm, setHighlightTerm] = useState('')
 
   const [syncProgress, setSyncProgress] = useState({ isRunning: false, progress: 0, message: '' })
   const [syncLogs, setSyncLogs] = useState([])
@@ -796,7 +845,9 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
           customerPhone: order.customer_phone,
           customerAddress: order.customer_address,
           customerNote: order.customer_note,
-          shippingMethod: order.shipping_method || order.shipping_title || order.shipping_method_title || 'Livraison gratuite',
+          shippingMethod: order.shipping_title || order.shipping_method_title || order.shipping_method || 'Livraison gratuite',
+          shippingCarrier: order.shipping_carrier || null,
+          customerCountry: order.customer_country || null,
           permalink: item.permalink, // Utiliser le permalink stocké en BDD
           productionType: productionType,
           status: currentStatus,
@@ -810,9 +861,16 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   // Filtrer les articles
   const allArticles = prepareArticles()
+  const term = searchTerm.toLowerCase().trim()
   const filteredArticles = allArticles.filter(article => {
     const typeMatch = selectedType === 'all' || article.productionType === selectedType
-    return typeMatch
+    if (!typeMatch) return false
+    if (!term) return true
+    return (
+      `${article.orderNumber}`.toLowerCase().includes(term) ||
+      (article.customer || '').toLowerCase().includes(term) ||
+      (article.product_name || '').toLowerCase().includes(term)
+    )
   })
   
 
@@ -892,13 +950,24 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
 
 
-      {/* En-tête avec filtres */}
+      {/* En-tête avec titre et recherche */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-semibold text-gray-900">
-          {propSelectedType === 'couture' ? '🧵 Production Couture' : 
-           propSelectedType === 'maille' ? '🪡 Production Maille' : 
+          {propSelectedType === 'couture' ? '🧵 Couture' : 
+           propSelectedType === 'maille' ? '🪡 Maille' : 
            'Gestion de Production'} ({filteredArticles.length} articles)
         </h2>
+        <div className="w-full sm:w-80">
+          <form onSubmit={(e)=>{e.preventDefault(); setHighlightTerm(searchTerm)}}>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Rechercher une commande (n°, client, produit)"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </form>
+        </div>
       </div>
 
       {/* Affichage des articles en cartes */}
@@ -915,6 +984,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
               getArticleOptions={getArticleOptions}
               onOverlayOpen={() => handleOverlayOpen(cardId)}
               isOverlayOpen={openOverlayCardId === cardId}
+              isHighlighted={highlightTerm && (
+                `${article.orderNumber}`.toLowerCase().includes(highlightTerm.toLowerCase()) ||
+                (article.customer || '').toLowerCase().includes(highlightTerm.toLowerCase()) ||
+                (article.product_name || '').toLowerCase().includes(highlightTerm.toLowerCase())
+              )}
+              searchTerm={highlightTerm}
             />
           )
         })}
