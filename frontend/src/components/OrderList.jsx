@@ -66,7 +66,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
 
   const fetchProductImage = async (id) => {
     if (!id) {
-      console.warn('ProductImage: Pas d\'ID de produit fourni')
+      // Pas d'ID de produit fourni
       setHasError(true)
       setErrorDetails('Pas d\'ID')
       return
@@ -215,7 +215,7 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
       setCopiedText(label)
       setTimeout(() => setCopiedText(''), 2000)
     } catch (err) {
-      console.error('Erreur lors de la copie:', err)
+      // Erreur silencieuse lors de la copie
     }
   }, [])
 
@@ -296,20 +296,16 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
     return <span>{highlightText(address, searchTerm)}</span>
   }
 
-  // Fonction simple de surlignage avec logs de debug
+  // Fonction simple de surlignage
   const highlightText = (text, searchTerm) => {
-    console.log('🔍 highlightText appelé avec:', { text, searchTerm })
     if (!searchTerm || !text) {
-      console.log('❌ Pas de terme ou texte, retour:', text)
       return text
     }
     
     const term = searchTerm.toLowerCase().trim()
     const source = text.toLowerCase()
-    console.log('🔍 Comparaison:', { term, source })
     
     if (source.includes(term)) {
-      console.log('✅ Terme trouvé, surlignage appliqué')
       const parts = text.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
       return parts.map((part, i) => 
         part.toLowerCase() === term ? 
@@ -318,7 +314,6 @@ const ArticleCard = React.memo(({ article, index, getArticleSize, getArticleColo
       )
     }
     
-    console.log('❌ Terme non trouvé')
     return text
   }
 
@@ -747,7 +742,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
               })
             }
           } catch (error) {
-            console.warn('Erreur lors de la récupération des logs:', error)
+            // Erreur silencieuse lors de la récupération des logs
           }
         }, 200) // Plus rapide pour voir les logs en temps réel
         
@@ -796,8 +791,6 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         setTimeout(() => setSyncProgress({ isRunning: false, progress: 0, message: '' }), 3000)
         
       } catch (error) {
-        console.error('Erreur lors de la synchronisation automatique:', error)
-        
         // Afficher l'erreur dans le popup de progression
         setSyncProgress(prev => ({ 
           ...prev, 

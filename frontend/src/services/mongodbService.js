@@ -10,9 +10,9 @@ export const getProductionStatuses = async () => {
     }
     const data = await response.json()
     return data.statuses || []
-  } catch (error) {
-    console.error('Erreur lors de la récupération des statuts:', error)
-        return []
+    } catch (error) {
+    // Erreur silencieuse lors de la récupération des statuts
+    return []
   }
 }
 
@@ -39,7 +39,7 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
       const data = await response.json()
     return data
     } catch (error) {
-    console.error('Erreur lors de la mise à jour du statut:', error)
+    // Erreur silencieuse lors de la mise à jour du statut
     throw error
   }
 }
@@ -67,7 +67,7 @@ export const dispatchToProduction = async (orderId, lineItemId, productionType, 
       const data = await response.json()
     return data
     } catch (error) {
-    console.error('Erreur lors du dispatch vers la production:', error)
+    // Erreur silencieuse lors du dispatch vers la production
     throw error
   }
 }
@@ -91,7 +91,7 @@ export const syncOrders = async (woocommerceOrders = []) => {
     const data = await response.json()
     return data
     } catch (error) {
-    console.error('Erreur lors de la synchronisation des commandes:', error)
+    // Erreur silencieuse lors de la synchronisation des commandes
       throw error
     }
   }
@@ -106,7 +106,7 @@ export const getOrdersFromDatabase = async () => {
     const data = await response.json()
     return data.orders || []
   } catch (error) {
-    console.error('Erreur lors de la récupération des commandes:', error)
+    // Erreur silencieuse lors de la récupération des commandes
     return []
   }
 }
@@ -114,17 +114,14 @@ export const getOrdersFromDatabase = async () => {
 // Récupérer les commandes par type de production
 export const getOrdersByProductionType = async (productionType) => {
   try {
-    console.log(`🔍 Frontend: Récupération des commandes pour ${productionType}`)
     const response = await fetch(`${API_BASE_URL}/orders/production/${productionType}`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     const data = await response.json()
-    console.log(`🔍 Frontend: Données reçues pour ${productionType}:`, data)
-    console.log(`🔍 Frontend: Nombre d'orders:`, data.orders?.length || 0)
     return data.orders || []
   } catch (error) {
-    console.error('Erreur lors de la récupération des commandes par type:', error)
+    // Erreur silencieuse lors de la récupération des commandes
     return []
   }
 }
@@ -139,7 +136,7 @@ export const getProductionStats = async () => {
     const data = await response.json()
     return data.stats || {}
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques:', error)
+    // Erreur silencieuse lors de la récupération des statistiques
     return {}
   }
 }
@@ -154,7 +151,7 @@ export const getProductPermalink = async (productId) => {
     const data = await response.json()
     return data.permalink
   } catch (error) {
-    console.error('Erreur lors de la récupération du permalink:', error)
+    // Erreur silencieuse lors de la récupération du permalink
     return null
   }
 }
@@ -177,7 +174,7 @@ export const getProductPermalinksBatch = async (productIds) => {
       const data = await response.json()
     return data
   } catch (error) {
-    console.error('Erreur lors de la récupération des permalinks en lot:', error)
+    // Erreur silencieuse lors de la récupération des permalinks en lot
     return { results: [], errors: [] }
   }
 }
@@ -192,7 +189,7 @@ export const getSyncLogs = async () => {
     const data = await response.json()
     return data
     } catch (error) {
-    console.error('Erreur lors de la récupération des logs:', error)
+    // Erreur silencieuse lors de la récupération des logs
       return { log: null, hasLog: false }
     }
   }
@@ -214,7 +211,7 @@ export const clearSyncLogs = async () => {
       const data = await response.json()
     return data.success
     } catch (error) {
-    console.error('Erreur lors du vidage des logs:', error)
+    // Erreur silencieuse lors du vidage des logs
     return false
   }
 }
