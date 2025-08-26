@@ -21,7 +21,7 @@ function App() {
   const tabs = [
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' },
-    { id: 'parametres', label: 'Paramètres', icon: '⚙️' }
+    { id: 'parametres', label: 'Admin', icon: '👑' }
   ]
 
   const renderContent = () => {
@@ -62,7 +62,7 @@ function App() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         activeTab === tab.id
                           ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -81,7 +81,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'

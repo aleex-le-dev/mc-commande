@@ -9,7 +9,7 @@ const ParametresPanel = () => {
   // Onglets disponibles
   const tabs = [
     { id: 'status', label: 'Status & Tests', icon: '📊' },
-    { id: 'modification', label: 'Modification des Commandes', icon: '✏️' }
+    { id: 'modification', label: 'Modification des commandes', icon: '✏️' }
   ]
 
   // Onglet Status & Tests
@@ -353,7 +353,7 @@ const ParametresPanel = () => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Modification des Commandes</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Modification des commandes</h2>
             <p className="text-gray-600">
               Recherchez une commande par numéro et modifiez son type de production.
             </p>
@@ -368,13 +368,18 @@ const ParametresPanel = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Numéro de commande
                   </label>
-                  <input
-                    type="text"
-                    value={searchOrderNumber}
-                    onChange={(e) => setSearchOrderNumber(e.target.value)}
-                    placeholder="WC-123456"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-medium">#</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={searchOrderNumber}
+                      onChange={(e) => setSearchOrderNumber(e.target.value.replace(/\D/g, ''))}
+                      placeholder="389935"
+                      className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <button 
@@ -525,16 +530,6 @@ const ParametresPanel = () => {
               </div>
             )}
 
-            {/* Instructions */}
-            {!selectedOrder && (
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <div className="flex items-center">
-                  <span className="text-yellow-800 text-sm">
-                    💡 Saisissez un numéro de commande et cliquez sur "Rechercher" pour commencer.
-                  </span>
-                </div>
-              </div>
-            )}
             
             {selectedOrder && !selectedItem && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
