@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { testConnection, testSync, getProductionStats, getSyncLogs } from '../../services/mongodbService'
+import { testConnection, testSync, getProductionStats } from '../../services/mongodbService'
 
 const StatusTab = () => {
   const [status, setStatus] = useState('')
@@ -45,19 +45,6 @@ const StatusTab = () => {
     setIsLoading(false)
   }
 
-  const testSyncLogs = async () => {
-    setIsLoading(true)
-    try {
-      const result = await getSyncLogs()
-      setTestResults(prev => ({ ...prev, logs: { success: true, data: result } }))
-      setStatus('Logs de synchronisation récupérés avec succès')
-    } catch (error) {
-      setTestResults(prev => ({ ...prev, logs: { success: false, error: error.message } }))
-      setStatus('Erreur lors de la récupération des logs')
-    }
-    setIsLoading(false)
-  }
-
   const testAll = async () => {
     setIsLoading(true)
     setStatus('Tests en cours...')
@@ -66,7 +53,6 @@ const StatusTab = () => {
     await testWordPressConnection()
     await testDatabaseConnection()
     await testDatabaseStats()
-    await testSyncLogs()
     
     setStatus('Tous les tests terminés')
     setIsLoading(false)
@@ -114,13 +100,6 @@ const StatusTab = () => {
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
               >
                 {isLoading ? 'Test en cours...' : 'Statistiques DB'}
-              </button>
-              <button
-                onClick={testSyncLogs}
-                disabled={isLoading}
-                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Test en cours...' : 'Logs Sync'}
               </button>
               <button
                 onClick={testAll}
@@ -179,35 +158,20 @@ const StatusTab = () => {
                             <p className="font-semibold">📦 Articles: {testResults.stats.data.totalItems || 0}</p>
                             <p className="font-semibold">🏷️ Statuts: {testResults.stats.data.totalStatuses || 0}</p>
                           </div>
-                          <div>
-                            <p className="font-semibold">❌ Sans statut: {testResults.stats.data.itemsWithoutStatus || 0}</p>
-                          </div>
                         </div>
                         
-                        {/* Statistiques par type de production */}
+                        {/* Statistiques par type de production (filtrées) */}
                         {testResults.stats.data.statusesByType && testResults.stats.data.statusesByType.length > 0 && (
                           <div className="mt-3 pt-2 border-t border-green-200">
                             <p className="font-semibold text-xs text-green-600 mb-1">Par type de production:</p>
                             <div className="flex flex-wrap gap-2">
-                              {testResults.stats.data.statusesByType.map((type, index) => (
-                                <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                  {type._id}: {type.count}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Statistiques par statut */}
-                        {testResults.stats.data.statusesByStatus && testResults.stats.data.statusesByStatus.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-green-200">
-                            <p className="font-semibold text-xs text-green-600 mb-1">Par statut:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {testResults.stats.data.statusesByStatus.map((status, index) => (
-                                <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                  {status._id}: {status.count}
-                                </span>
-                              ))}
+                              {testResults.stats.data.statusesByType
+                                .filter(type => type._id && type._id !== 'pending')
+                                .map((type, index) => (
+                                  <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                    {type._id}: {type.count}
+                                  </span>
+                                ))}
                             </div>
                           </div>
                         )}
@@ -215,26 +179,6 @@ const StatusTab = () => {
                     )}
                     {!testResults.stats.success && (
                       <p className="text-sm text-red-700 mt-1">{testResults.stats.error}</p>
-                    )}
-                  </div>
-                )}
-                {testResults.logs && (
-                  <div className={`p-3 rounded-md ${testResults.logs.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Logs de Synchronisation</span>
-                      <span className={`text-sm ${testResults.logs.success ? 'text-green-800' : 'text-red-800'}`}>
-                        {testResults.logs.success ? '✅ Succès' : '❌ Échec'}
-                      </span>
-                    </div>
-                    {testResults.logs.success && testResults.logs.data && testResults.logs.data.log && (
-                      <div className="mt-2 text-sm text-green-700">
-                        <p>Dernier log: {testResults.logs.data.log.message}</p>
-                        <p>Type: {testResults.logs.data.log.type}</p>
-                        <p>Timestamp: {new Date(testResults.logs.data.log.timestamp).toLocaleString()}</p>
-                      </div>
-                    )}
-                    {!testResults.logs.success && (
-                      <p className="text-sm text-red-700 mt-1">{testResults.logs.error}</p>
                     )}
                   </div>
                 )}
