@@ -11,7 +11,8 @@ const StatusTab = () => {
     wordpressOrders: false,
     database: false,
     stats: false,
-    images: false
+    images: false,
+    joursFeries: false
   })
 
   const testWordPressConnection = async () => {
@@ -114,7 +115,7 @@ const StatusTab = () => {
           success: true, 
           data: imageResults,
           method: 'Affichage direct MongoDB',
-          performance: 'Ultra-rapide'
+          performance: 'Ultra-simple'
         } 
       }))
       setStatus('Test des images réussi - Approche ultra-simple')
@@ -129,6 +130,51 @@ const StatusTab = () => {
       setStatus('Erreur lors du test des images')
     }
     setLoadingStates(prev => ({ ...prev, images: false }))
+  }
+
+  const testJoursFeriesAPI = async () => {
+    setLoadingStates(prev => ({ ...prev, joursFeries: true }))
+    try {
+      // Test direct de l'API gouvernementale des jours fériés
+      const response = await fetch('https://etalab.github.io/jours-feries-france-data/json/metropole.json')
+      
+      if (response.ok) {
+        const data = await response.json()
+        const nombreJoursFeries = Object.keys(data).length
+        const annees = [...new Set(Object.keys(data).map(date => date.split('-')[0]))].sort()
+        const anneeActuelle = new Date().getFullYear()
+        const joursFeriesActuels = Object.entries(data).filter(([date]) => date.startsWith(anneeActuelle.toString()))
+        
+        setTestResults(prev => ({ 
+          ...prev, 
+          joursFeries: { 
+            success: true, 
+            data: {
+              totalJoursFeries: nombreJoursFeries,
+              anneesDisponibles: annees.length,
+              plageAnnees: `${annees[0]}-${annees[annees.length-1]}`,
+              joursFeriesActuels: joursFeriesActuels.length,
+              anneeActuelle: anneeActuelle
+            },
+            api: 'API gouvernementale officielle',
+            source: 'data.gouv.fr'
+          } 
+        }))
+        setStatus(`✅ API jours fériés accessible - ${nombreJoursFeries} jours sur ${annees.length} années`)
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+    } catch (error) {
+      setTestResults(prev => ({ 
+        ...prev, 
+        joursFeries: { 
+          success: false, 
+          error: error.message 
+        } 
+      }))
+      setStatus('❌ Erreur lors du test de l\'API jours fériés')
+    }
+    setLoadingStates(prev => ({ ...prev, joursFeries: false }))
   }
 
   return (
@@ -203,6 +249,20 @@ const StatusTab = () => {
                   className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
                 >
                   {loadingStates.images ? 'Test en cours...' : 'Lancer le test'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tests APIs Externes */}
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h3 className="text-lg font-medium text-orange-900 mb-3">🌐 Test des APIs externes</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={testJoursFeriesAPI}
+                  disabled={loadingStates.joursFeries}
+                  className="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+                >
+                  {loadingStates.joursFeries ? 'Test en cours...' : '🧪 API Jours Fériés'}
                 </button>
               </div>
             </div>
@@ -339,29 +399,59 @@ const StatusTab = () => {
                         )}
                       </div>
                     )}
-                    {testResults.images && (
-                      <div className={`p-3 rounded-md ${testResults.images.success ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                            <span className="font-medium">🖼️ Images</span>
+                                            {testResults.images && (
+                          <div className={`p-3 rounded-md ${testResults.images.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                                <span className="font-medium">🖼️ Images</span>
+                              </div>
+                              <span className={`text-sm ${testResults.images.success ? 'text-green-800' : 'text-red-800'}`}>
+                                {testResults.images.success ? '✅ Succès' : '❌ Échec'}
+                              </span>
+                            </div>
+                            {!testResults.images.success && (
+                              <p className="text-sm text-red-700 mt-1">{testResults.images.error}</p>
+                            )}
+                            {testResults.images.success && testResults.images.data && (
+                              <div className="mt-2 text-sm text-green-700">
+                                <p className="font-semibold">🖼️ Méthode: {testResults.images.method}</p>
+                                <p className="font-semibold">🚀 Performance: {testResults.images.performance}</p>
+                                <p className="font-semibold">🏷️ Statut: {testResults.images.success ? '✅ Succès' : '❌ Échec'}</p>
+                              </div>
+                            )}
                           </div>
-                          <span className={`text-sm ${testResults.images.success ? 'text-green-800' : 'text-red-800'}`}>
-                            {testResults.images.success ? '✅ Succès' : '❌ Échec'}
-                          </span>
-                        </div>
-                        {!testResults.images.success && (
-                          <p className="text-sm text-red-700 mt-1">{testResults.images.error}</p>
                         )}
-                        {testResults.images.success && testResults.images.data && (
-                          <div className="mt-2 text-sm text-green-700">
-                            <p className="font-semibold">🖼️ Méthode: {testResults.images.method}</p>
-                            <p className="font-semibold">🚀 Performance: {testResults.images.performance}</p>
-                            <p className="font-semibold">🏷️ Statut: {testResults.images.success ? '✅ Succès' : '❌ Échec'}</p>
+                        {testResults.joursFeries && (
+                          <div className={`p-3 rounded-md ${testResults.joursFeries.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+                                <span className="font-medium">🧪 API Jours Fériés</span>
+                              </div>
+                              <span className={`text-sm ${testResults.joursFeries.success ? 'text-green-800' : 'text-red-800'}`}>
+                                {testResults.joursFeries.success ? '✅ Succès' : '❌ Échec'}
+                              </span>
+                            </div>
+                            {!testResults.joursFeries.success && (
+                              <p className="text-sm text-red-700 mt-1">{testResults.joursFeries.error}</p>
+                            )}
+                            {testResults.joursFeries.success && testResults.joursFeries.data && (
+                              <div className="mt-2 text-sm text-green-700">
+                                <div className="grid grid-cols-1 gap-2">
+                                  <p className="font-semibold">📊 Total jours fériés: {testResults.joursFeries.data.totalJoursFeries}</p>
+                                  <p className="font-semibold">📅 Années disponibles: {testResults.joursFeries.data.anneesDisponibles}</p>
+                                  <p className="font-semibold">🗓️ Plage: {testResults.joursFeries.data.plageAnnees}</p>
+                                  <p className="font-semibold">🎯 Année actuelle ({testResults.joursFeries.data.anneeActuelle}): {testResults.joursFeries.data.joursFeriesActuels} jours fériés</p>
+                                </div>
+                                <div className="mt-3 pt-2 border-t border-green-200">
+                                  <p className="font-semibold">🌐 Source: {testResults.joursFeries.api}</p>
+                                  <p className="font-semibold">🔗 URL: data.gouv.fr</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

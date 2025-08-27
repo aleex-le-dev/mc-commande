@@ -1691,7 +1691,7 @@ app.post('/api/delais/calculer', async (req, res) => {
     }
     
     // Fonction pour calculer la date limite
-    const calculerDateLimiteOuvrable = (dateCommande, joursOuvrablesCount, joursOuvrablesConfig) => {
+    const calculerDateLimiteOuvrable = async (dateCommande, joursOuvrablesCount, joursOuvrablesConfig) => {
       const dateCommandeObj = new Date(dateCommande)
       let dateLimite = new Date(dateCommandeObj)
       let joursAjoutes = 0
@@ -1703,15 +1703,27 @@ app.post('/api/delais/calculer', async (req, res) => {
         const jourSemaine = dateLimite.getDay()
         const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
         
+        // Vérifier si c'est un jour ouvrable ET pas un jour férié
         if (joursOuvrablesConfig[nomJour]) {
-          joursAjoutes++
+          // Vérifier si c'est un jour férié français
+          const annee = dateLimite.getFullYear()
+          const jour = dateLimite.getDate().toString().padStart(2, '0')
+          const mois = (dateLimite.getMonth() + 1).toString().padStart(2, '0')
+          const dateStr = `${annee}-${mois}-${jour}`
+          
+          // Vérifier si c'est un jour férié français en utilisant la logique locale
+          const estJourFerie = await estJourFerieLocal(dateLimite)
+          // Si ce n'est pas un jour férié, compter le jour
+          if (!estJourFerie) {
+            joursAjoutes++
+          }
         }
       }
       
       return dateLimite
     }
     
-    const dateLimite = calculerDateLimiteOuvrable(dateCommande, joursOuvrables, configurationJours)
+    const dateLimite = await calculerDateLimiteOuvrable(dateCommande, joursOuvrables, configurationJours)
     
     res.json({
       success: true,
@@ -1747,6 +1759,99 @@ app.get('/api/delais/historique', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur interne' })
   }
 })
+
+// GET /api/delais/jours-feries - Récupérer les jours fériés français
+app.get('/api/delais/jours-feries/:annee', async (req, res) => {
+  try {
+    const { annee } = req.params
+    
+    if (!annee || isNaN(parseInt(annee))) {
+      return res.status(400).json({ error: 'Année invalide' })
+    }
+    
+    // Utiliser l'API officielle du gouvernement français via data.gouv.fr
+    try {
+      const response = await fetch('https://etalab.github.io/jours-feries-france-data/json/metropole.json')
+      
+      if (!response.ok) {
+        throw new Error(`Erreur API gouvernementale: ${response.status}`)
+      }
+      
+      const tousJoursFeries = await response.json()
+      
+      // Filtrer les jours fériés pour l'année demandée
+      const joursFeries = {}
+      Object.entries(tousJoursFeries).forEach(([date, nom]) => {
+        if (date.startsWith(annee)) {
+          joursFeries[date] = nom
+        }
+      })
+      
+      return joursFeries
+    } catch (error) {
+      console.error(`Erreur lors de la récupération des jours fériés pour ${annee}:`, error)
+      // En cas d'erreur, retourner une liste vide
+      return {}
+    }
+    
+    const joursFeries = getJoursFeries(parseInt(annee))
+    
+    res.json({
+      success: true,
+      data: joursFeries
+    })
+  } catch (error) {
+    console.error('Erreur récupération jours fériés:', error)
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération des jours fériés',
+      details: error.message 
+    })
+  }
+})
+
+// Cache pour les jours fériés
+let joursFeriesCache = {}
+let cacheExpiration = 0
+
+// Fonction pour vérifier si une date est un jour férié français
+async function estJourFerieLocal(date) {
+  const annee = date.getFullYear()
+  const dateStr = date.toISOString().split('T')[0]
+  
+  // Vérifier le cache d'abord
+  if (joursFeriesCache[annee] && cacheExpiration > Date.now()) {
+    return joursFeriesCache[annee][dateStr] !== undefined
+  }
+  
+  try {
+    // Charger les jours fériés depuis l'API gouvernementale
+    const response = await fetch('https://etalab.github.io/jours-feries-france-data/json/metropole.json')
+    
+    if (response.ok) {
+      const tousJoursFeries = await response.json()
+      
+      // Mettre en cache avec expiration (24h)
+      joursFeriesCache = {}
+      Object.entries(tousJoursFeries).forEach(([date, nom]) => {
+        const anneeJour = date.split('-')[0]
+        if (!joursFeriesCache[anneeJour]) {
+          joursFeriesCache[anneeJour] = {}
+        }
+        joursFeriesCache[anneeJour][date] = nom
+      })
+      
+      cacheExpiration = Date.now() + (24 * 60 * 60 * 1000)
+      
+      // Retourner le résultat pour la date demandée
+      return joursFeriesCache[annee] && joursFeriesCache[annee][dateStr] !== undefined
+    }
+  } catch (error) {
+    console.warn('Erreur lors de la vérification des jours fériés:', error)
+  }
+  
+  // En cas d'erreur, retourner false
+  return false
+}
 
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
@@ -1946,6 +2051,7 @@ async function startServer() {
     console.log(`   POST /api/delais/configuration - Sauvegarder configuration`)
     console.log(`   POST /api/delais/calculer - Calculer date limite`)
     console.log(`   GET  /api/delais/historique - Historique des configurations`)
+    console.log(`   GET  /api/delais/jours-feries/:annee - Jours fériés français`)
   })
 }
 

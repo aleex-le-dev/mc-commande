@@ -92,15 +92,21 @@ class DelaiService {
     this.isLoadingJoursFeries = true
     
     try {
-      // Utiliser l'API des jours fériés français
-      const response = await fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${annee}`)
+      // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
+      const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`)
       
       if (response.ok) {
-        const joursFeries = await response.json()
+        const result = await response.json()
         
-        // Mettre en cache avec expiration (24h)
-        this.joursFeriesCache[annee] = joursFeries
-        this.cacheExpiration[annee] = Date.now() + (24 * 60 * 60 * 1000)
+        if (result.success && result.data) {
+          // Mettre en cache avec expiration (24h)
+          this.joursFeriesCache[annee] = result.data
+          this.cacheExpiration[annee] = Date.now() + (24 * 60 * 60 * 1000)
+        } else {
+          console.warn(`Erreur API jours fériés pour ${annee}:`, result.error)
+        }
+      } else {
+        console.warn(`Erreur HTTP jours fériés pour ${annee}:`, response.status)
       }
     } catch (error) {
       console.warn(`Erreur lors du chargement des jours fériés pour ${annee}:`, error)

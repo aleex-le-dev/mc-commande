@@ -205,6 +205,8 @@ const DateLimiteTab = () => {
     }
   }
 
+
+
   const handleSave = async () => {
     if (!joursDelai || joursDelai <= 0) {
       setMessage('Veuillez saisir un nombre de jours valide')
@@ -408,9 +410,7 @@ const DateLimiteTab = () => {
 
         {/* Affichage des jours fériés par mois */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Jours fériés français (exclus automatiquement du calcul)
-          </label>
+       
           {isLoadingJoursFeries ? (
             <div className="text-center py-4">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -457,9 +457,91 @@ const DateLimiteTab = () => {
               </div>
             </details>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              <p>Aucun jour férié trouvé</p>
-            </div>
+            <details className="border border-gray-200 rounded-lg bg-gray-50">
+              <summary className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors font-medium text-gray-800">
+                <div className="flex items-center justify-between">
+                  <span>Jours fériés français (exclus automatiquement du calcul)</span>
+                  <svg className="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </summary>
+              <div className="px-4 pb-4 space-y-4">
+                {/* Affichage des jours fériés par défaut (année actuelle) */}
+                {(() => {
+                  const anneeActuelle = new Date().getFullYear()
+                  const joursFeriesDefaut = {
+                    '1er janvier': `${anneeActuelle}-01-01`,
+                    'Lundi de Pâques': `${anneeActuelle}-04-${anneeActuelle === 2025 ? '21' : anneeActuelle === 2024 ? '01' : '22'}`,
+                    '1er mai': `${anneeActuelle}-05-01`,
+                    '8 mai': `${anneeActuelle}-05-08`,
+                    'Ascension': `${anneeActuelle}-05-${anneeActuelle === 2025 ? '29' : anneeActuelle === 2024 ? '09' : '30'}`,
+                    'Lundi de Pentecôte': `${anneeActuelle}-06-${anneeActuelle === 2025 ? '09' : anneeActuelle === 2024 ? '17' : '10'}`,
+                    '14 juillet': `${anneeActuelle}-07-14`,
+                    '15 août': `${anneeActuelle}-08-15`,
+                    '1er novembre': `${anneeActuelle}-11-01`,
+                    '11 novembre': `${anneeActuelle}-11-11`,
+                    '25 décembre': `${anneeActuelle}-12-25`
+                  }
+                  
+                  // Grouper par mois
+                  const groupesParMois = {}
+                  Object.entries(joursFeriesDefaut).forEach(([nom, date]) => {
+                    const [annee, mois, jour] = date.split('-')
+                    const cle = `${annee}-${mois}`
+                    if (!groupesParMois[cle]) {
+                      groupesParMois[cle] = {
+                        mois: new Date(annee, mois - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+                        jours: []
+                      }
+                    }
+                    groupesParMois[cle].jours.push({
+                      date: new Date(date),
+                      nom: nom,
+                      jourSemaine: new Date(date).toLocaleDateString('fr-FR', { weekday: 'long' })
+                    })
+                  })
+                  
+                  return Object.entries(groupesParMois).sort(([a], [b]) => a.localeCompare(b)).map(([cle, groupe]) => (
+                    <div key={cle} className="border border-gray-200 rounded-lg p-4 bg-white">
+                      <h4 className="font-semibold text-gray-800 mb-3 text-center">
+                        {groupe.mois}
+                      </h4>
+                      <div className="grid gap-2">
+                        {groupe.jours.map((jour, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 text-sm font-bold">
+                                  {jour.date.getDate()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{jour.nom}</p>
+                                <p className="text-xs text-gray-500 capitalize">{jour.jourSemaine}</p>
+                              </div>
+                            </div>
+                            <div className="text-xs text-red-500 font-medium">
+                              FÉRIÉ
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                })()}
+                
+                {/* Message informatif */}
+                <div className="text-center py-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700">
+                    <strong>ℹ️ Information :</strong> Ces jours fériés sont automatiquement exclus du calcul des délais.
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Cliquez sur "🧪 Test API Jours Fériés" dans l'onglet Statut pour vérifier la connexion à l'API gouvernementale.
+                  </p>
+                </div>
+              </div>
+            </details>
           )}
         </div>
 
@@ -499,6 +581,8 @@ const DateLimiteTab = () => {
           >
             Réinitialiser
           </button>
+          
+
         </div>
       </div>
     </div>
