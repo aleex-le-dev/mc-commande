@@ -29,6 +29,7 @@ const ArticleCard = forwardRef(({
   // États pour le modal de tricoteuse
   const [showTricoteuseModal, setShowTricoteuseModal] = useState(false)
   const [tricoteuses, setTricoteuses] = useState([])
+  const [isLoadingTricoteuses, setIsLoadingTricoteuses] = useState(false)
   // État local pour l'assignation (pour mise à jour immédiate)
   const [localAssignment, setLocalAssignment] = useState(assignment)
   // État de chargement de l'assignation
@@ -224,29 +225,32 @@ const ArticleCard = forwardRef(({
 
   // Charger la liste des tricoteuses
   const loadTricoteuses = useCallback(async () => {
+    setIsLoadingTricoteuses(true)
     try {
       const data = await tricoteusesService.getAllTricoteuses()
       setTricoteuses(data)
       
-              // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
-        if (localAssignment && localAssignment.tricoteuse_id) {
-          const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
-          if (tricoteuse) {
-            // Vérifier si l'assignation locale a besoin d'être enrichie
-            const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
-            if (needsEnrichment) {
-              const enrichedAssignment = {
-                ...localAssignment,
-                tricoteuse_photo: tricoteuse.photoUrl,
-                tricoteuse_color: tricoteuse.color,
-                tricoteuse_name: tricoteuse.firstName
-              }
-              setLocalAssignment(enrichedAssignment)
+      // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
+      if (localAssignment && localAssignment.tricoteuse_id) {
+        const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
+        if (tricoteuse) {
+          // Vérifier si l'assignation locale a besoin d'être enrichie
+          const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
+          if (needsEnrichment) {
+            const enrichedAssignment = {
+              ...localAssignment,
+              tricoteuse_photo: tricoteuse.photoUrl,
+              tricoteuse_color: tricoteuse.color,
+              tricoteuse_name: tricoteuse.firstName
             }
+            setLocalAssignment(enrichedAssignment)
           }
         }
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des tricoteuses:', error)
+    } finally {
+      setIsLoadingTricoteuses(false)
     }
   }, [localAssignment])
 
@@ -261,6 +265,22 @@ const ArticleCard = forwardRef(({
     setShowTricoteuseModal(false)
     // Supprimé: setSelectedTricoteuse(null)
   }, [])
+
+  // Fonction pour retirer l'assignation
+  const removeAssignment = useCallback(async () => {
+    if (localAssignment && uniqueAssignmentId) {
+      try {
+        await assignmentsService.deleteAssignment(uniqueAssignmentId)
+        setLocalAssignment(null)
+        if (onAssignmentUpdate) {
+          onAssignmentUpdate()
+        }
+        closeTricoteuseModal()
+      } catch (error) {
+        console.error('Erreur lors de la suppression de l\'assignation:', error)
+      }
+    }
+  }, [localAssignment, uniqueAssignmentId, onAssignmentUpdate, closeTricoteuseModal])
 
   // Supprimé: saveTricoteuseSelection function (plus nécessaire)
 
@@ -740,13 +760,44 @@ const ArticleCard = forwardRef(({
                 Choisir une tricoteuse
               </h3>
               <p className="text-sm text-gray-600">
-                Sélectionnez la tricoteuse responsable de cet article
+                {localAssignment 
+                  ? `Article actuellement assigné à ${localAssignment.tricoteuse_name}`
+                  : 'Sélectionnez la tricoteuse responsable de cet article'
+                }
               </p>
             </div>
 
             {/* Grille simple 2 par ligne */}
             <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto">
-              {tricoteuses.map((tricoteuse) => (
+              {/* Option de retrait si déjà assigné */}
+              {localAssignment && (
+                <button
+                  onClick={removeAssignment}
+                  className="group p-4 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-2xl shadow-md">
+                      ✕
+                    </div>
+                    <p className="font-semibold text-red-700 text-center">
+                      Retirer
+                    </p>
+                  </div>
+                </button>
+              )}
+
+              {/* Indicateur de chargement */}
+              {isLoadingTricoteuses && (
+                <div className="col-span-2 p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-rose-400 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600">Chargement des tricoteuses...</p>
+                </div>
+              )}
+
+              {/* Liste des tricoteuses */}
+              {!isLoadingTricoteuses && tricoteuses.length > 0 && tricoteuses
+                .filter(tricoteuse => !localAssignment || tricoteuse._id !== localAssignment.tricoteuse_id)
+                .map((tricoteuse) => (
                 <button
                   key={tricoteuse._id}
                   onClick={() => {
@@ -818,6 +869,13 @@ const ArticleCard = forwardRef(({
                   </div>
                 </button>
               ))}
+
+              {/* Message si aucune tricoteuse */}
+              {!isLoadingTricoteuses && tricoteuses.length === 0 && (
+                <div className="col-span-2 p-8 text-center text-gray-500">
+                  <p>Aucune tricoteuse disponible</p>
+                </div>
+              )}
             </div>
 
             {/* Bouton de fermeture */}
