@@ -37,7 +37,7 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
       // Synchronisation en cours
       return {
         emoji: '⚙️',
-        message: 'Synchronisation en cours...',
+        message: 'Récupération des nouvelles commandes...',
         bgColor: 'bg-[var(--rose-clair)]',
         textColor: 'text-[var(--rose-clair-text)]',
         emojiPosition: 'start'

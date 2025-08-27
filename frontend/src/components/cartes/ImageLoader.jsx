@@ -50,7 +50,6 @@ const ImageLoader = React.memo(({
     
     // Si c'est une image base64 ou par défaut, pas de retry nécessaire
     if (src && (src.startsWith('data:image/') || src.includes('default'))) {
-      console.debug('Image par défaut en erreur, pas de retry')
       return
     }
     

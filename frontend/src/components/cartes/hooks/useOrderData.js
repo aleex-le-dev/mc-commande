@@ -58,17 +58,31 @@ export const useOrderData = (selectedType, propSelectedType) => {
 
   // Fonction pour extraire la taille d'un article
   const getArticleSize = useCallback((metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
+    if (!metaData || !Array.isArray(metaData)) return null
     
+    // Recherche exhaustive de toutes les variantes de taille
     const sizeMeta = metaData.find(meta => 
       meta.key && (
         meta.key.toLowerCase().includes('taille') ||
         meta.key.toLowerCase().includes('size') ||
-        meta.key.toLowerCase().includes('dimension')
+        meta.key.toLowerCase().includes('dimension') ||
+        meta.key.toLowerCase().includes('pa_taille') ||
+        meta.key.toLowerCase().includes('attribute_pa_taille') ||
+        meta.key.toLowerCase().includes('_taille') ||
+        meta.key.toLowerCase().includes('_size') ||
+        meta.key === 'taille' ||
+        meta.key === 'size' ||
+        meta.key === 'pa_taille'
       )
     )
     
-    return sizeMeta ? sizeMeta.value : 'Non spécifiée'
+    if (sizeMeta && sizeMeta.value) {
+      // Nettoyer et formater la valeur
+      const cleanValue = sizeMeta.value.trim()
+      return cleanValue || null
+    }
+    
+    return null
   }, [])
 
   // Fonction pour extraire les options d'un article
@@ -101,17 +115,33 @@ export const useOrderData = (selectedType, propSelectedType) => {
 
   // Fonction pour extraire la couleur d'un article
   const getArticleColor = useCallback((metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return 'Non spécifiée'
+    if (!metaData || !Array.isArray(metaData)) return null
     
+    // Recherche exhaustive de toutes les variantes de couleur
     const colorMeta = metaData.find(meta => 
       meta.key && (
         meta.key.toLowerCase().includes('couleur') ||
         meta.key.toLowerCase().includes('color') ||
-        meta.key.toLowerCase().includes('colour')
+        meta.key.toLowerCase().includes('colour') ||
+        meta.key.toLowerCase().includes('pa_couleur') ||
+        meta.key.toLowerCase().includes('attribute_pa_couleur') ||
+        meta.key.toLowerCase().includes('_couleur') ||
+        meta.key.toLowerCase().includes('_color') ||
+        meta.key === 'couleur' ||
+        meta.key === 'color' ||
+        meta.key === 'pa_couleur' ||
+        meta.key === 'pa_couleur' ||
+        meta.key === 'attribute_pa_couleur'
       )
     )
     
-    return colorMeta ? colorMeta.value : 'Non spécifiée'
+    if (colorMeta && colorMeta.value) {
+      // Nettoyer et formater la valeur
+      const cleanValue = colorMeta.value.trim()
+      return cleanValue || null
+    }
+    
+    return null
   }, [])
 
   // Fonction pour récupérer le statut d'un article

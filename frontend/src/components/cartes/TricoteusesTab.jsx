@@ -82,6 +82,47 @@ const TricoteusesTab = () => {
     }
   }
 
+  // Compresser et convertir l'image en base64
+  const compressAndConvertImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Calculer les nouvelles dimensions (max 200x200px)
+        const maxSize = 200
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+        }
+        
+        // Redimensionner le canvas
+        canvas.width = width
+        canvas.height = height
+        
+        // Dessiner l'image redimensionnée
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Convertir en base64 avec qualité réduite
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+        resolve(dataUrl)
+      }
+      
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const trimmed = formData.firstName.trim()
@@ -90,12 +131,24 @@ const TricoteusesTab = () => {
     try {
       setLoading(true)
       
+      // Convertir l'image en base64 si elle existe
+      let photoUrl = editingKnitter ? editingKnitter.photoUrl : ''
+      if (formData.photoFile) {
+        try {
+          photoUrl = await compressAndConvertImage(formData.photoFile)
+        } catch (error) {
+          console.error('Erreur compression image:', error)
+          alert('Erreur lors de la compression de l\'image. Veuillez réessayer.')
+          return
+        }
+      }
+
       if (editingKnitter) {
         // Modification
         const updateData = {
           firstName: trimmed,
           color: formData.color,
-          photoUrl: formData.photoPreview || editingKnitter.photoUrl,
+          photoUrl: photoUrl,
           gender: formData.gender
         }
         await tricoteusesService.updateTricoteuse(editingKnitter._id, updateData)
@@ -104,7 +157,7 @@ const TricoteusesTab = () => {
         const createData = {
           firstName: trimmed,
           color: formData.color,
-          photoUrl: formData.photoPreview || '',
+          photoUrl: photoUrl,
           gender: formData.gender
         }
         await tricoteusesService.createTricoteuse(createData)
@@ -180,13 +233,23 @@ const TricoteusesTab = () => {
               {knitters.map(k => (
                 <div key={k._id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex flex-col items-center text-center space-y-3">
-                    {k.photoUrl ? (
-                      <img src={k.photoUrl} alt={k.firstName} className="h-16 w-16 rounded-full object-cover border-2 border-gray-100 shadow-sm" />
-                    ) : (
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>
-                        {k.firstName[0].toUpperCase()}
-                      </div>
-                    )}
+                                         {k.photoUrl && k.photoUrl.trim() !== '' && (k.photoUrl.startsWith('data:image/') || (!k.photoUrl.startsWith('blob:') && (k.photoUrl.startsWith('http://') || k.photoUrl.startsWith('https://')))) ? (
+                        <img 
+                          src={k.photoUrl} 
+                          alt={k.firstName} 
+                          className="h-16 w-16 rounded-full object-cover border-2 border-gray-100 shadow-sm"
+                          onError={() => {
+                            console.warn(`Impossible de charger la photo de ${k.firstName}:`, k.photoUrl)
+                          }}
+                          onLoad={() => {
+                            console.log(`Photo chargée avec succès pour ${k.firstName}:`, k.photoUrl)
+                          }}
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>
+                          {k.firstName[0].toUpperCase()}
+                        </div>
+                      )}
                     <div>
                       <div className="font-semibold text-gray-900 text-sm">{k.firstName}</div>
                       <div className="text-xs text-gray-500">
@@ -237,13 +300,25 @@ const TricoteusesTab = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Avatar et nom */}
                 <div className="flex items-center gap-4">
-                  {formData.photoPreview ? (
-                    <img src={formData.photoPreview} alt="Aperçu" className="h-16 w-16 rounded-full object-cover border-2 border-gray-200" />
-                  ) : (
-                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-semibold text-5xl relative" style={{ backgroundColor: formData.color }}>
-                      <span className="absolute inset-0 flex items-center justify-center transform -translate-y-1">{formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}</span>
-                    </div>
-                  )}
+                  {formData.photoPreview && formData.photoPreview.trim() !== '' ? (
+                      <img 
+                        src={formData.photoPreview} 
+                        alt="Aperçu" 
+                        className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
+                        onError={() => {
+                          console.warn('Impossible de charger l\'aperçu de la photo:', formData.photoPreview)
+                        }}
+                        onLoad={() => {
+                          console.log('Aperçu de photo chargé avec succès:', formData.photoPreview)
+                        }}
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-semibold text-5xl relative" style={{ backgroundColor: formData.color }}>
+                        <span className="absolute inset-0 flex items-center justify-center transform -translate-y-1">
+                          {formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}
+                        </span>
+                      </div>
+                    )}
               <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
                 <input
@@ -263,8 +338,8 @@ const TricoteusesTab = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-3">Couleur de l'avatar</label>
                   <div className="grid grid-cols-8 gap-2">
                     {palette.map((c, index) => (
-                      <button
-                        type="button"
+                  <button
+                    type="button"
                         key={`color-${index}-${c}`}
                         onClick={() => setFormData(prev => ({ ...prev, color: c }))}
                         className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
@@ -272,19 +347,19 @@ const TricoteusesTab = () => {
                             ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)] border-white' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ backgroundColor: c }}
-                        aria-label={`Choisir la couleur ${c}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                    style={{ backgroundColor: c }}
+                    aria-label={`Choisir la couleur ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
 
                 {/* Sélection du sexe */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Sexe</label>
                   <div className="flex gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input
+                        <input
                         type="radio"
                         name="gender"
                         value="feminin"
@@ -319,9 +394,9 @@ const TricoteusesTab = () => {
                         <span className="text-xl">👨</span>
                         <span className="font-medium">Masculin</span>
                       </div>
-                    </label>
-                  </div>
-                </div>
+                        </label>
+                        </div>
+                      </div>
 
                 {/* Upload photo */}
                 <div>
@@ -339,7 +414,7 @@ const TricoteusesTab = () => {
                       Supprimer
                     </button>
                   )}
-          </div>
+                    </div>
 
                 {/* Boutons d'action */}
                 <div className="flex gap-3 pt-4">

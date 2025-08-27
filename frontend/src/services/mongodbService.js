@@ -351,3 +351,76 @@ export const tricoteusesService = {
     }
   }
 }
+
+// Service pour les assignations d'articles aux tricoteuses
+export const assignmentsService = {
+  // Récupérer toutes les assignations
+  async getAllAssignments() {
+    try {
+      const response = await fetch('http://localhost:3001/api/assignments')
+      if (!response.ok) throw new Error('Erreur lors de la récupération des assignations')
+      const result = await response.json()
+      return result.data || []
+    } catch (error) {
+      console.error('Erreur récupération assignations:', error)
+      return []
+    }
+  },
+
+  // Récupérer l'assignation d'un article
+  async getAssignmentByArticleId(articleId) {
+    try {
+      // Récupérer toutes les assignations en une fois (pas d'erreur 404)
+      const response = await fetch('http://localhost:3001/api/assignments')
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des assignations')
+      }
+      
+      const result = await response.json()
+      const allAssignments = result.data || []
+      
+      // Chercher l'assignation pour cet article
+      const assignment = allAssignments.find(a => a.article_id === articleId)
+      
+      return assignment || null
+    } catch (error) {
+      console.error('Erreur assignation:', error.message)
+      return null
+    }
+  },
+
+  // Créer ou mettre à jour une assignation
+  async createOrUpdateAssignment(assignmentData) {
+    try {
+      const response = await fetch('http://localhost:3001/api/assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assignmentData)
+      })
+      if (!response.ok) throw new Error('Erreur lors de la sauvegarde de l\'assignation')
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Erreur sauvegarde assignation:', error)
+      throw error
+    }
+  },
+
+  // Supprimer une assignation
+  async deleteAssignment(articleId) {
+    try {
+      const response = await fetch(`http://localhost:3001/api/assignments/${articleId}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Erreur lors de la suppression de l\'assignation')
+      const result = await response.json()
+      return result.success
+    } catch (error) {
+      console.error('Erreur suppression assignation:', error)
+      throw error
+    }
+  }
+}

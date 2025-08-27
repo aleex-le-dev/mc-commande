@@ -74,6 +74,13 @@ async function createCollectionsAndIndexes() {
     await tricoteusesCollection.createIndex({ firstName: 1 })
     await tricoteusesCollection.createIndex({ createdAt: -1 })
     
+    // Collection des assignations d'articles aux tricoteuses
+    const assignmentsCollection = db.collection('article_assignments')
+    await assignmentsCollection.createIndex({ article_id: 1 }, { unique: true })
+    await assignmentsCollection.createIndex({ tricoteuse_id: 1 })
+    await assignmentsCollection.createIndex({ status: 1 })
+    await assignmentsCollection.createIndex({ assigned_at: -1 })
+    
     console.log('✅ Collections et index créés')
   } catch (error) {
     console.error('❌ Erreur création collections:', error)
@@ -1334,6 +1341,126 @@ app.delete('/api/tricoteuses/:id', async (req, res) => {
   }
 })
 
+// Routes pour les assignations d'articles aux tricoteuses
+
+// GET /api/assignments - Récupérer toutes les assignations
+app.get('/api/assignments', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const assignmentsCollection = db.collection('article_assignments')
+    const assignments = await assignmentsCollection.find({}).sort({ assigned_at: -1 }).toArray()
+    
+    res.json({
+      success: true,
+      data: assignments
+    })
+  } catch (error) {
+    console.error('Erreur récupération assignations:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// GET /api/assignments/:articleId - Récupérer l'assignation d'un article
+app.get('/api/assignments/:articleId', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { articleId } = req.params
+    const assignmentsCollection = db.collection('article_assignments')
+    
+    const assignment = await assignmentsCollection.findOne({ article_id: articleId })
+    
+    if (!assignment) {
+      return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
+    }
+    
+    res.json({
+      success: true,
+      data: assignment
+    })
+  } catch (error) {
+    console.error('Erreur récupération assignation:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/assignments - Créer ou mettre à jour une assignation
+app.post('/api/assignments', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { article_id, tricoteuse_id, tricoteuse_name, status } = req.body
+    
+    if (!article_id || !tricoteuse_id || !tricoteuse_name) {
+      return res.status(400).json({ error: 'article_id, tricoteuse_id et tricoteuse_name sont requis' })
+    }
+    
+    const assignmentsCollection = db.collection('article_assignments')
+    
+    // Utiliser upsert pour créer ou mettre à jour
+    const result = await assignmentsCollection.updateOne(
+      { article_id: article_id },
+      {
+        $set: {
+          tricoteuse_id: tricoteuse_id,
+          tricoteuse_name: tricoteuse_name,
+          status: status || 'en_cours',
+          assigned_at: new Date(),
+          updated_at: new Date()
+        }
+      },
+      { upsert: true }
+    )
+    
+    res.json({
+      success: true,
+      data: {
+        article_id,
+        tricoteuse_id,
+        tricoteuse_name,
+        status: status || 'en_cours',
+        assigned_at: new Date()
+      }
+    })
+  } catch (error) {
+    console.error('Erreur création/mise à jour assignation:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// DELETE /api/assignments/:articleId - Supprimer une assignation
+app.delete('/api/assignments/:articleId', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { articleId } = req.params
+    const assignmentsCollection = db.collection('article_assignments')
+    
+    const result = await assignmentsCollection.deleteOne({ article_id: articleId })
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
+    }
+    
+    res.json({
+      success: true,
+      message: 'Assignation supprimée avec succès'
+    })
+  } catch (error) {
+    console.error('Erreur suppression assignation:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
 
@@ -1520,6 +1647,10 @@ async function startServer() {
     console.log(`   POST /api/tricoteuses - Créer une nouvelle tricoteuse`)
     console.log(`   PUT  /api/tricoteuses/:id - Modifier une tricoteuse`)
     console.log(`   DELETE /api/tricoteuses/:id - Supprimer une tricoteuse`)
+    console.log(`   GET  /api/assignments - Récupérer toutes les assignations`)
+    console.log(`   GET  /api/assignments/:articleId - Récupérer une assignation`)
+    console.log(`   POST /api/assignments - Créer/mettre à jour une assignation`)
+    console.log(`   DELETE /api/assignments/:articleId - Supprimer une assignation`)
   })
 }
 

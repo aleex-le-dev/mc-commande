@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
+import { assignmentsService } from '../../services/mongodbService'
 
 // Composant simple avec flexbox et flex-wrap pour les cartes
 const SimpleFlexGrid = ({ 
@@ -14,6 +15,29 @@ const SimpleFlexGrid = ({
   productionType = 'unknown' // Ajouter le type de production
 }) => {
   const [isLoading, setIsLoading] = useState(true)
+  const [assignments, setAssignments] = useState({})
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true)
+
+  // Charger toutes les assignations en une fois
+  const loadAssignments = useCallback(async () => {
+    try {
+      setAssignmentsLoading(true)
+      const response = await assignmentsService.getAllAssignments()
+      const assignmentsMap = {}
+      response.forEach(assignment => {
+        assignmentsMap[assignment.article_id] = assignment
+      })
+      setAssignments(assignmentsMap)
+    } catch (error) {
+      console.error('Erreur chargement assignations:', error)
+    } finally {
+      setAssignmentsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadAssignments()
+  }, [loadAssignments, productionType]) // Recharger quand on change d'onglet
 
   // Gérer l'état de loading lors des changements d'onglets
   useEffect(() => {
@@ -57,6 +81,8 @@ const SimpleFlexGrid = ({
             isHighlighted={isHighlighted}
             searchTerm={searchTerm}
             productionType={productionType} // Passer le type de production
+            assignment={assignments[article.line_item_id]} // Passer l'assignation directement
+            onAssignmentUpdate={loadAssignments} // Fonction pour rafraîchir les assignations
           />
         </div>
       )

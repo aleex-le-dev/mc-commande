@@ -1,27 +1,40 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
 import imageService from '../../services/imageService'
+import { tricoteusesService, assignmentsService } from '../../services/mongodbService'
 
 // Composant carte d'article moderne optimisé
-const ArticleCard = React.memo(({ 
+const ArticleCard = forwardRef(({ 
   article, 
   index, 
-  getArticleSize, 
-  getArticleColor, 
-  getArticleOptions, 
   onOverlayOpen, 
   isOverlayOpen, 
   isHighlighted, 
   searchTerm,
-  productionType // Ajouter le type de production
-}) => {
+  productionType, // Ajouter le type de production
+  assignment, // Nouvelle prop pour l'assignation
+  onAssignmentUpdate, // Fonction pour rafraîchir les assignations
+  getArticleSize, // Fonction pour obtenir la taille de l'article
+  getArticleColor, // Fonction pour obtenir la couleur de l'article
+  getArticleOptions // Fonction pour obtenir les options de l'article
+}, ref) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [isFromCache, setIsFromCache] = useState(false)
+  
+  // États pour le modal de tricoteuse
+  const [showTricoteuseModal, setShowTricoteuseModal] = useState(false)
+  const [tricoteuses, setTricoteuses] = useState([])
+  // État local pour l'assignation (pour mise à jour immédiate)
+  const [localAssignment, setLocalAssignment] = useState(assignment)
+  // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
+  // Supprimé: const [isLoading, setIsLoading] = useState(false)
+
+  
   const noteBtnRef = useRef(null)
   const notePopoverRef = useRef(null)
 
@@ -115,6 +128,8 @@ const ArticleCard = React.memo(({
     }
   }, [displayImageUrl, memoizedProductId])
 
+
+
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
     if (!address || typeof address !== 'string') {
@@ -155,6 +170,68 @@ const ArticleCard = React.memo(({
     
     return text
   }
+
+  // Charger l'assignation existante et synchroniser avec la prop
+  useEffect(() => {
+    const loadExistingAssignment = async () => {
+      if (article.product_id) {
+        try {
+          const existingAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
+          if (existingAssignment) {
+            setLocalAssignment(existingAssignment)
+          } else {
+            setLocalAssignment(assignment)
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement de l\'assignation:', error)
+          setLocalAssignment(assignment)
+        }
+      } else {
+        setLocalAssignment(assignment)
+      }
+    }
+
+    loadExistingAssignment()
+  }, [article.product_id, assignment])
+
+  // Charger la liste des tricoteuses
+  const loadTricoteuses = useCallback(async () => {
+    try {
+      const data = await tricoteusesService.getAllTricoteuses()
+      setTricoteuses(data)
+    } catch (error) {
+      console.error('Erreur lors du chargement des tricoteuses:', error)
+    }
+  }, [])
+
+  // Ouvrir le modal de sélection de tricoteuse
+  const openTricoteuseModal = useCallback(() => {
+    setShowTricoteuseModal(true)
+    loadTricoteuses()
+  }, [loadTricoteuses])
+
+  // Fermer le modal
+  const closeTricoteuseModal = useCallback(() => {
+    setShowTricoteuseModal(false)
+    // Supprimé: setSelectedTricoteuse(null)
+  }, [])
+
+  // Supprimé: saveTricoteuseSelection function (plus nécessaire)
+
+  // Fonction pour valider les URLs des photos
+  const isValidPhotoUrl = useCallback((url) => {
+    if (!url || typeof url !== 'string') return false
+    
+    // Rejeter les URLs blob (temporaires)
+    if (url.startsWith('blob:')) return false
+    
+    // Rejeter les URLs vides ou trop courtes
+    if (url.trim() === '' || url.length < 10) return false
+    
+    // Accepter les URLs HTTP/HTTPS et data URLs
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')
+  }, [])
+
 
   return (
     <div 
@@ -288,56 +365,157 @@ const ArticleCard = React.memo(({
       </div>
 
       {/* Zone d'informations dynamique en bas */}
-      <div className="h-24 bg-white/95 backdrop-blur-md transition-all duration-300">
+      <div className="h-24 bg-white/95 backdrop-blur-md transition-all duration-300 relative">
         <div className="p-4">
           {/* Informations principales pour tricoteuses */}
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
               {highlightText(article.product_name, searchTerm)}
             </h3>
-            <div className="grid grid-cols-3 gap-3 text-base text-gray-700">
+            <div className="grid gap-3 text-base text-gray-700" style={{ 
+              gridTemplateColumns: `repeat(${[
+                'quantity',
+                (getArticleSize && getArticleSize(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_taille')?.value) ? 'size' : null,
+                (getArticleColor && getArticleColor(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_couleur')?.value) ? 'color' : null
+              ].filter(Boolean).length}, 1fr)`
+            }}>
               <div className="text-center">
                 <div className="text-sm text-gray-500">Quantité</div>
                 <div className="text-lg font-semibold">{article.quantity}</div>
               </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-500">Taille</div>
-                <div className="text-lg font-semibold">{getArticleSize(article.meta_data)}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-500">Couleur</div>
-                <div className="text-lg font-semibold">{getArticleColor(article.meta_data) !== 'Non spécifiée' ? getArticleColor(article.meta_data) : 'N/A'}</div>
-              </div>
+              
+              {((getArticleSize && getArticleSize(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_taille')?.value)) && (
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">Taille</div>
+                  <div className="text-lg font-semibold">
+                    {(getArticleSize && getArticleSize(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_taille')?.value) || 'N/A'}
+                  </div>
+                </div>
+              )}
+              
+              {((getArticleColor && getArticleColor(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_couleur')?.value)) && (
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">Couleur</div>
+                  <div className="text-lg font-semibold">
+                    {(getArticleColor && getArticleColor(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_couleur')?.value) || 'N/A'}
+                  </div>
+                </div>
+              )}
             </div>
+            
+            {/* Indicateur d'assignation */}
+            {assignment && (
+              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: assignment.tricoteuse_color || '#6b7280' }}
+                    >
+                      {assignment.tricoteuse_name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    <span className="text-sm text-blue-800 font-medium">
+                      Assigné à {assignment.tricoteuse_name}
+                    </span>
+                  </div>
+                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                    {assignment.status === 'en_cours' ? 'En cours' : assignment.status}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Date / heure / note */}
-      <div className="absolute bottom-0 left-0 p-3 z-10">
-        <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium">
-          <span className="bg-gray-100 px-2 py-1 rounded-md">
-            {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
-          </span>
-          <span className="bg-gray-100 px-2 py-1 rounded-md">
-            {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
-          </span>
-          {article.customerNote && (
-            <>
+            {/* Date / heure / note */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+        <div className="flex items-end justify-between">
+          {/* Date et heure à gauche - position fixe */}
+          <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium">
+            <span className="bg-gray-100 px-2 py-1 rounded-md">
+              {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
+            </span>
+            <span className="bg-gray-100 px-2 py-1 rounded-md">
+              {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
+            </span>
+            {article.customerNote && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
+                  ref={noteBtnRef}
+                  className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-50 border-amber-200'}`}
+                  aria-haspopup="dialog"
+                  aria-expanded={isNoteOpen}
+                  aria-label="Afficher la note"
+                >
+                  <span className="mr-1">📝</span>
+                  Note
+                </button>
+              </>
+            )}
+          </div>
+          
+          {/* Avatar de la tricoteuse ou bouton d'assignation - aligné en bas */}
+          <div className="flex items-end">
+            {localAssignment ? (
+              /* Avatar cliquable pour modifier l'assignation */
               <button
-                type="button"
-                onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
-                ref={noteBtnRef}
-                className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-50 border-amber-200'}`}
-                aria-haspopup="dialog"
-                aria-expanded={isNoteOpen}
-                aria-label="Afficher la note"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openTricoteuseModal()
+                }}
+                className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110"
+                title={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
+                aria-label={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
               >
-                <span className="mr-1">📝</span>
-                Note
+                {localAssignment.tricoteuse_photo && isValidPhotoUrl(localAssignment.tricoteuse_photo) ? (
+                  <ImageLoader 
+                    src={localAssignment.tricoteuse_photo} 
+                    alt={`Photo de ${localAssignment.tricoteuse_name}`}
+                    className="w-full h-full object-cover"
+                    fallback="👤"
+                    maxRetries={1}
+                    retryDelay={300}
+                  />
+                ) : (
+                  <div 
+                    className="w-full h-full flex items-center justify-center text-white text-2xl font-bold"
+                    style={{ backgroundColor: localAssignment.tricoteuse_color || '#6b7280' }}
+                  >
+                    {localAssignment.tricoteuse_name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                {/* Indicateur de modification au survol */}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10,17 15,12 10,7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                </div>
               </button>
-            </>
-          )}
+            ) : (
+              /* Bouton d'assignation par défaut */
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openTricoteuseModal()
+                }}
+                className="group relative px-3 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600"
+                title="Assigner à un artisan"
+                aria-label="Assigner à un artisan"
+              >
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="text-xs font-semibold">Assigner</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3 h-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21a8 8 0 0 0-16 0" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -490,6 +668,119 @@ const ArticleCard = React.memo(({
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal d'assignation simple et élégante */}
+      {showTricoteuseModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeTricoteuseModal()
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl p-6 w-full max-w-2xl mx-auto shadow-xl"
+          >
+            {/* En-tête simple */}
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Choisir un artisan
+              </h3>
+              <p className="text-sm text-gray-600">
+                Sélectionnez l'artisan responsable de cet article
+              </p>
+            </div>
+
+            {/* Grille simple 2 par ligne */}
+            <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto">
+              {tricoteuses.map((tricoteuse) => (
+                <button
+                  key={tricoteuse._id}
+                  onClick={() => {
+                    const assignmentData = {
+                      article_id: article.product_id,
+                      tricoteuse_id: tricoteuse._id,
+                      tricoteuse_name: tricoteuse.firstName,
+                      tricoteuse_photo: tricoteuse.photoUrl,
+                      tricoteuse_color: tricoteuse.color,
+                      status: 'en_cours'
+                    }
+                    
+                    assignmentsService.createOrUpdateAssignment(assignmentData)
+                      .then(async (savedAssignment) => {
+                        // Récupérer l'assignation complète sauvegardée
+                        try {
+                          const completeAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
+                          if (completeAssignment) {
+                            setLocalAssignment(completeAssignment)
+                          } else {
+                            setLocalAssignment(assignmentData)
+                          }
+                        } catch (error) {
+                          console.error('Erreur lors de la récupération de l\'assignation:', error)
+                          setLocalAssignment(assignmentData)
+                        }
+                        
+                        if (onAssignmentUpdate) {
+                          onAssignmentUpdate()
+                        }
+                        closeTricoteuseModal()
+                      })
+                      .catch((error) => {
+                        console.error('Erreur lors de la sauvegarde:', error)
+                      })
+                  }}
+                  className="group p-4 rounded-xl border-2 border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all duration-200"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    {/* Photo de la tricoteuse */}
+                    {isValidPhotoUrl(tricoteuse.photoUrl) ? (
+                      <div className="w-16 h-16 rounded-full overflow-hidden shadow-md">
+                        <ImageLoader 
+                          src={tricoteuse.photoUrl} 
+                          alt={`Photo de ${tricoteuse.firstName}`}
+                          className="w-full h-full object-cover"
+                          fallback="👤"
+                          maxRetries={1}
+                          retryDelay={300}
+                          onError={() => {
+                            // En cas d'erreur, on pourrait logguer ou gérer l'erreur
+                            console.warn(`Impossible de charger la photo de ${tricoteuse.firstName}`)
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      /* Fallback avec initiale si pas de photo ou URL invalide */
+                      <div 
+                        className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-md"
+                        style={{ backgroundColor: tricoteuse.color || '#6b7280' }}
+                      >
+                        <span>{tricoteuse.firstName.charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
+                    
+                    {/* Nom seulement */}
+                    <p className="font-semibold text-gray-900 text-center">
+                      {tricoteuse.firstName}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Bouton de fermeture */}
+            <div className="text-center mt-6">
+              <button
+                onClick={closeTricoteuseModal}
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
