@@ -31,21 +31,22 @@ const DateLimiteTab = () => {
     }
   }, [joursDelai, joursOuvrables])
 
-  // Fonction pour calculer la date limite en tenant compte des jours ouvrables personnalisés
+  // Fonction pour calculer la date limite en arrière depuis aujourd'hui
   const calculerDateLimiteOuvrable = (joursOuvrablesCount) => {
     const aujourdhui = new Date()
     let dateLimite = new Date(aujourdhui)
-    let joursAjoutes = 0
+    let joursRetires = 0
 
-    while (joursAjoutes < joursOuvrablesCount) {
-      dateLimite.setDate(dateLimite.getDate() + 1)
+    // On remonte dans le temps pour trouver la date limite
+    while (joursRetires < joursOuvrablesCount) {
+      dateLimite.setDate(dateLimite.getDate() - 1)
       
       // Vérifier si c'est un jour ouvrable selon la configuration personnalisée
       const jourSemaine = dateLimite.getDay()
       const nomJour = getNomJour(jourSemaine)
       
       if (joursOuvrables[nomJour]) {
-        joursAjoutes++
+        joursRetires++
       }
     }
 
@@ -182,16 +183,42 @@ const DateLimiteTab = () => {
           Gestion des délais d'expédition
         </h2>
         <p className="text-gray-600">
-          Configurez le nombre de jours ouvrables maximum pour expédier un article 
-          depuis sa date de commande et choisissez quels jours sont considérés comme ouvrables.
+          Configurez le nombre de jours ouvrables maximum pour identifier quelles commandes 
+          doivent être terminées depuis aujourd'hui et choisissez quels jours sont considérés comme ouvrables.
         </p>
       </div>
+
+      {/* Affichage de la date limite calculée - EN AVANT */}
+      {dateLimite && getNombreJoursOuvrables() > 0 && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white shadow-md">
+          <div className="text-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 mx-auto text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold mb-2">
+              Date limite de commande
+            </h3>
+            <div className="text-xl font-bold mb-2 text-blue-100">
+              {formaterDate(new Date(dateLimite))}
+            </div>
+            <div className="text-sm text-blue-100 space-y-1">
+              <p><strong>Délai :</strong> {joursDelai} jours ouvrables en arrière</p>
+              <p><strong>Jours :</strong> {Object.entries(joursOuvrables)
+                .filter(([_, estOuvrable]) => estOuvrable)
+                .map(([jour, _]) => jour.charAt(0).toUpperCase() + jour.slice(1))
+                .join(', ')}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Sélecteur de délai en jours ouvrables */}
         <div>
           <label htmlFor="joursDelai" className="block text-sm font-medium text-gray-700 mb-2">
-            Délai d'expédition (en jours ouvrables)
+            Délai d'expédition (en jours ouvrables en arrière)
           </label>
           <div className="flex items-center space-x-3">
             <input
@@ -204,10 +231,10 @@ const DateLimiteTab = () => {
               placeholder="Ex: 21"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair)] focus:border-[var(--rose-clair)]"
             />
-            <span className="text-gray-500 font-medium">jours ouvrables</span>
+            <span className="text-gray-500 font-medium">jours ouvrables en arrière</span>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Saisissez le nombre de jours ouvrables maximum selon votre configuration
+            Saisissez le nombre de jours ouvrables maximum pour identifier les commandes à terminer
           </p>
         </div>
 
@@ -242,40 +269,7 @@ const DateLimiteTab = () => {
         </div>
 
         {/* Affichage de la date limite calculée */}
-        {dateLimite && getNombreJoursOuvrables() > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Date limite d'expédition calculée
-                </h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <p>
-                    <strong>Délai configuré :</strong> {joursDelai} jours ouvrables
-                  </p>
-                  <p className="mt-1">
-                    <strong>Jours ouvrables :</strong> {Object.entries(joursOuvrables)
-                      .filter(([_, estOuvrable]) => estOuvrable)
-                      .map(([jour, _]) => jour.charAt(0).toUpperCase() + jour.slice(1))
-                      .join(', ')}
-                  </p>
-                  <p className="mt-1">
-                    <strong>Date limite :</strong> {formaterDate(new Date(dateLimite))}
-                  </p>
-                  <p className="mt-1">
-                    <strong>Exemple concret :</strong> Une commande passée aujourd'hui ({formaterDate(new Date())}) 
-                    devra être expédiée avant le {formaterDate(new Date(dateLimite))}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* This block is now moved outside the space-y-6 div */}
 
         {/* Informations sur le calcul */}
         <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
@@ -287,12 +281,12 @@ const DateLimiteTab = () => {
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-amber-800">
-                Configuration personnalisée
+                Calcul en arrière depuis aujourd'hui
               </h3>
               <div className="mt-2 text-sm text-amber-700">
-                <p>• <strong>Jours ouvrables :</strong> Cochez les jours que vous considérez comme ouvrables</p>
-                <p>• <strong>Calcul automatique :</strong> La date limite est calculée selon votre configuration</p>
-                <p>• <strong>Flexibilité :</strong> Adaptez les jours ouvrables à votre activité</p>
+                <p>• <strong>Logique inversée :</strong> On calcule la date limite en remontant dans le temps depuis aujourd'hui</p>
+                <p>• <strong>Exemple :</strong> Si aujourd'hui c'est le 15 et que vous mettez 21 jours ouvrables, la date limite sera le 24 du mois précédent</p>
+                <p>• <strong>Objectif :</strong> Identifier quelles commandes doivent être terminées dans X jours ouvrables</p>
               </div>
             </div>
           </div>
