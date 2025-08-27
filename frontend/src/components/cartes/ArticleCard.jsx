@@ -118,24 +118,25 @@ const ArticleCard = forwardRef(({
   useEffect(() => {
     const loadDateLimite = async () => {
       try {
+        // Utiliser le service centralisé qui gère le cache
         const response = await delaiService.getDateLimiteActuelle()
-        console.log('ArticleCard - Réponse date limite:', response)
         if (response.success && response.dateLimite) {
           setDateLimite(response.dateLimite)
-          console.log('ArticleCard - Date limite chargée:', response.dateLimite)
         }
       } catch (error) {
         console.error('Erreur lors du chargement de la date limite:', error)
       }
     }
     
-    loadDateLimite()
-  }, [])
+    // Charger seulement si pas déjà chargé
+    if (!dateLimite) {
+      loadDateLimite()
+    }
+  }, [dateLimite])
 
   // Déterminer si l'article doit avoir un trait rouge (date de commande <= date limite)
   const doitAvoirTraitRouge = useMemo(() => {
     if (!dateLimite || !article.orderDate) {
-      console.log('ArticleCard - Pas de date limite ou date de commande:', { dateLimite, orderDate: article.orderDate })
       return false
     }
     
@@ -143,19 +144,8 @@ const ArticleCard = forwardRef(({
     const dateLimiteObj = new Date(dateLimite)
     
     // Comparer les dates (ignorer l'heure)
-    const isEnRetard = dateCommande.toDateString() <= dateLimiteObj.toDateString()
-    
-    if (isEnRetard) {
-      console.log('ArticleCard - Article en retard:', {
-        orderNumber: article.orderNumber,
-        dateCommande: dateCommande.toDateString(),
-        dateLimite: dateLimiteObj.toDateString(),
-        isEnRetard
-      })
-    }
-    
-    return isEnRetard
-  }, [dateLimite, article.orderDate, article.orderNumber])
+    return dateCommande.toDateString() <= dateLimiteObj.toDateString()
+  }, [dateLimite, article.orderDate])
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
   const getImageUrl = () => {
@@ -276,23 +266,23 @@ const ArticleCard = forwardRef(({
       const data = await tricoteusesService.getAllTricoteuses()
       setTricoteuses(data)
       
-      // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
-      if (localAssignment && localAssignment.tricoteuse_id) {
-        const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
-        if (tricoteuse) {
-          // Vérifier si l'assignation locale a besoin d'être enrichie
-          const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
-          if (needsEnrichment) {
-            const enrichedAssignment = {
-              ...localAssignment,
-              tricoteuse_photo: tricoteuse.photoUrl,
-              tricoteuse_color: tricoteuse.color,
-              tricoteuse_name: tricoteuse.firstName
+              // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
+        if (localAssignment && localAssignment.tricoteuse_id) {
+          const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
+          if (tricoteuse) {
+            // Vérifier si l'assignation locale a besoin d'être enrichie
+            const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
+            if (needsEnrichment) {
+              const enrichedAssignment = {
+                ...localAssignment,
+                tricoteuse_photo: tricoteuse.photoUrl,
+                tricoteuse_color: tricoteuse.color,
+                tricoteuse_name: tricoteuse.firstName
+              }
+              setLocalAssignment(enrichedAssignment)
             }
-            setLocalAssignment(enrichedAssignment)
           }
         }
-      }
     } catch (error) {
       console.error('Erreur lors du chargement des tricoteuses:', error)
     } finally {
@@ -417,15 +407,15 @@ const ArticleCard = forwardRef(({
           </div>
         )}
 
-        {/* Trait rouge pour les articles en retard (date de commande <= date limite) */}
+        {/* Badge rouge pour article en retard */}
         {doitAvoirTraitRouge && (
           <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-30 flex items-center justify-center">
-            <span className="text-white text-xs font-bold px-2 py-1 bg-red-600 rounded-full">
+            <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter -mt-1">
               ⚠️ EN RETARD
             </span>
           </div>
         )}
-        
+
         {/* Lien vers la fiche produit - uniquement sur l'image */}
         <a
           href={article.permalink || '#'}

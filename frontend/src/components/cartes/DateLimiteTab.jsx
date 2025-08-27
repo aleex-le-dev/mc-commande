@@ -6,6 +6,7 @@ const DateLimiteTab = () => {
   const [dateLimite, setDateLimite] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isCalculating, setIsCalculating] = useState(true)
   const [joursOuvrables, setJoursOuvrables] = useState({
     lundi: true,
     mardi: true,
@@ -15,21 +16,29 @@ const DateLimiteTab = () => {
     samedi: false,
     dimanche: false
   })
+  // État pour les jours fériés
+  const [joursFeries, setJoursFeries] = useState({})
+  const [isLoadingJoursFeries, setIsLoadingJoursFeries] = useState(false)
 
   // Charger le délai actuel au montage du composant
   useEffect(() => {
     loadDelai()
+    loadJoursFeries()
   }, [])
 
-  // Calculer la date limite quand le délai ou les jours ouvrables changent
+  // Calculer la date limite quand le délai, les jours ouvrables OU les jours fériés changent
   useEffect(() => {
-    if (joursDelai && !isNaN(joursDelai) && joursDelai > 0) {
+    if (joursDelai && !isNaN(joursDelai) && joursDelai > 0 && !isLoadingJoursFeries && Object.keys(joursFeries).length > 0) {
       const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
       setDateLimite(dateLimite.toISOString().split('T')[0])
-    } else {
-      setDateLimite('')
+    } else if (!isLoadingJoursFeries && Object.keys(joursFeries).length === 0) {
+      // Si pas de jours fériés disponibles, on peut quand même calculer
+      if (joursDelai && !isNaN(joursDelai) && joursDelai > 0) {
+        const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
+        setDateLimite(dateLimite.toISOString().split('T')[0])
+      }
     }
-  }, [joursDelai, joursOuvrables])
+  }, [joursDelai, joursOuvrables, joursFeries, isLoadingJoursFeries])
 
   // Fonction pour calculer la date limite en arrière depuis aujourd'hui
   const calculerDateLimiteOuvrable = (joursOuvrablesCount) => {
@@ -45,7 +54,8 @@ const DateLimiteTab = () => {
       const jourSemaine = dateLimite.getDay()
       const nomJour = getNomJour(jourSemaine)
       
-      if (joursOuvrables[nomJour]) {
+      // Vérifier si c'est un jour ouvrable ET pas un jour férié
+      if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
         joursRetires++
       }
     }
@@ -64,6 +74,14 @@ const DateLimiteTab = () => {
     const jourSemaine = date.getDay()
     const nomJour = getNomJour(jourSemaine)
     return joursOuvrables[nomJour]
+  }
+
+  // Fonction pour vérifier si une date est un jour férié
+  const estJourFerie = (date) => {
+    if (!joursFeries || Object.keys(joursFeries).length === 0) return false
+    
+    const dateStr = date.toISOString().split('T')[0]
+    return joursFeries[dateStr] !== undefined
   }
 
   // Fonction pour formater une date en français
@@ -89,6 +107,66 @@ const DateLimiteTab = () => {
     return Object.values(joursOuvrables).filter(Boolean).length
   }
 
+  // Fonction pour grouper les jours fériés par mois
+  const grouperJoursFeriesParMois = () => {
+    const groupes = {}
+    
+    Object.entries(joursFeries).forEach(([date, nom]) => {
+      const dateObj = new Date(date)
+      const mois = dateObj.getMonth()
+      const annee = dateObj.getFullYear()
+      const cle = `${annee}-${mois}`
+      
+      if (!groupes[cle]) {
+        groupes[cle] = {
+          mois: dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+          jours: []
+        }
+      }
+      
+      groupes[cle].jours.push({
+        date: dateObj,
+        nom: nom,
+        jourSemaine: dateObj.toLocaleDateString('fr-FR', { weekday: 'long' })
+      })
+    })
+    
+    // Trier les mois par ordre chronologique
+    return Object.entries(groupes).sort(([a], [b]) => a.localeCompare(b))
+  }
+
+  // Fonction pour obtenir les jours fériés dans la période de calcul
+  const getJoursFeriesDansPeriode = () => {
+    if (!dateLimite || !joursFeries) return []
+    
+    const dateLimiteObj = new Date(dateLimite)
+    const aujourdhui = new Date()
+    const joursFeriesDansPeriode = []
+    
+    // Parcourir toutes les dates entre la date limite et aujourd'hui
+    let dateCourante = new Date(dateLimiteObj)
+    
+    while (dateCourante <= aujourdhui) {
+      const dateStr = dateCourante.toISOString().split('T')[0]
+      
+      // Vérifier si cette date est un jour férié
+      if (joursFeries[dateStr]) {
+        const dateFerie = new Date(dateStr)
+        joursFeriesDansPeriode.push({
+          date: dateFerie,
+          nom: joursFeries[dateStr],
+          jourSemaine: dateFerie.toLocaleDateString('fr-FR', { weekday: 'long' })
+        })
+      }
+      
+      // Passer au jour suivant
+      dateCourante.setDate(dateCourante.getDate() + 1)
+    }
+    
+    // Trier par date
+    return joursFeriesDansPeriode.sort((a, b) => a.date - b.date)
+  }
+
   const loadDelai = async () => {
     try {
       const response = await delaiService.getDelai()
@@ -107,6 +185,23 @@ const DateLimiteTab = () => {
     } catch (error) {
       console.error('Erreur lors du chargement du délai:', error)
       // En cas d'erreur, on garde les valeurs par défaut
+    } finally {
+      setIsCalculating(false)
+    }
+  }
+
+  // Fonction pour charger les jours fériés
+  const loadJoursFeries = async () => {
+    setIsLoadingJoursFeries(true)
+    try {
+      const response = await delaiService.getJoursFeries()
+      if (response.success) {
+        setJoursFeries(response.joursFeries)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des jours fériés:', error)
+    } finally {
+      setIsLoadingJoursFeries(false)
     }
   }
 
@@ -189,7 +284,7 @@ const DateLimiteTab = () => {
       </div>
 
       {/* Affichage de la date limite calculée - EN AVANT */}
-      {dateLimite && getNombreJoursOuvrables() > 0 && (
+      {!isCalculating && !isLoadingJoursFeries && dateLimite && getNombreJoursOuvrables() > 0 && (
         <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white shadow-md">
           <div className="text-center">
             <div className="mb-2">
@@ -209,6 +304,49 @@ const DateLimiteTab = () => {
                 .filter(([_, estOuvrable]) => estOuvrable)
                 .map(([jour, _]) => jour.charAt(0).toUpperCase() + jour.slice(1))
                 .join(', ')}</p>
+              <p className="text-xs opacity-90">⚠️ Jours fériés automatiquement exclus</p>
+            </div>
+            
+            {/* Affichage des jours fériés dans la période */}
+            {getJoursFeriesDansPeriode().length > 0 && (
+              <div className="mt-4 pt-4 border-t border-blue-400">
+                <p className="text-sm font-medium text-blue-100 mb-2">
+                  Jours fériés dans cette période :
+                </p>
+                <div className="space-y-1">
+                  {getJoursFeriesDansPeriode().map((jourFerie, index) => (
+                    <div key={index} className="flex items-center justify-center space-x-2 text-xs">
+                      <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">
+                          {jourFerie.date.getDate()}
+                        </span>
+                      </div>
+                      <span className="text-blue-100">
+                        {jourFerie.nom} ({jourFerie.jourSemaine})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Affichage du chargement */}
+      {(isCalculating || isLoadingJoursFeries) && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white shadow-md">
+          <div className="text-center">
+            <div className="mb-2">
+              <svg className="w-8 h-8 mx-auto text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold mb-2">
+              {isLoadingJoursFeries ? 'Chargement des jours fériés...' : 'Calcul de la date limite...'}
+            </h3>
+            <div className="flex justify-center">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           </div>
         </div>
@@ -268,29 +406,67 @@ const DateLimiteTab = () => {
           </p>
         </div>
 
+        {/* Affichage des jours fériés par mois */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Jours fériés français (exclus automatiquement du calcul)
+          </label>
+          {isLoadingJoursFeries ? (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <p className="mt-2 text-sm text-gray-500">Chargement des jours fériés...</p>
+            </div>
+          ) : Object.keys(joursFeries).length > 0 ? (
+            <details className="border border-gray-200 rounded-lg bg-gray-50">
+              <summary className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors font-medium text-gray-800">
+                <div className="flex items-center justify-between">
+                  <span>Voir tous les jours fériés ({Object.keys(joursFeries).length} jour(s))</span>
+                  <svg className="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </summary>
+              <div className="px-4 pb-4 space-y-4">
+                {grouperJoursFeriesParMois().map(([cle, groupe]) => (
+                  <div key={cle} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <h4 className="font-semibold text-gray-800 mb-3 text-center">
+                      {groupe.mois}
+                    </h4>
+                    <div className="grid gap-2">
+                      {groupe.jours.map((jour, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-sm font-bold">
+                                {jour.date.getDate()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{jour.nom}</p>
+                              <p className="text-xs text-gray-500 capitalize">{jour.jourSemaine}</p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-red-500 font-medium">
+                            FÉRIÉ
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <p>Aucun jour férié trouvé</p>
+            </div>
+          )}
+        </div>
+
         {/* Affichage de la date limite calculée */}
         {/* This block is now moved outside the space-y-6 div */}
 
-        {/* Informations sur le calcul */}
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-amber-800">
-                Calcul en arrière depuis aujourd'hui
-              </h3>
-              <div className="mt-2 text-sm text-amber-700">
-                <p>• <strong>Logique inversée :</strong> On calcule la date limite en remontant dans le temps depuis aujourd'hui</p>
-                <p>• <strong>Exemple :</strong> Si aujourd'hui c'est le 15 et que vous mettez 21 jours ouvrables, la date limite sera le 24 du mois précédent</p>
-                <p>• <strong>Objectif :</strong> Identifier quelles commandes doivent être terminées dans X jours ouvrables</p>
-              </div>
-            </div>
-          </div>
-        </div>
+  
 
         {/* Message de feedback */}
         {message && (

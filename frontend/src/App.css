@@ -17,10 +17,26 @@
   --couture-en-pause-border: --color-gray-300;
   --couture-en-pause-dark: orange;
   
-  --couture-termine: green; /* Vert */
-  --couture-termine-hover: green;
-  --couture-termine-border: --color-gray-300;
-  --couture-termine-dark: green;
+  --couture-termine: #22c55e; /* Vert */
+  --couture-termine-hover: #16a34a;
+  --couture-termine-border: #16a34a;
+  --couture-termine-dark: #15803d;
+}
+
+/* Animation de clignotement pour le texte "EN RETARD" */
+@keyframes clignoter {
+  0%, 50% { 
+    color: white;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+  51%, 100% { 
+    color: rgba(255, 255, 255, 0.6);
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+}
+
+.clignoter {
+  animation: clignoter 1.5s ease-in-out infinite;
 }
 
 /* Styles personnalisés pour l'application */
