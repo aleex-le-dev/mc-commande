@@ -78,10 +78,35 @@ const DateLimiteTab = () => {
 
   // Fonction pour vérifier si une date est un jour férié
   const estJourFerie = (date) => {
-    if (!joursFeries || Object.keys(joursFeries).length === 0) return false
-    
     const dateStr = date.toISOString().split('T')[0]
-    return joursFeries[dateStr] !== undefined
+    
+    // Vérifier d'abord dans les jours fériés chargés depuis l'API
+    if (joursFeries && joursFeries[dateStr]) {
+      return true
+    }
+    
+    // Si pas de jours fériés depuis l'API, utiliser les jours fériés par défaut
+    if (Object.keys(joursFeries || {}).length === 0) {
+      const anneeActuelle = date.getFullYear()
+      const joursFeriesDefaut = {
+        '1er janvier': `${anneeActuelle}-01-01`,
+        'Lundi de Pâques': `${anneeActuelle}-04-${anneeActuelle === 2025 ? '21' : anneeActuelle === 2024 ? '01' : '22'}`,
+        '1er mai': `${anneeActuelle}-05-01`,
+        '8 mai': `${anneeActuelle}-05-08`,
+        'Ascension': `${anneeActuelle}-05-${anneeActuelle === 2025 ? '29' : anneeActuelle === 2024 ? '09' : '30'}`,
+        'Lundi de Pentecôte': `${anneeActuelle}-06-${anneeActuelle === 2025 ? '09' : anneeActuelle === 2024 ? '17' : '10'}`,
+        '14 juillet': `${anneeActuelle}-07-14`,
+        '15 août': `${anneeActuelle}-08-15`,
+        '1er novembre': `${anneeActuelle}-11-01`,
+        '11 novembre': `${anneeActuelle}-11-11`,
+        '25 décembre': `${anneeActuelle}-12-25`
+      }
+      
+      // Vérifier si la date est dans les jours fériés par défaut
+      return Object.values(joursFeriesDefaut).includes(dateStr)
+    }
+    
+    return false
   }
 
   // Fonction pour formater une date en français
@@ -137,7 +162,7 @@ const DateLimiteTab = () => {
 
   // Fonction pour obtenir les jours fériés dans la période de calcul
   const getJoursFeriesDansPeriode = () => {
-    if (!dateLimite || !joursFeries) return []
+    if (!dateLimite) return []
     
     const dateLimiteObj = new Date(dateLimite)
     const aujourdhui = new Date()
@@ -147,15 +172,15 @@ const DateLimiteTab = () => {
     let dateCourante = new Date(dateLimiteObj)
     
     while (dateCourante <= aujourdhui) {
-      const dateStr = dateCourante.toISOString().split('T')[0]
-      
-      // Vérifier si cette date est un jour férié
-      if (joursFeries[dateStr]) {
-        const dateFerie = new Date(dateStr)
+      // Utiliser la fonction estJourFerie qui gère déjà les jours fériés par défaut
+      if (estJourFerie(dateCourante)) {
+        const dateStr = dateCourante.toISOString().split('T')[0]
+        const nomJourFerie = joursFeries && joursFeries[dateStr] ? joursFeries[dateStr] : getNomJourFerieDefaut(dateStr)
+        
         joursFeriesDansPeriode.push({
-          date: dateFerie,
-          nom: joursFeries[dateStr],
-          jourSemaine: dateFerie.toLocaleDateString('fr-FR', { weekday: 'long' })
+          date: new Date(dateCourante),
+          nom: nomJourFerie,
+          jourSemaine: dateCourante.toLocaleDateString('fr-FR', { weekday: 'long' })
         })
       }
       
@@ -165,6 +190,33 @@ const DateLimiteTab = () => {
     
     // Trier par date
     return joursFeriesDansPeriode.sort((a, b) => a.date - b.date)
+  }
+
+  // Fonction pour obtenir le nom d'un jour férié par défaut
+  const getNomJourFerieDefaut = (dateStr) => {
+    const anneeActuelle = new Date().getFullYear()
+    const joursFeriesDefaut = {
+      '1er janvier': `${anneeActuelle}-01-01`,
+      'Lundi de Pâques': `${anneeActuelle}-04-${anneeActuelle === 2025 ? '21' : anneeActuelle === 2024 ? '01' : '22'}`,
+      '1er mai': `${anneeActuelle}-05-01`,
+      '8 mai': `${anneeActuelle}-05-08`,
+      'Ascension': `${anneeActuelle}-05-${anneeActuelle === 2025 ? '29' : anneeActuelle === 2024 ? '09' : '30'}`,
+      'Lundi de Pentecôte': `${anneeActuelle}-06-${anneeActuelle === 2025 ? '09' : anneeActuelle === 2024 ? '17' : '10'}`,
+      '14 juillet': `${anneeActuelle}-07-14`,
+      '15 août': `${anneeActuelle}-08-15`,
+      '1er novembre': `${anneeActuelle}-11-01`,
+      '11 novembre': `${anneeActuelle}-11-11`,
+      '25 décembre': `${anneeActuelle}-12-25`
+    }
+    
+    // Trouver le nom du jour férié
+    for (const [nom, date] of Object.entries(joursFeriesDefaut)) {
+      if (date === dateStr) {
+        return nom
+      }
+    }
+    
+    return 'Jour férié'
   }
 
   const loadDelai = async () => {
@@ -306,31 +358,34 @@ const DateLimiteTab = () => {
                 .filter(([_, estOuvrable]) => estOuvrable)
                 .map(([jour, _]) => jour.charAt(0).toUpperCase() + jour.slice(1))
                 .join(', ')}</p>
-              <p className="text-xs opacity-90">⚠️ Jours fériés automatiquement exclus</p>
-            </div>
-            
-            {/* Affichage des jours fériés dans la période */}
-            {getJoursFeriesDansPeriode().length > 0 && (
-              <div className="mt-4 pt-4 border-t border-blue-400">
-                <p className="text-sm font-medium text-blue-100 mb-2">
-                  Jours fériés dans cette période :
-                </p>
-                <div className="space-y-1">
-                  {getJoursFeriesDansPeriode().map((jourFerie, index) => (
-                    <div key={index} className="flex items-center justify-center space-x-2 text-xs">
-                      <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">
-                          {jourFerie.date.getDate()}
+              
+              {/* Affichage des jours fériés dans la période de calcul */}
+              {getJoursFeriesDansPeriode().length > 0 ? (
+                <div className="mt-3 pt-3 border-t border-blue-400">
+                  <p className="text-sm font-medium text-blue-100 mb-2">
+                    🗓️ Jours fériés dans cette période ({getJoursFeriesDansPeriode().length} jour(s)) :
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {getJoursFeriesDansPeriode().map((jourFerie, index) => (
+                      <div key={index} className="flex items-center justify-center space-x-2 text-xs">
+                        <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">
+                            {jourFerie.date.getDate()}
+                          </span>
+                        </div>
+                        <span className="text-blue-100">
+                          {jourFerie.nom} ({jourFerie.jourSemaine})
                         </span>
                       </div>
-                      <span className="text-blue-100">
-                        {jourFerie.nom} ({jourFerie.jourSemaine})
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-xs opacity-90">✅ Aucun jour férié dans cette période</p>
+              )}
+            </div>
+            
+
           </div>
         </div>
       )}
