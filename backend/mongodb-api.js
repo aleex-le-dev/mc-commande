@@ -81,6 +81,11 @@ async function createCollectionsAndIndexes() {
     await assignmentsCollection.createIndex({ status: 1 })
     await assignmentsCollection.createIndex({ assigned_at: -1 })
     
+    // Collection des délais d'expédition
+    const delaisCollection = db.collection('delais_expedition')
+    await delaisCollection.createIndex({ dateCreation: -1 })
+    await delaisCollection.createIndex({ derniereModification: -1 })
+    
     console.log('✅ Collections et index créés')
   } catch (error) {
     console.error('❌ Erreur création collections:', error)
@@ -1461,6 +1466,288 @@ app.delete('/api/assignments/:articleId', async (req, res) => {
   }
 })
 
+// Routes pour les délais d'expédition
+
+// GET /api/delais - Récupérer tous les délais d'expédition
+app.get('/api/delais', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    const delais = await delaisCollection.find({}).sort({ dateCreation: -1 }).toArray()
+    
+    res.json({
+      success: true,
+      data: delais
+    })
+  } catch (error) {
+    console.error('Erreur récupération délais:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/delais - Créer un nouveau délai d'expédition
+app.post('/api/delais', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { dateCreation, derniereModification, description } = req.body
+    
+    if (!dateCreation) {
+      return res.status(400).json({ error: 'La date de création est requise' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    
+    const newDelai = {
+      dateCreation: new Date(dateCreation),
+      derniereModification: derniereModification ? new Date(derniereModification) : new Date(),
+      description: description || null
+    }
+    
+    const result = await delaisCollection.insertOne(newDelai)
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: result.insertedId,
+        ...newDelai
+      }
+    })
+  } catch (error) {
+    console.error('Erreur création délai:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// PUT /api/delais/:id - Modifier un délai d'expédition
+app.put('/api/delais/:id', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { id } = req.params
+    const { dateCreation, derniereModification, description } = req.body
+    
+    if (!dateCreation) {
+      return res.status(400).json({ error: 'La date de création est requise' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    
+    const updateData = {
+      dateCreation: new Date(dateCreation),
+      derniereModification: derniereModification ? new Date(derniereModification) : new Date(),
+      description: description || null
+    }
+    
+    const result = await delaisCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    )
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Délai non trouvé' })
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id,
+        ...updateData
+      }
+    })
+  } catch (error) {
+    console.error('Erreur modification délai:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// DELETE /api/delais/:id - Supprimer un délai d'expédition
+app.delete('/api/delais/:id', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { id } = req.params
+    const delaisCollection = db.collection('delais_expedition')
+    
+    const result = await delaisCollection.deleteOne({ _id: new ObjectId(id) })
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Délai non trouvé' })
+    }
+    
+    res.json({
+      success: true,
+      message: 'Délai supprimé avec succès'
+    })
+  } catch (error) {
+    console.error('Erreur suppression délai:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// Routes pour les délais d'expédition
+
+// GET /api/delais/configuration - Récupérer la configuration actuelle des délais
+app.get('/api/delais/configuration', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    const configuration = await delaisCollection.findOne({}, { sort: { derniereModification: -1 } })
+    
+    if (configuration) {
+      res.json({
+        success: true,
+        data: configuration
+      })
+    } else {
+      // Retourner une configuration par défaut si aucune n'existe
+      res.json({
+        success: true,
+        data: {
+          joursDelai: 21,
+          joursOuvrables: {
+            lundi: true,
+            mardi: true,
+            mercredi: true,
+            jeudi: true,
+            vendredi: true,
+            samedi: false,
+            dimanche: false
+          },
+          dateLimite: null,
+          dateCreation: new Date(),
+          derniereModification: new Date()
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Erreur récupération configuration délais:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/delais/configuration - Sauvegarder la configuration des délais
+app.post('/api/delais/configuration', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { joursDelai, joursOuvrables, dateLimite, dateCreation, derniereModification } = req.body
+    
+    if (!joursDelai || !joursOuvrables) {
+      return res.status(400).json({ error: 'Les jours de délai et la configuration des jours ouvrables sont requis' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    
+    // Créer la nouvelle configuration
+    const nouvelleConfiguration = {
+      joursDelai: parseInt(joursDelai),
+      joursOuvrables: joursOuvrables,
+      dateLimite: dateLimite ? new Date(dateLimite) : null,
+      dateCreation: dateCreation ? new Date(dateCreation) : new Date(),
+      derniereModification: new Date()
+    }
+    
+    const result = await delaisCollection.insertOne(nouvelleConfiguration)
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: result.insertedId,
+        ...nouvelleConfiguration
+      }
+    })
+  } catch (error) {
+    console.error('Erreur sauvegarde configuration délais:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/delais/calculer - Calculer la date limite pour une commande
+app.post('/api/delais/calculer', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { dateCommande, joursOuvrables, configurationJours } = req.body
+    
+    if (!dateCommande || !joursOuvrables || !configurationJours) {
+      return res.status(400).json({ error: 'Tous les paramètres sont requis' })
+    }
+    
+    // Fonction pour calculer la date limite
+    const calculerDateLimiteOuvrable = (dateCommande, joursOuvrablesCount, joursOuvrablesConfig) => {
+      const dateCommandeObj = new Date(dateCommande)
+      let dateLimite = new Date(dateCommandeObj)
+      let joursAjoutes = 0
+      
+      while (joursAjoutes < joursOuvrablesCount) {
+        dateLimite.setDate(dateLimite.getDate() + 1)
+        
+        // Vérifier si c'est un jour ouvrable selon la configuration
+        const jourSemaine = dateLimite.getDay()
+        const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
+        
+        if (joursOuvrablesConfig[nomJour]) {
+          joursAjoutes++
+        }
+      }
+      
+      return dateLimite
+    }
+    
+    const dateLimite = calculerDateLimiteOuvrable(dateCommande, joursOuvrables, configurationJours)
+    
+    res.json({
+      success: true,
+      data: {
+        dateCommande: new Date(dateCommande),
+        joursOuvrables: parseInt(joursOuvrables),
+        dateLimite: dateLimite,
+        joursCalcules: Math.ceil((dateLimite - new Date(dateCommande)) / (1000 * 60 * 60 * 24))
+      }
+    })
+  } catch (error) {
+    console.error('Erreur calcul date limite:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// GET /api/delais/historique - Récupérer l'historique des configurations
+app.get('/api/delais/historique', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const delaisCollection = db.collection('delais_expedition')
+    const historique = await delaisCollection.find({}).sort({ derniereModification: -1 }).limit(50).toArray()
+    
+    res.json({
+      success: true,
+      data: historique
+    })
+  } catch (error) {
+    console.error('Erreur récupération historique délais:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
 
@@ -1651,6 +1938,14 @@ async function startServer() {
     console.log(`   GET  /api/assignments/:articleId - Récupérer une assignation`)
     console.log(`   POST /api/assignments - Créer/mettre à jour une assignation`)
     console.log(`   DELETE /api/assignments/:articleId - Supprimer une assignation`)
+    console.log(`   GET  /api/delais - Récupérer tous les délais d'expédition`)
+    console.log(`   POST /api/delais - Créer un nouveau délai d'expédition`)
+    console.log(`   PUT  /api/delais/:id - Modifier un délai d'expédition`)
+    console.log(`   DELETE /api/delais/:id - Supprimer un délai d'expédition`)
+    console.log(`   GET  /api/delais/configuration - Configuration actuelle`)
+    console.log(`   POST /api/delais/configuration - Sauvegarder configuration`)
+    console.log(`   POST /api/delais/calculer - Calculer date limite`)
+    console.log(`   GET  /api/delais/historique - Historique des configurations`)
   })
 }
 
