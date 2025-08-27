@@ -1222,7 +1222,7 @@ app.post('/api/tricoteuses', async (req, res) => {
       return res.status(500).json({ error: 'Base de données non connectée' })
     }
     
-    const { firstName, color, photoUrl } = req.body
+    const { firstName, color, photoUrl, gender } = req.body
     
     if (!firstName || !firstName.trim()) {
       return res.status(400).json({ error: 'Le prénom est requis' })
@@ -1238,6 +1238,7 @@ app.post('/api/tricoteuses', async (req, res) => {
       firstName: firstName.trim(),
       color,
       photoUrl: photoUrl || '',
+      gender: gender || 'feminin', // Par défaut féminin
       createdAt: new Date(),
       updatedAt: new Date()
     }
@@ -1265,7 +1266,7 @@ app.put('/api/tricoteuses/:id', async (req, res) => {
     }
     
     const { id } = req.params
-    const { firstName, color, photoUrl } = req.body
+    const { firstName, color, photoUrl, gender } = req.body
     
     if (!firstName || !firstName.trim()) {
       return res.status(400).json({ error: 'Le prénom est requis' })
@@ -1281,6 +1282,7 @@ app.put('/api/tricoteuses/:id', async (req, res) => {
       firstName: firstName.trim(),
       color,
       photoUrl: photoUrl || '',
+      gender: gender || 'feminin', // Par défaut féminin
       updatedAt: new Date()
     }
     

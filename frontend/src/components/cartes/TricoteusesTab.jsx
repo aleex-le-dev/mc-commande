@@ -10,7 +10,8 @@ const TricoteusesTab = () => {
     firstName: '',
     color: '#f43f5e',
     photoFile: null,
-    photoPreview: ''
+    photoPreview: '',
+    gender: 'feminin' // Par défaut féminin
   })
 
   const palette = [
@@ -41,7 +42,8 @@ const TricoteusesTab = () => {
       firstName: '',
       color: '#f43f5e',
       photoFile: null,
-      photoPreview: ''
+      photoPreview: '',
+      gender: 'feminin' // Par défaut féminin
     })
     setEditingKnitter(null)
   }
@@ -56,7 +58,8 @@ const TricoteusesTab = () => {
       firstName: knitter.firstName,
       color: knitter.color,
       photoFile: null,
-      photoPreview: knitter.photoUrl || ''
+      photoPreview: knitter.photoUrl || '',
+      gender: knitter.gender || 'feminin' // Par défaut féminin
     })
     setEditingKnitter(knitter)
     setShowModal(true)
@@ -89,18 +92,22 @@ const TricoteusesTab = () => {
       
       if (editingKnitter) {
         // Modification
-        await tricoteusesService.updateTricoteuse(editingKnitter._id, {
+        const updateData = {
           firstName: trimmed,
           color: formData.color,
-          photoUrl: formData.photoPreview || editingKnitter.photoUrl
-        })
+          photoUrl: formData.photoPreview || editingKnitter.photoUrl,
+          gender: formData.gender
+        }
+        await tricoteusesService.updateTricoteuse(editingKnitter._id, updateData)
       } else {
         // Ajout
-        await tricoteusesService.createTricoteuse({
-      firstName: trimmed,
+        const createData = {
+          firstName: trimmed,
           color: formData.color,
-          photoUrl: formData.photoPreview || ''
-        })
+          photoUrl: formData.photoPreview || '',
+          gender: formData.gender
+        }
+        await tricoteusesService.createTricoteuse(createData)
       }
       
       // Recharger la liste
@@ -160,39 +167,52 @@ const TricoteusesTab = () => {
               </button>
             </div>
           ) : (
-            knitters.map(k => (
-              <div key={k._id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  {k.photoUrl ? (
-                    <img src={k.photoUrl} alt={k.firstName} className="h-16 w-16 rounded-full object-cover border-2 border-gray-100 shadow-sm" />
-                  ) : (
-                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>
-                      {k.firstName[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-semibold text-gray-900 text-sm">{k.firstName}</div>
-                    <div className="text-xs text-gray-500">Tricoteuse</div>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                      onClick={() => openEditModal(k)}
-                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Modifier"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => removeKnitter(k._id)}
-                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Supprimer"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+            <>
+              {/* Bouton Ajouter permanent */}
+              <div className="group bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-[var(--rose-clair-text)] hover:bg-[var(--rose-clair)] hover:bg-opacity-5 transition-all duration-200 cursor-pointer" onClick={openAddModal}>
+                <div className="flex flex-col items-center justify-center text-center space-y-3 h-full min-h-[120px]">
+                  <div className="text-4xl text-gray-400 group-hover:text-[var(--rose-clair-text)] transition-colors">+</div>
+                  <div className="text-sm font-medium text-gray-600 group-hover:text-[var(--rose-clair-text)] transition-colors">Ajouter une tricoteuse</div>
                 </div>
               </div>
-            ))
+              
+              {/* Tricoteuses existantes */}
+              {knitters.map(k => (
+                <div key={k._id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    {k.photoUrl ? (
+                      <img src={k.photoUrl} alt={k.firstName} className="h-16 w-16 rounded-full object-cover border-2 border-gray-100 shadow-sm" />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>
+                        {k.firstName[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-semibold text-gray-900 text-sm">{k.firstName}</div>
+                      <div className="text-xs text-gray-500">
+                        {k.gender === 'masculin' ? 'Tricoteur' : 'Tricoteuse'}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => openEditModal(k)}
+                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Modifier"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => removeKnitter(k._id)}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
         </div>
       </div>
@@ -204,7 +224,7 @@ const TricoteusesTab = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">
-                  {editingKnitter ? 'Modifier la tricoteuse' : 'Ajouter une tricoteuse'}
+                  {editingKnitter ? `Modifier le/la ${formData.gender === 'masculin' ? 'tricoteur' : 'tricoteuse'}` : 'Ajouter une tricoteuse'}
                 </h3>
                 <button
                   onClick={closeModal}
@@ -220,17 +240,18 @@ const TricoteusesTab = () => {
                   {formData.photoPreview ? (
                     <img src={formData.photoPreview} alt="Aperçu" className="h-16 w-16 rounded-full object-cover border-2 border-gray-200" />
                   ) : (
-                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-3xl" style={{ backgroundColor: formData.color }}>
-                      {formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}
-                </div>
-              )}
+                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-semibold text-5xl relative" style={{ backgroundColor: formData.color }}>
+                      <span className="absolute inset-0 flex items-center justify-center transform -translate-y-1">{formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}</span>
+                    </div>
+                  )}
               <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
                 <input
+                
                   type="text"
                       value={formData.firstName}
                       onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="Ex: Alice"
+                  placeholder="Ex: Alex"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] focus:border-transparent"
                       required
                 />
@@ -242,8 +263,8 @@ const TricoteusesTab = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-3">Couleur de l'avatar</label>
                   <div className="grid grid-cols-8 gap-2">
                     {palette.map((c, index) => (
-                  <button
-                    type="button"
+                      <button
+                        type="button"
                         key={`color-${index}-${c}`}
                         onClick={() => setFormData(prev => ({ ...prev, color: c }))}
                         className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
@@ -251,12 +272,56 @@ const TricoteusesTab = () => {
                             ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)] border-white' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Choisir la couleur ${c}`}
-                  />
-                ))}
-              </div>
-            </div>
+                        style={{ backgroundColor: c }}
+                        aria-label={`Choisir la couleur ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sélection du sexe */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Sexe</label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="feminin"
+                        checked={formData.gender === 'feminin'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="sr-only"
+                      />
+                      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        formData.gender === 'feminin' 
+                          ? 'border-[var(--rose-clair-text)] bg-[var(--rose-clair)] bg-opacity-10' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <span className="text-xl">👩</span>
+                        <span className="font-medium">Féminin</span>
+                      </div>
+                    </label>
+                    
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="masculin"
+                        checked={formData.gender === 'masculin'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        className="sr-only"
+                      />
+                      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        formData.gender === 'masculin' 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <span className="text-xl">👨</span>
+                        <span className="font-medium">Masculin</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
 
                 {/* Upload photo */}
                 <div>
