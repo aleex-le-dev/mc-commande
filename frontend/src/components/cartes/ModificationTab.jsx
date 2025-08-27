@@ -1,13 +1,11 @@
 import React, { useState } from 'react'
 import { getOrderByNumber, updateOrderStatus } from '../../services/mongodbService'
-import ImageTest from '../ImageTest'
 
 const ModificationTab = () => {
   const [searchOrderNumber, setSearchOrderNumber] = useState('')
   const [order, setOrder] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setStatus] = useState({ type: '', text: '' })
-  const [showImageTest, setShowImageTest] = useState(false)
 
   const searchOrder = async (e) => {
     e.preventDefault()
@@ -91,25 +89,8 @@ const ModificationTab = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">✏️ Modification des commandes</h2>
           <p className="text-gray-600">
             Recherchez une commande par numéro et modifiez le type de production de chaque article.
-            <br />
-            <span className="text-sm text-green-600">✅ Images optimisées avec cache mémoire et préchargement intelligent</span>
           </p>
-          
-          {/* Bouton de test des images */}
-          <button
-            onClick={() => setShowImageTest(!showImageTest)}
-            className="mt-3 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 text-sm"
-          >
-            {showImageTest ? 'Masquer' : 'Afficher'} Test des Images Optimisé
-          </button>
         </div>
-
-        {/* Composant de test des images */}
-        {showImageTest && (
-          <div className="mb-6">
-            <ImageTest />
-          </div>
-        )}
 
         {/* Formulaire de recherche */}
         <form onSubmit={searchOrder} className="mb-6">
@@ -125,7 +106,7 @@ const ModificationTab = () => {
                   id="orderNumber"
                   value={searchOrderNumber}
                   onChange={(e) => setSearchOrderNumber(e.target.value)}
-                  placeholder="12345"
+                  placeholder="390023"
                   className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]"
                 />
               </div>
@@ -157,18 +138,33 @@ const ModificationTab = () => {
         {order && (
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
             <h3 className="text-lg font-medium text-gray-900 mb-3">📋 Commande #{order.order_id}</h3>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-600">Client:</span>
-                <p className="text-gray-900">{order.customer_email}</p>
+                <p className="text-gray-900">{order.customer_name || 'Non défini'}</p>
+                <p className="text-gray-600 text-xs">{order.customer_email}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Adresse:</span>
-                <p className="text-gray-900">{order.customer_address}</p>
+                <span className="font-medium text-gray-600">Date de commande:</span>
+                <p className="text-gray-900">
+                  {order.order_date ? new Date(order.order_date).toLocaleDateString('fr-FR') : 'Non définie'}
+                </p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Date:</span>
-                <p className="text-gray-900">{new Date(order.created_at).toLocaleDateString('fr-FR')}</p>
+                <span className="font-medium text-gray-600">Statut:</span>
+                <p className="text-gray-900">{order.status || 'Non défini'}</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-600">Total articles:</span>
+                <p className="text-gray-900">{order.items ? order.items.length : 0}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-600">Prix total:</span>
+                <p className="text-gray-900">{order.total ? `${order.total}€` : 'Non défini'}</p>
               </div>
             </div>
           </div>
@@ -190,7 +186,12 @@ const ModificationTab = () => {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <span>Quantité: {item.quantity}</span>
-                        <span>Prix: {item.total}€</span>
+                        <span>Prix: {item.price}€</span>
+                        <span>Taille: {item.meta_data?.find(m => m.key === 'pa_size')?.display_value || 'Non définie'}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <span>Type: {item.production_status?.production_type || 'Non défini'}</span>
+                        <span>Statut: {item.production_status?.status || 'Non défini'}</span>
                       </div>
                     </div>
                     
@@ -213,7 +214,7 @@ const ModificationTab = () => {
                         className={`px-4 py-2 rounded-md text-sm font-medium border transition-colors ${
                           item.production_status?.production_type === 'maille'
                             ? 'bg-purple-100 text-purple-800 border-purple-300 cursor-default'
-                            : 'bg-white text-purple-600 border-purple-300 hover:bg-purple-50'
+                            : 'bg-white text-purple-600 border-blue-300 hover:bg-purple-50'
                         }`}
                         disabled={item.production_status?.production_type === 'maille'}
                       >
@@ -232,3 +233,4 @@ const ModificationTab = () => {
 }
 
 export default ModificationTab
+

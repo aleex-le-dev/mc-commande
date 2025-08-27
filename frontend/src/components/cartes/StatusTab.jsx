@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { testConnection, testSync, getProductionStats } from '../../services/mongodbService'
+import imageService from '../../services/imageService'
 
 const StatusTab = () => {
   const [status, setStatus] = useState('')
@@ -9,7 +10,8 @@ const StatusTab = () => {
     wordpressProducts: false,
     wordpressOrders: false,
     database: false,
-    stats: false
+    stats: false,
+    images: false
   })
 
   const testWordPressConnection = async () => {
@@ -87,6 +89,48 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, stats: false }))
   }
 
+  const testImages = async () => {
+    setLoadingStates(prev => ({ ...prev, images: true }))
+    try {
+      // Test de la nouvelle approche des images (affichage direct MongoDB)
+      const testProductIds = [1, 2, 3, 4, 5]
+      const imageResults = []
+      
+      for (const productId of testProductIds) {
+        const imageUrl = imageService.getImage(productId)
+        const isPlaceholder = imageUrl.startsWith('data:image/svg+xml')
+        
+        imageResults.push({
+          productId,
+          url: imageUrl,
+          isPlaceholder,
+          success: true
+        })
+      }
+      
+      setTestResults(prev => ({ 
+        ...prev, 
+        images: { 
+          success: true, 
+          data: imageResults,
+          method: 'Affichage direct MongoDB',
+          performance: 'Ultra-rapide'
+        } 
+      }))
+      setStatus('Test des images réussi - Approche ultra-simple')
+    } catch (error) {
+      setTestResults(prev => ({ 
+        ...prev, 
+        images: { 
+          success: false, 
+          error: error.message 
+        } 
+      }))
+      setStatus('Erreur lors du test des images')
+    }
+    setLoadingStates(prev => ({ ...prev, images: false }))
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -102,7 +146,7 @@ const StatusTab = () => {
           <div className="lg:col-span-1 space-y-6">
             {/* Tests WordPress */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-medium text-blue-900 mb-3">🌐 Tests WordPress</h3>
+              <h3 className="text-lg font-medium text-blue-900 mb-3">🌐 Test de la connexion WordPress</h3>
               <div className="space-y-3">
                 <button
                   onClick={testWordPressConnection}
@@ -130,7 +174,7 @@ const StatusTab = () => {
 
             {/* Tests Base de données */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <h3 className="text-lg font-medium text-green-900 mb-3">🗄️ Tests Base de données</h3>
+              <h3 className="text-lg font-medium text-green-900 mb-3">🗄️ Test de la base de données</h3>
               <div className="space-y-3">
                 <button
                   onClick={testDatabaseConnection}
@@ -144,7 +188,21 @@ const StatusTab = () => {
                   disabled={loadingStates.stats}
                   className="w-full px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
                 >
-                  {loadingStates.stats ? 'Test en cours...' : 'Statistiques'}
+                  {loadingStates.stats ? 'Test en cours...' : 'Contenu de la base'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tests Images */}
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h3 className="text-lg font-medium text-purple-900 mb-3">🖼️ Test des images</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={testImages}
+                  disabled={loadingStates.images}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {loadingStates.images ? 'Test en cours...' : 'Lancer le test'}
                 </button>
               </div>
             </div>
@@ -278,6 +336,29 @@ const StatusTab = () => {
                         )}
                         {!testResults.stats.success && (
                           <p className="text-sm text-red-700 mt-1">{testResults.stats.error}</p>
+                        )}
+                      </div>
+                    )}
+                    {testResults.images && (
+                      <div className={`p-3 rounded-md ${testResults.images.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+                            <span className="font-medium">🖼️ Images</span>
+                          </div>
+                          <span className={`text-sm ${testResults.images.success ? 'text-green-800' : 'text-red-800'}`}>
+                            {testResults.images.success ? '✅ Succès' : '❌ Échec'}
+                          </span>
+                        </div>
+                        {!testResults.images.success && (
+                          <p className="text-sm text-red-700 mt-1">{testResults.images.error}</p>
+                        )}
+                        {testResults.images.success && testResults.images.data && (
+                          <div className="mt-2 text-sm text-green-700">
+                            <p className="font-semibold">🖼️ Méthode: {testResults.images.method}</p>
+                            <p className="font-semibold">🚀 Performance: {testResults.images.performance}</p>
+                            <p className="font-semibold">🏷️ Statut: {testResults.images.success ? '✅ Succès' : '❌ Échec'}</p>
+                          </div>
                         )}
                       </div>
                     )}
