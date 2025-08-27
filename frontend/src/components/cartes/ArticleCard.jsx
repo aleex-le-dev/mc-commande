@@ -307,7 +307,12 @@ const ArticleCard = forwardRef(({
         animationDuration: searchTerm ? '0s' : '0.6s',
         animationTimingFunction: searchTerm ? undefined : 'ease-out',
         animationFillMode: searchTerm ? undefined : 'forwards',
-        animationDelay: searchTerm ? '0ms' : `${index * 150}ms`
+        animationDelay: searchTerm ? '0ms' : `${index * 150}ms`,
+        border: localAssignment ? `3px solid ${
+          localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
+          localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
+          localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
+        }` : 'none'
       }}
     >
       {/* Image de fond avec overlay moderne */}
@@ -875,6 +880,135 @@ const ArticleCard = forwardRef(({
                 <div className="col-span-2 p-8 text-center text-gray-500">
                   <p>Aucune tricoteuse disponible</p>
                 </div>
+              )}
+
+              {/* Section changer le statut si déjà assigné */}
+              {localAssignment && !isLoadingTricoteuses && (
+                <>
+                  <div className="col-span-2 border-t border-gray-200 pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 text-center mb-3">
+                      Changer le statut
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                       <button
+                         onClick={() => {
+                           const updatedAssignment = { ...localAssignment, status: 'en_cours' }
+                           assignmentsService.createOrUpdateAssignment(updatedAssignment)
+                             .then(() => {
+                               setLocalAssignment(updatedAssignment)
+                               if (onAssignmentUpdate) {
+                                 onAssignmentUpdate()
+                               }
+                             })
+                             .catch((error) => {
+                               console.error('Erreur lors de la mise à jour du statut:', error)
+                             })
+                         }}
+                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                           localAssignment.status === 'en_cours'
+                             ? 'text-black shadow-lg border-black'
+                             : 'text-black hover:shadow-md'
+                         }`}
+                         style={{
+                           backgroundColor: localAssignment.status === 'en_cours' 
+                             ? 'var(--couture-en-cours)' 
+                             : 'var(--couture-en-cours-hover)',
+                           borderColor: localAssignment.status === 'en_cours' 
+                             ? 'black' 
+                             : 'var(--couture-en-cours-border)'
+                         }}
+                       >
+                         <div className="text-center">
+                           <div 
+                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2"
+                             style={{ backgroundColor: 'var(--couture-en-cours-dark)' }}
+                           >
+                             ⏳
+                           </div>
+                           <p className="text-xs font-medium">En cours</p>
+                         </div>
+                       </button>
+
+                       <button
+                         onClick={() => {
+                           const updatedAssignment = { ...localAssignment, status: 'en_pause' }
+                           assignmentsService.createOrUpdateAssignment(updatedAssignment)
+                             .then(() => {
+                               setLocalAssignment(updatedAssignment)
+                               if (onAssignmentUpdate) {
+                                 onAssignmentUpdate()
+                               }
+                             })
+                             .catch((error) => {
+                               console.error('Erreur lors de la mise à jour du statut:', error)
+                             })
+                         }}
+                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                           localAssignment.status === 'en_pause'
+                             ? 'text-white shadow-lg border-black'
+                             : 'text-white hover:shadow-md'
+                         }`}
+                         style={{
+                           backgroundColor: localAssignment.status === 'en_pause' 
+                             ? 'var(--couture-en-pause)' 
+                             : 'var(--couture-en-pause-hover)',
+                           borderColor: localAssignment.status === 'en_pause' 
+                             ? 'black' 
+                             : 'var(--couture-en-pause-border)'
+                         }}
+                       >
+                         <div className="text-center">
+                           <div 
+                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2"
+                             style={{ backgroundColor: 'var(--couture-en-pause-dark)' }}
+                           >
+                             ⏸️
+                           </div>
+                           <p className="text-xs font-medium">En pause</p>
+                         </div>
+                       </button>
+
+                       <button
+                         onClick={() => {
+                           const updatedAssignment = { ...localAssignment, status: 'termine' }
+                           assignmentsService.createOrUpdateAssignment(updatedAssignment)
+                             .then(() => {
+                               setLocalAssignment(updatedAssignment)
+                               if (onAssignmentUpdate) {
+                                 onAssignmentUpdate()
+                               }
+                             })
+                             .catch((error) => {
+                               console.error('Erreur lors de la mise à jour du statut:', error)
+                             })
+                         }}
+                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                           localAssignment.status === 'termine'
+                             ? 'text-white shadow-lg border-black'
+                             : 'text-white hover:shadow-md'
+                         }`}
+                         style={{
+                           backgroundColor: localAssignment.status === 'termine' 
+                             ? 'var(--couture-termine)' 
+                             : 'var(--couture-termine-hover)',
+                           borderColor: localAssignment.status === 'termine' 
+                             ? 'black' 
+                             : 'var(--couture-termine-border)'
+                         }}
+                       >
+                         <div className="text-center">
+                           <div 
+                             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2"
+                             style={{ backgroundColor: 'var(--couture-termine-dark)' }}
+                           >
+                             ✅
+                           </div>
+                           <p className="text-xs font-medium">Terminé</p>
+                         </div>
+                       </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 

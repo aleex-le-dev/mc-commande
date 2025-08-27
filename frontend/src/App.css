@@ -5,6 +5,22 @@
   --rose-clair-hover: #fce7f3;
   --rose-clair-border: #fbcfe8;
   --rose-clair-text: #be185d;
+  
+  /* Couleurs de couture */
+  --couture-en-cours: yellow; /* Jaune */
+  --couture-en-cours-hover: yellow;
+  --couture-en-cours-border: --color-gray-300;
+  --couture-en-cours-dark: yellow;
+  
+  --couture-en-pause: orange; /* Orange */
+  --couture-en-pause-hover: orange;
+  --couture-en-pause-border: --color-gray-300;
+  --couture-en-pause-dark: orange;
+  
+  --couture-termine: green; /* Vert */
+  --couture-termine-hover: green;
+  --couture-termine-border: --color-gray-300;
+  --couture-termine-dark: green;
 }
 
 /* Styles personnalisés pour l'application */
