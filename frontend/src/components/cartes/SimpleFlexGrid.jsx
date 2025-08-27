@@ -9,7 +9,8 @@ const SimpleFlexGrid = ({
   getArticleOptions, 
   handleOverlayOpen, 
   openOverlayCardId, 
-  searchTerm 
+  searchTerm,
+  productionType = 'unknown' // Ajouter le type de production
 }) => {
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
@@ -23,7 +24,7 @@ const SimpleFlexGrid = ({
       
       return (
         <div 
-          key={cardId} 
+          key={`${productionType}-${cardId}`} // Clé unique incluant le type de production
           className="flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)] 2xl:w-[calc(20%-19.2px)]"
         >
           <ArticleCard 
@@ -36,6 +37,7 @@ const SimpleFlexGrid = ({
             isOverlayOpen={openOverlayCardId === cardId}
             isHighlighted={isHighlighted}
             searchTerm={searchTerm}
+            productionType={productionType} // Passer le type de production
           />
         </div>
       )
@@ -47,7 +49,8 @@ const SimpleFlexGrid = ({
     getArticleOptions, 
     handleOverlayOpen, 
     openOverlayCardId, 
-    searchTerm
+    searchTerm,
+    productionType // Ajouter aux dépendances
   ])
 
   if (filteredArticles.length === 0) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
 /**
  * Composant ultra-simple pour afficher le statut de chargement
@@ -6,10 +6,14 @@ import React, { useEffect, useState } from 'react'
  */
 const ImagePreloader = ({ articles, onPreloadComplete }) => {
   const [isPreloading, setIsPreloading] = useState(false)
+  const hasShownRef = useRef(false)
 
   useEffect(() => {
-    if (articles && articles.length > 0) {
+    // Ne montrer le preloader qu'une seule fois par session
+    if (articles && articles.length > 0 && !hasShownRef.current) {
       setIsPreloading(true)
+      hasShownRef.current = true
+      
       // Simuler un chargement rapide
       setTimeout(() => {
         setIsPreloading(false)

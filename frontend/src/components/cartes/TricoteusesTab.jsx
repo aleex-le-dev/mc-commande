@@ -97,7 +97,7 @@ const TricoteusesTab = () => {
       } else {
         // Ajout
         await tricoteusesService.createTricoteuse({
-          firstName: trimmed,
+      firstName: trimmed,
           color: formData.color,
           photoUrl: formData.photoPreview || ''
         })
@@ -212,7 +212,7 @@ const TricoteusesTab = () => {
                 >
                   ×
                 </button>
-              </div>
+        </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Avatar et nom */}
@@ -222,28 +222,28 @@ const TricoteusesTab = () => {
                   ) : (
                     <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-3xl" style={{ backgroundColor: formData.color }}>
                       {formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}
-                    </div>
-                  )}
-                  <div className="flex-1">
+                </div>
+              )}
+              <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
-                    <input
-                      type="text"
+                <input
+                  type="text"
                       value={formData.firstName}
                       onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                      placeholder="Ex: Alice"
+                  placeholder="Ex: Alice"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] focus:border-transparent"
                       required
-                    />
-                  </div>
-                </div>
+                />
+              </div>
+            </div>
 
                 {/* Palette de couleurs */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Couleur de l'avatar</label>
                   <div className="grid grid-cols-8 gap-2">
                     {palette.map((c, index) => (
-                      <button
-                        type="button"
+                  <button
+                    type="button"
                         key={`color-${index}-${c}`}
                         onClick={() => setFormData(prev => ({ ...prev, color: c }))}
                         className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
@@ -251,20 +251,20 @@ const TricoteusesTab = () => {
                             ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)] border-white' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        style={{ backgroundColor: c }}
-                        aria-label={`Choisir la couleur ${c}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                    style={{ backgroundColor: c }}
+                    aria-label={`Choisir la couleur ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
 
                 {/* Upload photo */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Photo (optionnel)</label>
                   <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 transition-colors">
                     📷 {formData.photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                  </label>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
                   {formData.photoPreview && (
                     <button
                       type="button"
@@ -274,12 +274,12 @@ const TricoteusesTab = () => {
                       Supprimer
                     </button>
                   )}
-                </div>
+          </div>
 
                 {/* Boutons d'action */}
                 <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
+                            <button
+                              type="button"
                     onClick={closeModal}
                     disabled={loading}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -300,12 +300,12 @@ const TricoteusesTab = () => {
                       editingKnitter ? 'Modifier' : 'Ajouter'
                     )}
                   </button>
-                </div>
+                        </div>
               </form>
+                        </div>
+                      </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
     </div>
   )
 }

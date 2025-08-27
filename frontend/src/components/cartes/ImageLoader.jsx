@@ -23,9 +23,25 @@ const ImageLoader = React.memo(({
   useEffect(() => {
     setImageSrc(src)
     setHasError(false)
-    setIsLoading(true)
     setRetryCount(0)
-  }, [src])
+    
+    // Vérifier si l'image est déjà en cache
+    if (src) {
+      const img = new Image()
+      img.onload = () => {
+        // Image déjà en cache, affichage immédiat
+        setIsLoading(false)
+        onLoad?.()
+      }
+      img.onerror = () => {
+        // Image pas en cache, afficher le loading
+        setIsLoading(true)
+      }
+      img.src = src
+    } else {
+      setIsLoading(false)
+    }
+  }, [src, onLoad])
 
   // Gestion d'erreur avec retry automatique
   const handleError = useCallback(() => {
@@ -76,7 +92,7 @@ const ImageLoader = React.memo(({
       <div className={`w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center ${className}`}>
         <div className="text-center">
           <div className="text-4xl text-slate-500 mb-2">{fallback}</div>
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-gray-600">
             {!src ? 'Aucune image' : 'Image non disponible'}
           </div>
           {src && retryCount < maxRetries && (

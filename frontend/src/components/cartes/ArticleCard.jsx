@@ -14,7 +14,8 @@ const ArticleCard = React.memo(({
   onOverlayOpen, 
   isOverlayOpen, 
   isHighlighted, 
-  searchTerm 
+  searchTerm,
+  productionType // Ajouter le type de production
 }) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
@@ -64,23 +65,71 @@ const ArticleCard = React.memo(({
   const memoizedImageUrl = useMemo(() => article.image_url, [article.image_url])
   const memoizedProductId = useMemo(() => article.product_id, [article.product_id])
 
-  // Charger l'image quand les props changent
+  // Charger l'image quand les props changent OU quand le type de production change
   useEffect(() => {
-    const loadImage = () => {
-      if (memoizedImageUrl) {
-        // Si on a déjà l'URL de l'image, l'utiliser directement
-        setImageUrl(memoizedImageUrl)
+    console.log(`🔄 ArticleCard useEffect - ProductID: ${memoizedProductId}, ProductionType: ${productionType}`)
+    
+    // Vérifier d'abord si l'image est déjà en localStorage (priorité absolue)
+    if (memoizedProductId) {
+      const cachedImageUrl = localStorage.getItem(`image_${memoizedProductId}`)
+      console.log(`📦 Cache localStorage pour ${memoizedProductId}:`, cachedImageUrl ? 'TROUVÉ' : 'NON TROUVÉ')
+      
+      if (cachedImageUrl) {
+        console.log(`✅ Image en cache, affichage immédiat: ${cachedImageUrl}`)
+        setImageUrl(cachedImageUrl)
         setIsImageLoading(false)
-      } else if (memoizedProductId) {
-        // AFFICHAGE INSTANTANÉ depuis MongoDB
-        const instantImage = imageService.getImage(memoizedProductId)
-        setImageUrl(instantImage)
-        setIsImageLoading(false)
+        return // Sortir immédiatement si l'image est en cache
       }
     }
 
-    loadImage()
-  }, [memoizedImageUrl, memoizedProductId])
+    // Si pas en cache, charger l'image
+    if (memoizedImageUrl) {
+      console.log(`🖼️ Image URL directe disponible: ${memoizedImageUrl}`)
+      setImageUrl(memoizedImageUrl)
+      setIsImageLoading(false)
+    } else if (memoizedProductId) {
+      console.log(`🚀 Chargement depuis MongoDB pour ${memoizedProductId}`)
+      setIsImageLoading(true) // Afficher le loading seulement si pas en cache
+      const instantImage = imageService.getImage(memoizedProductId)
+      console.log(`🔗 URL MongoDB générée: ${instantImage}`)
+      setImageUrl(instantImage)
+      setIsImageLoading(false)
+    }
+    
+    console.log(`📊 État final - imageUrl: ${imageUrl}, isLoading: ${isImageLoading}`)
+  }, [memoizedImageUrl, memoizedProductId, productionType]) // Garder productionType pour forcer le remontage
+
+  // Fonction pour obtenir l'URL de l'image (priorité au cache)
+  const getImageUrl = () => {
+    if (imageUrl) return imageUrl
+    
+    // Si pas d'URL en état, essayer le cache
+    if (memoizedProductId) {
+      const cachedUrl = localStorage.getItem(`image_${memoizedProductId}`)
+      if (cachedUrl) {
+        console.log(`🔄 Récupération depuis cache dans getImageUrl: ${cachedUrl}`)
+        return cachedUrl
+      }
+    }
+    
+    return null
+  }
+
+  // URL de l'image à utiliser
+  const displayImageUrl = getImageUrl()
+
+  // Sauvegarder l'URL de l'image en localStorage quand elle change
+  useEffect(() => {
+    if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:')) {
+      console.log(`💾 Sauvegarde en localStorage: ${memoizedProductId} -> ${displayImageUrl}`)
+      localStorage.setItem(`image_${memoizedProductId}`, displayImageUrl)
+    }
+  }, [displayImageUrl, memoizedProductId])
+
+  // Log de l'état de l'image
+  useEffect(() => {
+    console.log(`👁️ État image mis à jour - ProductID: ${memoizedProductId}, URL: ${imageUrl}, DisplayURL: ${displayImageUrl}, Loading: ${isImageLoading}`)
+  }, [imageUrl, displayImageUrl, isImageLoading, memoizedProductId])
 
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
@@ -137,17 +186,33 @@ const ArticleCard = React.memo(({
       {/* Image de fond avec overlay moderne */}
       <div className="relative h-60 overflow-hidden">
         {/* Image de base */}
-        {imageUrl ? (
+        {displayImageUrl ? (
           <div className="relative">
             <ImageLoader 
-              src={imageUrl} 
+              src={displayImageUrl} 
               alt={article.product_name}
               className="w-full h-full object-cover"
               fallback="📦"
               maxRetries={3}
               retryDelay={1000}
-              onLoad={() => console.debug('Image chargée avec succès')}
-              onError={(retryCount) => console.warn('Erreur image, tentative:', retryCount)}
+              onLoad={() => {
+                console.debug('Image chargée avec succès')
+                // Marquer l'image comme chargée avec succès
+                setIsImageLoading(false)
+              }}
+              onError={(retryCount) => {
+                console.warn('Erreur image, tentative:', retryCount)
+                if (retryCount >= 3) {
+                  // Après 3 tentatives, essayer de recharger l'image
+                  console.log('Tentative de rechargement de l\'image')
+                  setTimeout(() => {
+                    if (memoizedProductId) {
+                      const retryImage = imageService.getImage(memoizedProductId)
+                      setImageUrl(retryImage)
+                    }
+                  }, 1000)
+                }
+              }}
             />
             
             {/* Indicateur de cache */}

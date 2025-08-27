@@ -75,6 +75,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         handleOverlayOpen={handleOverlayOpen}
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
+        productionType={selectedType} // Passer le type de production
       />
 
       {/* Préchargeur d'images en arrière-plan */}

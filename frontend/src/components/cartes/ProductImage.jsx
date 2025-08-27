@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+
+// Cache global pour les images déjà chargées
+const imageCache = new Map()
 
 // Composant pour afficher l'image du produit
 const ProductImage = ({ productId, productName, permalink }) => {
@@ -6,20 +9,44 @@ const ProductImage = ({ productId, productName, permalink }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [errorDetails, setErrorDetails] = useState('')
+  const abortControllerRef = useRef(null)
 
   useEffect(() => {
     if (productId) {
-      // Reset l'état quand l'ID change
+      // Vérifier d'abord le cache
+      if (imageCache.has(productId)) {
+        setImageUrl(imageCache.get(productId))
+        setHasError(false)
+        setErrorDetails('')
+        return
+      }
+
+      // Reset l'état
       setImageUrl(null)
       setHasError(false)
       setErrorDetails('')
-      fetchProductImage(productId)
+      
+      // Annuler la requête précédente si elle existe
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      
+      // Créer un nouveau contrôleur d'annulation
+      abortControllerRef.current = new AbortController()
+      
+      fetchProductImage(productId, abortControllerRef.current.signal)
+    }
+
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
   }, [productId])
 
-  const fetchProductImage = async (id) => {
+  const fetchProductImage = async (id, signal) => {
     if (!id) {
-      // Pas d'ID de produit fourni
       setHasError(true)
       setErrorDetails('Pas d\'ID')
       return
@@ -30,18 +57,30 @@ const ProductImage = ({ productId, productName, permalink }) => {
     setErrorDetails('')
     
     try {
-      // Charger depuis le backend (image stockée en BDD) pour éviter CORS
       const backendUrl = 'http://localhost:3001/api/images/' + id
-      const resp = await fetch(backendUrl, { method: 'GET', signal: AbortSignal.timeout(8000) })
+      const resp = await fetch(backendUrl, { 
+        method: 'GET', 
+        signal: signal,
+        // Ajouter des headers pour éviter le cache navigateur
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+      
       if (resp.ok) {
-        // Utiliser l'URL directe de l'endpoint comme src
+        // Mettre en cache l'URL
+        imageCache.set(id, backendUrl)
         setImageUrl(backendUrl)
       } else {
-        // Fallback silencieux: garder l'icône placeholder
         setHasError(true)
         setErrorDetails('Image non trouvée')
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        // Requête annulée, ne rien faire
+        return
+      }
       setHasError(true)
       setErrorDetails('Erreur image')
     } finally {
@@ -84,7 +123,12 @@ const ProductImage = ({ productId, productName, permalink }) => {
           src={imageUrl} 
           alt={productName}
           className="w-full h-full object-cover"
-          onError={() => setHasError(true)}
+          onError={() => {
+            // En cas d'erreur de chargement, retirer du cache et afficher l'erreur
+            imageCache.delete(productId)
+            setHasError(true)
+            setErrorDetails('Erreur de chargement')
+          }}
         />
       </div>
     </a>
