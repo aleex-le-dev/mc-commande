@@ -444,13 +444,9 @@ const ArticleCard = forwardRef(({
         )}
         
         {/* Indicateur de position par rapport à la date limite */}
-        {dateLimite && (
-          <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-30 ${
-            estApresDateLimite 
-              ? 'bg-red-500 text-white' 
-              : 'bg-green-500 text-white'
-          }`}>
-            {estApresDateLimite ? '📅 Après limite' : '✅ Dans les délais'}
+        {dateLimite && estApresDateLimite && (
+          <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-30 bg-red-500 text-white">
+            📅 Après limite
           </div>
         )}
 

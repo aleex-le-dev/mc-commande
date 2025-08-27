@@ -206,7 +206,7 @@ class WordPressAPI {
       const queryParams = new URLSearchParams()
       queryParams.append('consumer_key', this.config.consumerKey)
       queryParams.append('consumer_secret', this.config.consumerSecret)
-      queryParams.append('per_page', '15') // Limite à 15 commandes pour le moment
+      queryParams.append('per_page', '30') // Limite à 15 commandes pour le moment
       queryParams.append('orderby', 'date')
       queryParams.append('order', 'desc')
       

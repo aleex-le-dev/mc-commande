@@ -174,9 +174,9 @@ const DateLimiteTab = () => {
     while (dateCourante <= aujourdhui) {
       // Utiliser la fonction estJourFerie qui gère déjà les jours fériés par défaut
       if (estJourFerie(dateCourante)) {
-        const dateStr = dateCourante.toISOString().split('T')[0]
+      const dateStr = dateCourante.toISOString().split('T')[0]
         const nomJourFerie = joursFeries && joursFeries[dateStr] ? joursFeries[dateStr] : getNomJourFerieDefaut(dateStr)
-        
+      
         joursFeriesDansPeriode.push({
           date: new Date(dateCourante),
           nom: nomJourFerie,
@@ -362,27 +362,27 @@ const DateLimiteTab = () => {
               {/* Affichage des jours fériés dans la période de calcul */}
               {getJoursFeriesDansPeriode().length > 0 ? (
                 <div className="mt-3 pt-3 border-t border-blue-400">
-                  <p className="text-sm font-medium text-blue-100 mb-2">
+                <p className="text-sm font-medium text-blue-100 mb-2">
                     🗓️ Jours fériés dans cette période ({getJoursFeriesDansPeriode().length} jour(s)) :
-                  </p>
+                </p>
                   <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {getJoursFeriesDansPeriode().map((jourFerie, index) => (
-                      <div key={index} className="flex items-center justify-center space-x-2 text-xs">
-                        <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">
-                            {jourFerie.date.getDate()}
-                          </span>
-                        </div>
-                        <span className="text-blue-100">
-                          {jourFerie.nom} ({jourFerie.jourSemaine})
+                  {getJoursFeriesDansPeriode().map((jourFerie, index) => (
+                    <div key={index} className="flex items-center justify-center space-x-2 text-xs">
+                      <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">
+                          {jourFerie.date.getDate()}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                      <span className="text-blue-100">
+                        {jourFerie.nom} ({jourFerie.jourSemaine})
+                      </span>
+                    </div>
+                  ))}
                 </div>
+              </div>
               ) : (
                 <p className="text-xs opacity-90">✅ Aucun jour férié dans cette période</p>
-              )}
+            )}
             </div>
             
 
@@ -595,7 +595,7 @@ const DateLimiteTab = () => {
                     Cliquez sur "🧪 Test API Jours Fériés" dans l'onglet Statut pour vérifier la connexion à l'API gouvernementale.
                   </p>
                 </div>
-              </div>
+            </div>
             </details>
           )}
         </div>
