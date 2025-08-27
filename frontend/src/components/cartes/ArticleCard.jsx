@@ -410,7 +410,7 @@ const ArticleCard = forwardRef(({
         {/* Badge rouge pour article en retard */}
         {doitAvoirTraitRouge && (
           <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-30 flex items-center justify-center">
-            <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter -mt-1">
+            <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter mt-2">
               ⚠️ EN RETARD
             </span>
           </div>
