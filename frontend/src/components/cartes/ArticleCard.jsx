@@ -19,7 +19,9 @@ const ArticleCard = forwardRef(({
   onAssignmentUpdate, // Fonction pour rafraîchir les assignations
   getArticleSize, // Fonction pour obtenir la taille de l'article
   getArticleColor, // Fonction pour obtenir la couleur de l'article
-  getArticleOptions // Fonction pour obtenir les options de l'article
+  getArticleOptions, // Fonction pour obtenir les options de l'article
+  showDateLimiteSeparator = false, // Nouvelle prop pour afficher le trait de séparation
+  isAfterDateLimite = false // Indique si l'article est après la date limite
 }, ref) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
@@ -134,7 +136,7 @@ const ArticleCard = forwardRef(({
     }
   }, [dateLimite])
 
-  // Déterminer si l'article doit avoir un trait rouge (date de commande <= date limite)
+  // Déterminer si l'article doit avoir un trait rouge (date de commande > date limite = EN RETARD)
   const doitAvoirTraitRouge = useMemo(() => {
     if (!dateLimite || !article.orderDate) {
       return false
@@ -143,8 +145,22 @@ const ArticleCard = forwardRef(({
     const dateCommande = new Date(article.orderDate)
     const dateLimiteObj = new Date(dateLimite)
     
-    // Comparer les dates (ignorer l'heure)
-    return dateCommande.toDateString() <= dateLimiteObj.toDateString()
+    // Un article est EN RETARD si sa date de commande est APRÈS la date limite
+    // (c'est-à-dire qu'il a été commandé trop tard pour respecter le délai)
+    return dateCommande.toDateString() > dateLimiteObj.toDateString()
+  }, [dateLimite, article.orderDate])
+
+  // Déterminer si l'article est après la date limite (pour la bordure et les indicateurs)
+  const estApresDateLimite = useMemo(() => {
+    if (!dateLimite || !article.orderDate) {
+      return false
+    }
+    
+    const dateCommande = new Date(article.orderDate)
+    const dateLimiteObj = new Date(dateLimite)
+    
+    // Un article est "après la date limite" si sa date de commande est APRÈS la date limite
+    return dateCommande.toDateString() > dateLimiteObj.toDateString()
   }, [dateLimite, article.orderDate])
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
@@ -348,9 +364,20 @@ const ArticleCard = forwardRef(({
           localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
           localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
           localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
-        }` : 'none'
+        }` : estApresDateLimite ? '3px solid #ef4444' : 'none'
       }}
     >
+      {/* Trait de séparation de la date limite */}
+      {showDateLimiteSeparator && (
+        <div className="absolute -top-2 left-0 right-0 z-50">
+          <div className="flex items-center justify-center">
+            <div className="bg-gradient-to-r from-transparent via-red-500 to-transparent h-1 w-full"></div>
+            <div className="absolute bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+              📅 Date limite
+            </div>
+          </div>
+        </div>
+      )}
       {/* Image de fond avec overlay moderne */}
       <div className="relative h-60 overflow-hidden rounded-t-3xl">
         {/* Image de base */}
@@ -413,6 +440,17 @@ const ArticleCard = forwardRef(({
             <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter mt-2">
               ⚠️ EN RETARD
             </span>
+          </div>
+        )}
+        
+        {/* Indicateur de position par rapport à la date limite */}
+        {dateLimite && (
+          <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-30 ${
+            estApresDateLimite 
+              ? 'bg-red-500 text-white' 
+              : 'bg-green-500 text-white'
+          }`}>
+            {estApresDateLimite ? '📅 Après limite' : '✅ Dans les délais'}
           </div>
         )}
 
