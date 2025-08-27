@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { getOrderByNumber, updateOrderStatus } from '../../services/mongodbService'
+import ImageTest from '../ImageTest'
 
 const ModificationTab = () => {
   const [searchOrderNumber, setSearchOrderNumber] = useState('')
   const [order, setOrder] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setStatus] = useState({ type: '', text: '' })
+  const [showImageTest, setShowImageTest] = useState(false)
 
   const searchOrder = async (e) => {
     e.preventDefault()
@@ -89,8 +91,25 @@ const ModificationTab = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">✏️ Modification des commandes</h2>
           <p className="text-gray-600">
             Recherchez une commande par numéro et modifiez le type de production de chaque article.
+            <br />
+            <span className="text-sm text-green-600">✅ Images optimisées avec cache mémoire et préchargement intelligent</span>
           </p>
+          
+          {/* Bouton de test des images */}
+          <button
+            onClick={() => setShowImageTest(!showImageTest)}
+            className="mt-3 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 text-sm"
+          >
+            {showImageTest ? 'Masquer' : 'Afficher'} Test des Images Optimisé
+          </button>
         </div>
+
+        {/* Composant de test des images */}
+        {showImageTest && (
+          <div className="mb-6">
+            <ImageTest />
+          </div>
+        )}
 
         {/* Formulaire de recherche */}
         <form onSubmit={searchOrder} className="mb-6">

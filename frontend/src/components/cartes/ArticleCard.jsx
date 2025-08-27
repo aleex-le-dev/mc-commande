@@ -66,43 +66,16 @@ const ArticleCard = React.memo(({
 
   // Charger l'image quand les props changent
   useEffect(() => {
-    const loadImage = async () => {
+    const loadImage = () => {
       if (memoizedImageUrl) {
         // Si on a déjà l'URL de l'image, l'utiliser directement
-        setIsImageLoading(true)
-        try {
-          const optimizedUrl = await imageService.getImageFromUrl(memoizedImageUrl)
-          setImageUrl(optimizedUrl)
-        } catch (error) {
-          console.warn('Erreur lors de l\'optimisation de l\'URL:', error)
-          // En cas d'erreur, utiliser l'URL originale
-          setImageUrl(memoizedImageUrl)
-        } finally {
-          setIsImageLoading(false)
-        }
+        setImageUrl(memoizedImageUrl)
+        setIsImageLoading(false)
       } else if (memoizedProductId) {
-        // ESSAI INSTANTANÉ D'ABORD
-        const instantImage = imageService.getImageSync(memoizedProductId)
-        if (instantImage) {
-          // Image trouvée instantanément en cache mémoire !
-          setImageUrl(instantImage)
-          setIsFromCache(true)
-          setIsImageLoading(false)
-          return
-        }
-
-        // Si pas en cache, charger de manière asynchrone
-        setIsImageLoading(true)
-        setIsFromCache(false)
-        try {
-          const url = await imageService.getImage(memoizedProductId, { forceWordPress: true })
-          setImageUrl(url)
-        } catch (error) {
-          console.warn('Erreur lors du chargement de l\'image:', error)
-          setImageUrl(null)
-        } finally {
-          setIsImageLoading(false)
-        }
+        // AFFICHAGE INSTANTANÉ depuis MongoDB
+        const instantImage = imageService.getImage(memoizedProductId)
+        setImageUrl(instantImage)
+        setIsImageLoading(false)
       }
     }
 
