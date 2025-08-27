@@ -71,7 +71,7 @@ export const useSyncProgress = (performSync) => {
         })
       }
       
-      // Étape 6: Afficher le résultat dans le popup de progression
+      // Étape 6: Afficher le résultat dans le toast
       if (syncResult.results) {
         const { ordersCreated, itemsCreated } = syncResult.results
         const totalNew = ordersCreated + itemsCreated
@@ -80,19 +80,19 @@ export const useSyncProgress = (performSync) => {
           setSyncProgress(prev => ({ 
             ...prev, 
             progress: 100, 
-            message: `${ordersCreated} commande${ordersCreated > 1 ? 's' : ''} et ${itemsCreated} article${itemsCreated > 1 ? 's' : ''} récupéré${itemsCreated > 1 ? 's' : ''}`
+            message: `${ordersCreated} commande${ordersCreated > 1 ? 's' : ''} récupérée${ordersCreated > 1 ? 's' : ''}`
           }))
         } else {
           setSyncProgress(prev => ({ 
             ...prev, 
             progress: 100, 
-            message: 'Aucune nouvelle commande à traiter'
+            message: 'Tout est à jour'
           }))
         }
       }
       
-      // Masquer le popup de progression après 3 secondes
-      setTimeout(() => setSyncProgress({ isRunning: false, progress: 0, message: '' }), 3000)
+      // Masquer le toast après 6 secondes en cas d'erreur
+      setTimeout(() => setSyncProgress({ isRunning: false, progress: 0, message: '' }), 6000)
       
     } catch (error) {
       // Afficher l'erreur dans le popup de progression

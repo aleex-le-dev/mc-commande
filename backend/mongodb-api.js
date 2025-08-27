@@ -455,7 +455,7 @@ app.get('/api/orders', async (req, res) => {
     const statusCollection = db.collection('production_status')
     
     // Récupérer toutes les commandes
-    const orders = await ordersCollection.find({}).sort({ order_date: -1 }).toArray()
+    const orders = await ordersCollection.find({}).sort({ order_date: 1 }).toArray()
     
     // Pour chaque commande, récupérer les articles et statuts
     const ordersWithDetails = await Promise.all(orders.map(async (order) => {
@@ -561,6 +561,9 @@ app.get('/api/orders/production/:type', async (req, res) => {
         }]
       }
     }))
+    
+    // Trier les commandes par date (anciennes vers récentes)
+    ordersWithDetails.sort((a, b) => new Date(a.order_date) - new Date(b.order_date))
     
     res.json({ orders: ordersWithDetails })
   } catch (error) {
