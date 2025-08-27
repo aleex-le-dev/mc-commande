@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
 import imageService from '../../services/imageService'
 import { tricoteusesService, assignmentsService } from '../../services/mongodbService'
+import delaiService from '../../services/delaiService'
 
 // Composant carte d'article moderne optimisé
 const ArticleCard = forwardRef(({ 
@@ -34,6 +35,8 @@ const ArticleCard = forwardRef(({
   const [localAssignment, setLocalAssignment] = useState(assignment)
   // État de chargement de l'assignation
   const [isLoadingAssignment, setIsLoadingAssignment] = useState(true)
+  // État pour la date limite
+  const [dateLimite, setDateLimite] = useState(null)
   // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
   // Supprimé: const [isLoading, setIsLoading] = useState(false)
 
@@ -99,17 +102,60 @@ const ArticleCard = forwardRef(({
       }
     }
 
-    // Si pas en cache, charger l'image
+    // Si pas en cache, charger l'image via le service
     if (memoizedImageUrl) {
       setImageUrl(memoizedImageUrl)
       setIsImageLoading(false)
     } else if (memoizedProductId) {
-      setIsImageLoading(true) // Afficher le loading seulement si pas en cache
-      const instantImage = imageService.getImage(memoizedProductId)
-      setImageUrl(instantImage)
+      setIsImageLoading(true)
+      const imageUrl = imageService.getImage(memoizedProductId)
+      setImageUrl(imageUrl)
       setIsImageLoading(false)
     }
-  }, [memoizedImageUrl, memoizedProductId, productionType]) // Garder productionType pour forcer le remontage
+  }, [memoizedImageUrl, memoizedProductId, productionType])
+
+  // Charger la date limite pour déterminer si l'article doit avoir un trait rouge
+  useEffect(() => {
+    const loadDateLimite = async () => {
+      try {
+        const response = await delaiService.getDateLimiteActuelle()
+        console.log('ArticleCard - Réponse date limite:', response)
+        if (response.success && response.dateLimite) {
+          setDateLimite(response.dateLimite)
+          console.log('ArticleCard - Date limite chargée:', response.dateLimite)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de la date limite:', error)
+      }
+    }
+    
+    loadDateLimite()
+  }, [])
+
+  // Déterminer si l'article doit avoir un trait rouge (date de commande <= date limite)
+  const doitAvoirTraitRouge = useMemo(() => {
+    if (!dateLimite || !article.orderDate) {
+      console.log('ArticleCard - Pas de date limite ou date de commande:', { dateLimite, orderDate: article.orderDate })
+      return false
+    }
+    
+    const dateCommande = new Date(article.orderDate)
+    const dateLimiteObj = new Date(dateLimite)
+    
+    // Comparer les dates (ignorer l'heure)
+    const isEnRetard = dateCommande.toDateString() <= dateLimiteObj.toDateString()
+    
+    if (isEnRetard) {
+      console.log('ArticleCard - Article en retard:', {
+        orderNumber: article.orderNumber,
+        dateCommande: dateCommande.toDateString(),
+        dateLimite: dateLimiteObj.toDateString(),
+        isEnRetard
+      })
+    }
+    
+    return isEnRetard
+  }, [dateLimite, article.orderDate, article.orderNumber])
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
   const getImageUrl = () => {
@@ -371,6 +417,15 @@ const ArticleCard = forwardRef(({
           </div>
         )}
 
+        {/* Trait rouge pour les articles en retard (date de commande <= date limite) */}
+        {doitAvoirTraitRouge && (
+          <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-30 flex items-center justify-center">
+            <span className="text-white text-xs font-bold px-2 py-1 bg-red-600 rounded-full">
+              ⚠️ EN RETARD
+            </span>
+          </div>
+        )}
+        
         {/* Lien vers la fiche produit - uniquement sur l'image */}
         <a
           href={article.permalink || '#'}
