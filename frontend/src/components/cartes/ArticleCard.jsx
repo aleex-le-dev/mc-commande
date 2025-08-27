@@ -31,6 +31,8 @@ const ArticleCard = forwardRef(({
   const [tricoteuses, setTricoteuses] = useState([])
   // État local pour l'assignation (pour mise à jour immédiate)
   const [localAssignment, setLocalAssignment] = useState(assignment)
+  // État de chargement de l'assignation
+  const [isLoadingAssignment, setIsLoadingAssignment] = useState(true)
   // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
   // Supprimé: const [isLoading, setIsLoading] = useState(false)
 
@@ -174,26 +176,26 @@ const ArticleCard = forwardRef(({
   // Charger l'assignation existante et l'enrichir avec les données de la tricoteuse
   const loadExistingAssignment = useCallback(async () => {
     if (article.product_id) {
+      setIsLoadingAssignment(true)
       try {
-        const existingAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
+        // Charger assignation ET tricoteuses en parallèle pour plus de rapidité
+        const [existingAssignment, allTricoteuses] = await Promise.all([
+          assignmentsService.getAssignmentByArticleId(article.product_id),
+          tricoteusesService.getAllTricoteuses()
+        ])
+        
         if (existingAssignment && existingAssignment.tricoteuse_id) {
-          // Enrichir l'assignation avec les données complètes de la tricoteuse
-          try {
-            const allTricoteuses = await tricoteusesService.getAllTricoteuses()
-            const tricoteuse = allTricoteuses.find(t => t._id === existingAssignment.tricoteuse_id)
-            if (tricoteuse) {
-              const enrichedAssignment = {
-                ...existingAssignment,
-                tricoteuse_photo: tricoteuse.photoUrl,
-                tricoteuse_color: tricoteuse.color,
-                tricoteuse_name: tricoteuse.firstName
-              }
-              setLocalAssignment(enrichedAssignment)
-            } else {
-              setLocalAssignment(existingAssignment)
+          // Enrichir immédiatement avec les données de la tricoteuse
+          const tricoteuse = allTricoteuses.find(t => t._id === existingAssignment.tricoteuse_id)
+          if (tricoteuse) {
+            const enrichedAssignment = {
+              ...existingAssignment,
+              tricoteuse_photo: tricoteuse.photoUrl,
+              tricoteuse_color: tricoteuse.color,
+              tricoteuse_name: tricoteuse.firstName
             }
-          } catch (tricoteuseError) {
-            console.error('Erreur lors du chargement de la tricoteuse:', tricoteuseError)
+            setLocalAssignment(enrichedAssignment)
+          } else {
             setLocalAssignment(existingAssignment)
           }
         } else {
@@ -202,9 +204,12 @@ const ArticleCard = forwardRef(({
       } catch (error) {
         console.error('Erreur lors du chargement de l\'assignation:', error)
         setLocalAssignment(assignment)
+      } finally {
+        setIsLoadingAssignment(false)
       }
     } else {
       setLocalAssignment(assignment)
+      setIsLoadingAssignment(false)
     }
   }, [article.product_id, assignment])
 
@@ -491,7 +496,12 @@ const ArticleCard = forwardRef(({
           
           {/* Avatar de la tricoteuse ou bouton d'assignation - aligné en bas */}
           <div className="flex items-end">
-            {localAssignment ? (
+            {isLoadingAssignment ? (
+              /* Indicateur de chargement */
+              <div className="w-14 h-14 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : localAssignment ? (
               /* Avatar cliquable pour modifier l'assignation */
               <button
                 onClick={(e) => {
@@ -718,10 +728,10 @@ const ArticleCard = forwardRef(({
             {/* En-tête simple */}
             <div className="text-center mb-6">
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Choisir un artisan
+                Choisir une tricoteuse
               </h3>
               <p className="text-sm text-gray-600">
-                Sélectionnez l'artisan responsable de cet article
+                Sélectionnez la tricoteuse responsable de cet article
               </p>
             </div>
 
