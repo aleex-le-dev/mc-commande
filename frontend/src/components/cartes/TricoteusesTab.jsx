@@ -1,227 +1,311 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { tricoteusesService } from '../../services/mongodbService'
 
 const TricoteusesTab = () => {
-  const [firstName, setFirstName] = useState('')
-  const [color, setColor] = useState('#f43f5e')
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState('')
   const [knitters, setKnitters] = useState([])
-  const [editingId, setEditingId] = useState(null)
-  const [draftName, setDraftName] = useState('')
-  const [draftColor, setDraftColor] = useState('#f43f5e')
-  const [draftPhotoPreview, setDraftPhotoPreview] = useState('')
-  const [draftPhotoFile, setDraftPhotoFile] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [editingKnitter, setEditingKnitter] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    color: '#f43f5e',
+    photoFile: null,
+    photoPreview: ''
+  })
 
   const palette = [
     '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
     '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
-    '#f43f5e', '#ef4444', '#6b7280', '#111827'
+    '#f43f5e', '#6b7280', '#111827'
   ]
+
+  // Charger les tricoteuses au montage du composant
+  useEffect(() => {
+    loadTricoteuses()
+  }, [])
+
+  const loadTricoteuses = async () => {
+    try {
+      setLoading(true)
+      const data = await tricoteusesService.getAllTricoteuses()
+      setKnitters(data)
+    } catch (error) {
+      console.error('Erreur chargement tricoteuses:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      firstName: '',
+      color: '#f43f5e',
+      photoFile: null,
+      photoPreview: ''
+    })
+    setEditingKnitter(null)
+  }
+
+  const openAddModal = () => {
+    resetForm()
+    setShowModal(true)
+  }
+
+  const openEditModal = (knitter) => {
+    setFormData({
+      firstName: knitter.firstName,
+      color: knitter.color,
+      photoFile: null,
+      photoPreview: knitter.photoUrl || ''
+    })
+    setEditingKnitter(knitter)
+    setShowModal(true)
+  }
+
+  const closeModal = () => {
+    setShowModal(false)
+    resetForm()
+  }
 
   const handleFileChange = (e) => {
     const file = e.target.files && e.target.files[0]
-    setPhotoFile(file || null)
     if (file) {
       const url = URL.createObjectURL(file)
-      setPhotoPreview(url)
-    } else {
-      setPhotoPreview('')
+      setFormData(prev => ({
+        ...prev,
+        photoFile: file,
+        photoPreview: url
+      }))
     }
   }
 
-  const handleDraftFileChange = (e) => {
-    const file = e.target.files && e.target.files[0]
-    setDraftPhotoFile(file || null)
-    if (file) {
-      const url = URL.createObjectURL(file)
-      setDraftPhotoPreview(url)
-    }
-  }
-
-  const addKnitter = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const trimmed = firstName.trim()
+    const trimmed = formData.firstName.trim()
     if (!trimmed) return
-    const newEntry = {
-      id: Date.now(),
-      firstName: trimmed,
-      color,
-      photoUrl: photoPreview || ''
+
+    try {
+      setLoading(true)
+      
+      if (editingKnitter) {
+        // Modification
+        await tricoteusesService.updateTricoteuse(editingKnitter._id, {
+          firstName: trimmed,
+          color: formData.color,
+          photoUrl: formData.photoPreview || editingKnitter.photoUrl
+        })
+      } else {
+        // Ajout
+        await tricoteusesService.createTricoteuse({
+          firstName: trimmed,
+          color: formData.color,
+          photoUrl: formData.photoPreview || ''
+        })
+      }
+      
+      // Recharger la liste
+      await loadTricoteuses()
+      closeModal()
+    } catch (error) {
+      console.error('Erreur sauvegarde tricoteuse:', error)
+      alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
+    } finally {
+      setLoading(false)
     }
-    setKnitters(prev => [newEntry, ...prev])
-    setFirstName('')
-    setColor('#f43f5e')
-    setPhotoFile(null)
-    setPhotoPreview('')
   }
 
-  const removeKnitter = (id) => {
-    setKnitters(prev => prev.filter(k => k.id !== id))
-  }
+  const removeKnitter = async (id) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tricoteuse ?')) {
+      return
+    }
 
-  const startEdit = (k) => {
-    setEditingId(k.id)
-    setDraftName(k.firstName)
-    setDraftColor(k.color)
-    setDraftPhotoPreview(k.photoUrl)
-    setDraftPhotoFile(null)
-  }
-
-  const cancelEdit = () => {
-    setEditingId(null)
-    setDraftName('')
-    setDraftColor('#f43f5e')
-    setDraftPhotoPreview('')
-    setDraftPhotoFile(null)
-  }
-
-  const saveEdit = (id) => {
-    setKnitters(prev => prev.map(k => k.id === id ? {
-      ...k,
-      firstName: draftName.trim() || k.firstName,
-      color: draftColor,
-      photoUrl: draftPhotoPreview || k.photoUrl
-    } : k))
-    cancelEdit()
+    try {
+      setLoading(true)
+      await tricoteusesService.deleteTricoteuse(id)
+      await loadTricoteuses()
+    } catch (error) {
+      console.error('Erreur suppression tricoteuse:', error)
+      alert('Erreur lors de la suppression. Veuillez réessayer.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Tricoteuses</h2>
-          <p className="text-gray-600">Ajoutez une tricoteuse avec avatar (couleur + initiale) ou photo.</p>
+          <p className="text-gray-600">Gérez votre équipe de tricoteuses</p>
         </div>
 
-        {/* Formulaire moderne (carte compacte) */}
-        <form onSubmit={addKnitter} className="mb-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:gap-6 gap-4">
-            <div className="flex items-center gap-4 flex-1">
-              {photoPreview ? (
-                <img src={photoPreview} alt="Aperçu" className="h-14 w-14 rounded-full object-cover border" />
-              ) : (
-                <div className="h-14 w-14 rounded-full flex items-center justify-center text-white font-semibold" style={{ backgroundColor: color }}>
-                  {firstName ? firstName[0].toUpperCase() : 'A'}
-                </div>
-              )}
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Prénom</label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Ex: Alice"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]"
-                />
-              </div>
+        {/* Grille des tricoteuses */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {loading ? (
+            <div className="col-span-full p-12 border-2 border-dashed border-gray-300 rounded-xl text-center">
+              <div className="text-gray-400 text-6xl mb-4">⚙️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Chargement des tricoteuses...</h3>
+              <p className="text-gray-500 mb-4">Veuillez patienter pendant le chargement des données.</p>
             </div>
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-2">Couleur de l'avatar</label>
-              <div className="grid grid-cols-10 gap-2">
-                {palette.map((c) => (
-                  <button
-                    type="button"
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className={`h-8 w-8 rounded-full border ${color === c ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)]' : 'border-gray-200'}`}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Choisir la couleur ${c}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm hover:bg-gray-50">
-                📷 Uploader
-                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-              </label>
-              <button type="submit" className="px-4 py-2 bg-[var(--rose-clair-text)] text-white rounded-md hover:opacity-90">Ajouter</button>
-            </div>
-          </div>
-        </form>
-
-        {/* Liste / grille des tricoteuses */}
-        <div className="mt-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-3">Équipe</h3>
-          {knitters.length === 0 ? (
-            <div className="p-6 border border-dashed border-gray-300 rounded-lg text-gray-500 text-sm">
-              Aucune tricoteuse ajoutée pour le moment.
+          ) : knitters.length === 0 ? (
+            <div className="col-span-full p-12 border-2 border-dashed border-gray-300 rounded-xl text-center">
+              <div className="text-gray-400 text-6xl mb-4">🧶</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune tricoteuse</h3>
+              <p className="text-gray-500 mb-4">Commencez par ajouter votre première tricoteuse</p>
+              <button
+                onClick={openAddModal}
+                className="px-4 py-2 bg-[var(--rose-clair-text)] text-white rounded-lg hover:opacity-90 transition-all duration-200"
+              >
+                Ajouter une tricoteuse
+              </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {knitters.map(k => (
-                <div key={k.id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                  {editingId === k.id ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        {draftPhotoPreview ? (
-                          <img src={draftPhotoPreview} alt={draftName} className="h-12 w-12 rounded-full object-cover border" />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-semibold" style={{ backgroundColor: draftColor }}>
-                            {draftName ? draftName[0].toUpperCase() : k.firstName[0].toUpperCase()}
-                          </div>
-                        )}
-                        <input
-                          type="text"
-                          value={draftName}
-                          onChange={(e) => setDraftName(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]"
-                        />
-                      </div>
-                      <div>
-                        <div className="grid grid-cols-10 gap-2">
-                          {palette.map((c) => (
-                            <button
-                              type="button"
-                              key={c}
-                              onClick={() => setDraftColor(c)}
-                              className={`h-7 w-7 rounded-full border ${draftColor === c ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)]' : 'border-gray-200'}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md bg-white text-sm hover:bg-gray-50">
-                          📷 Remplacer la photo
-                          <input type="file" accept="image/*" onChange={handleDraftFileChange} className="hidden" />
-                        </label>
-                        <div className="space-x-2">
-                          <button onClick={() => saveEdit(k.id)} className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm">Enregistrer</button>
-                          <button onClick={cancelEdit} className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm">Annuler</button>
-                        </div>
-                      </div>
-                    </div>
+            knitters.map(k => (
+              <div key={k._id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="flex flex-col items-center text-center space-y-3">
+                  {k.photoUrl ? (
+                    <img src={k.photoUrl} alt={k.firstName} className="h-16 w-16 rounded-full object-cover border-2 border-gray-100 shadow-sm" />
                   ) : (
-                    <>
-                      <div className="flex items-center gap-3">
-                        {k.photoUrl ? (
-                          <img src={k.photoUrl} alt={k.firstName} className="h-12 w-12 rounded-full object-cover border" />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-semibold" style={{ backgroundColor: k.color }}>
-                            {k.firstName[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-gray-900">{k.firstName}</div>
-                          <div className="text-xs text-gray-500">Avatar {k.photoUrl ? 'photo' : 'couleur'}</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex justify-between items-center">
-                        <div className="h-6 w-6 rounded-full border" style={{ backgroundColor: k.color }} title={k.color} />
-                        <div className="space-x-3">
-                          <button onClick={() => startEdit(k)} className="text-sm text-blue-600 hover:text-blue-700">Modifier</button>
-                          <button onClick={() => removeKnitter(k.id)} className="text-sm text-red-600 hover:text-red-700">Supprimer</button>
-                        </div>
-                      </div>
-                    </>
+                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>
+                      {k.firstName[0].toUpperCase()}
+                    </div>
                   )}
+                  <div>
+                    <div className="font-semibold text-gray-900 text-sm">{k.firstName}</div>
+                    <div className="text-xs text-gray-500">Tricoteuse</div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button
+                      onClick={() => openEditModal(k)}
+                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Modifier"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => removeKnitter(k._id)}
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
       </div>
+
+      {/* Modal d'ajout/modification */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {editingKnitter ? 'Modifier la tricoteuse' : 'Ajouter une tricoteuse'}
+                </h3>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Avatar et nom */}
+                <div className="flex items-center gap-4">
+                  {formData.photoPreview ? (
+                    <img src={formData.photoPreview} alt="Aperçu" className="h-16 w-16 rounded-full object-cover border-2 border-gray-200" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-3xl" style={{ backgroundColor: formData.color }}>
+                      {formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
+                    <input
+                      type="text"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      placeholder="Ex: Alice"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Palette de couleurs */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Couleur de l'avatar</label>
+                  <div className="grid grid-cols-8 gap-2">
+                    {palette.map((c, index) => (
+                      <button
+                        type="button"
+                        key={`color-${index}-${c}`}
+                        onClick={() => setFormData(prev => ({ ...prev, color: c }))}
+                        className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
+                          formData.color === c 
+                            ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)] border-white' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        style={{ backgroundColor: c }}
+                        aria-label={`Choisir la couleur ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Upload photo */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo (optionnel)</label>
+                  <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 transition-colors">
+                    📷 {formData.photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                  </label>
+                  {formData.photoPreview && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photoPreview: '', photoFile: null }))}
+                      className="ml-2 text-sm text-red-600 hover:text-red-700"
+                    >
+                      Supprimer
+                    </button>
+                  )}
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-[var(--rose-clair-text)] text-white rounded-lg hover:opacity-90 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {editingKnitter ? 'Modification...' : 'Ajout...'}
+                      </>
+                    ) : (
+                      editingKnitter ? 'Modifier' : 'Ajouter'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

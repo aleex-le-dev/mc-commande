@@ -69,6 +69,11 @@ async function createCollectionsAndIndexes() {
     const imagesCollection = db.collection('product_images')
     await imagesCollection.createIndex({ product_id: 1 }, { unique: true })
     
+    // Collection des tricoteuses
+    const tricoteusesCollection = db.collection('tricoteuses')
+    await tricoteusesCollection.createIndex({ firstName: 1 })
+    await tricoteusesCollection.createIndex({ createdAt: -1 })
+    
     console.log('✅ Collections et index créés')
   } catch (error) {
     console.error('❌ Erreur création collections:', error)
@@ -1182,6 +1187,148 @@ app.put('/api/production-status/:lineItemId/type', async (req, res) => {
   }
 })
 
+// Routes API pour les tricoteuses
+
+// GET /api/tricoteuses - Récupérer toutes les tricoteuses
+app.get('/api/tricoteuses', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const tricoteusesCollection = db.collection('tricoteuses')
+    const tricoteuses = await tricoteusesCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray()
+    
+    res.json({
+      success: true,
+      data: tricoteuses
+    })
+  } catch (error) {
+    console.error('Erreur récupération tricoteuses:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/tricoteuses - Créer une nouvelle tricoteuse
+app.post('/api/tricoteuses', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { firstName, color, photoUrl } = req.body
+    
+    if (!firstName || !firstName.trim()) {
+      return res.status(400).json({ error: 'Le prénom est requis' })
+    }
+    
+    if (!color) {
+      return res.status(400).json({ error: 'La couleur est requise' })
+    }
+    
+    const tricoteusesCollection = db.collection('tricoteuses')
+    
+    const newTricoteuse = {
+      firstName: firstName.trim(),
+      color,
+      photoUrl: photoUrl || '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    
+    const result = await tricoteusesCollection.insertOne(newTricoteuse)
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: result.insertedId,
+        ...newTricoteuse
+      }
+    })
+  } catch (error) {
+    console.error('Erreur création tricoteuse:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// PUT /api/tricoteuses/:id - Modifier une tricoteuse
+app.put('/api/tricoteuses/:id', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { id } = req.params
+    const { firstName, color, photoUrl } = req.body
+    
+    if (!firstName || !firstName.trim()) {
+      return res.status(400).json({ error: 'Le prénom est requis' })
+    }
+    
+    if (!color) {
+      return res.status(400).json({ error: 'La couleur est requise' })
+    }
+    
+    const tricoteusesCollection = db.collection('tricoteuses')
+    
+    const updateData = {
+      firstName: firstName.trim(),
+      color,
+      photoUrl: photoUrl || '',
+      updatedAt: new Date()
+    }
+    
+    const result = await tricoteusesCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    )
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Tricoteuse non trouvée' })
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id,
+        ...updateData
+      }
+    })
+  } catch (error) {
+    console.error('Erreur modification tricoteuse:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// DELETE /api/tricoteuses/:id - Supprimer une tricoteuse
+app.delete('/api/tricoteuses/:id', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { id } = req.params
+    const tricoteusesCollection = db.collection('tricoteuses')
+    
+    const result = await tricoteusesCollection.deleteOne({ _id: new ObjectId(id) })
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Tricoteuse non trouvée' })
+    }
+    
+    res.json({
+      success: true,
+      message: 'Tricoteuse supprimée avec succès'
+    })
+  } catch (error) {
+    console.error('Erreur suppression tricoteuse:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
 
@@ -1364,6 +1511,10 @@ async function startServer() {
     console.log(`   GET  /api/test/connection - Test connexion WordPress`)
     console.log(`   GET  /api/test/sync - Test connexion base de données`)
     console.log(`   GET  /api/debug/status - Debug de l'état de la base`)
+    console.log(`   GET  /api/tricoteuses - Récupérer toutes les tricoteuses`)
+    console.log(`   POST /api/tricoteuses - Créer une nouvelle tricoteuse`)
+    console.log(`   PUT  /api/tricoteuses/:id - Modifier une tricoteuse`)
+    console.log(`   DELETE /api/tricoteuses/:id - Supprimer une tricoteuse`)
   })
 }
 

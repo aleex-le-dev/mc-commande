@@ -282,3 +282,72 @@ export const updateOrderStatus = async (orderId, newStatus) => {
     throw new Error(`Erreur lors de la mise à jour: ${error.message}`)
   }
 }
+
+// Service pour les tricoteuses
+export const tricoteusesService = {
+  // Récupérer toutes les tricoteuses
+  async getAllTricoteuses() {
+    try {
+      const response = await fetch('http://localhost:3001/api/tricoteuses')
+      if (!response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
+      const result = await response.json()
+      return result.data || []
+    } catch (error) {
+      console.error('Erreur récupération tricoteuses:', error)
+      return []
+    }
+  },
+
+  // Créer une nouvelle tricoteuse
+  async createTricoteuse(tricoteuseData) {
+    try {
+      const response = await fetch('http://localhost:3001/api/tricoteuses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tricoteuseData)
+      })
+      if (!response.ok) throw new Error('Erreur lors de la création de la tricoteuse')
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Erreur création tricoteuse:', error)
+      throw error
+    }
+  },
+
+  // Modifier une tricoteuse
+  async updateTricoteuse(id, tricoteuseData) {
+    try {
+      const response = await fetch(`http://localhost:3001/api/tricoteuses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tricoteuseData)
+      })
+      if (!response.ok) throw new Error('Erreur lors de la modification de la tricoteuse')
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Erreur modification tricoteuse:', error)
+      throw error
+    }
+  },
+
+  // Supprimer une tricoteuse
+  async deleteTricoteuse(id) {
+    try {
+      const response = await fetch(`http://localhost:3001/api/tricoteuses/${id}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Erreur lors de la suppression de la tricoteuse')
+      const result = await response.json()
+      return result.success
+    } catch (error) {
+      console.error('Erreur suppression tricoteuse:', error)
+      throw error
+    }
+  }
+}
