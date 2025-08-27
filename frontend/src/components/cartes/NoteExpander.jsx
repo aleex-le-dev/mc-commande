@@ -24,7 +24,7 @@ const NoteExpander = ({ note }) => {
       {/* Bouton pour voir la note */}
       <button
         onClick={toggleNote}
-        className="w-full flex items-center justify-between p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-all duration-300 group"
+        className="w-full flex items-center justify-between p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-all duration-300 group cursor-pointer"
       >
         <div className="flex items-center">
           <span className="text-amber-600 mr-2">📝</span>

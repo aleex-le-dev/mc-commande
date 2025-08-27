@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import OrderList from './components/OrderList'
 import OrderForm from './components/OrderForm'
 import ParametresPanel from './components/ParametresPanel'
+import CardStyles from './components/cartes/CardStyles'
 import './App.css'
 
 // Configuration du client React Query
@@ -39,6 +40,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <CardStyles />
       <div className="min-h-screen bg-gray-50">
         {/* Navigation principale */}
         <nav className="bg-white shadow-lg border-b border-gray-200">
