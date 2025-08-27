@@ -1,5 +1,6 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import ArticleCard from './ArticleCard'
+import LoadingSpinner from '../LoadingSpinner'
 
 // Composant simple avec flexbox et flex-wrap pour les cartes
 const SimpleFlexGrid = ({ 
@@ -12,6 +13,24 @@ const SimpleFlexGrid = ({
   searchTerm,
   productionType = 'unknown' // Ajouter le type de production
 }) => {
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Gérer l'état de loading lors des changements d'onglets
+  useEffect(() => {
+    // Toujours afficher le loading au début
+    if (filteredArticles.length === 0) {
+      setIsLoading(true)
+      // Simuler un délai de chargement
+      const timer = setTimeout(() => {
+        setIsLoading(false)
+      }, 800)
+      return () => clearTimeout(timer)
+    } else {
+      // Articles disponibles, masquer le loading
+      setIsLoading(false)
+    }
+  }, [filteredArticles.length, productionType]) // Retirer previousArticlesCount des dépendances
+
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
     return filteredArticles.map((article, index) => {
@@ -52,6 +71,11 @@ const SimpleFlexGrid = ({
     searchTerm,
     productionType // Ajouter aux dépendances
   ])
+
+  // Afficher le loading pendant les changements d'onglets
+  if (isLoading) {
+    return <LoadingSpinner />
+  }
 
   if (filteredArticles.length === 0) {
     return (

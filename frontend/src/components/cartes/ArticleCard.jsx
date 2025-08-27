@@ -67,15 +67,11 @@ const ArticleCard = React.memo(({
 
   // Charger l'image quand les props changent OU quand le type de production change
   useEffect(() => {
-    console.log(`🔄 ArticleCard useEffect - ProductID: ${memoizedProductId}, ProductionType: ${productionType}`)
-    
     // Vérifier d'abord si l'image est déjà en localStorage (priorité absolue)
     if (memoizedProductId) {
       const cachedImageUrl = localStorage.getItem(`image_${memoizedProductId}`)
-      console.log(`📦 Cache localStorage pour ${memoizedProductId}:`, cachedImageUrl ? 'TROUVÉ' : 'NON TROUVÉ')
       
       if (cachedImageUrl) {
-        console.log(`✅ Image en cache, affichage immédiat: ${cachedImageUrl}`)
         setImageUrl(cachedImageUrl)
         setIsImageLoading(false)
         return // Sortir immédiatement si l'image est en cache
@@ -84,19 +80,14 @@ const ArticleCard = React.memo(({
 
     // Si pas en cache, charger l'image
     if (memoizedImageUrl) {
-      console.log(`🖼️ Image URL directe disponible: ${memoizedImageUrl}`)
       setImageUrl(memoizedImageUrl)
       setIsImageLoading(false)
     } else if (memoizedProductId) {
-      console.log(`🚀 Chargement depuis MongoDB pour ${memoizedProductId}`)
       setIsImageLoading(true) // Afficher le loading seulement si pas en cache
       const instantImage = imageService.getImage(memoizedProductId)
-      console.log(`🔗 URL MongoDB générée: ${instantImage}`)
       setImageUrl(instantImage)
       setIsImageLoading(false)
     }
-    
-    console.log(`📊 État final - imageUrl: ${imageUrl}, isLoading: ${isImageLoading}`)
   }, [memoizedImageUrl, memoizedProductId, productionType]) // Garder productionType pour forcer le remontage
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
@@ -107,7 +98,6 @@ const ArticleCard = React.memo(({
     if (memoizedProductId) {
       const cachedUrl = localStorage.getItem(`image_${memoizedProductId}`)
       if (cachedUrl) {
-        console.log(`🔄 Récupération depuis cache dans getImageUrl: ${cachedUrl}`)
         return cachedUrl
       }
     }
@@ -121,15 +111,9 @@ const ArticleCard = React.memo(({
   // Sauvegarder l'URL de l'image en localStorage quand elle change
   useEffect(() => {
     if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:')) {
-      console.log(`💾 Sauvegarde en localStorage: ${memoizedProductId} -> ${displayImageUrl}`)
       localStorage.setItem(`image_${memoizedProductId}`, displayImageUrl)
     }
   }, [displayImageUrl, memoizedProductId])
-
-  // Log de l'état de l'image
-  useEffect(() => {
-    console.log(`👁️ État image mis à jour - ProductID: ${memoizedProductId}, URL: ${imageUrl}, DisplayURL: ${displayImageUrl}, Loading: ${isImageLoading}`)
-  }, [imageUrl, displayImageUrl, isImageLoading, memoizedProductId])
 
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
@@ -196,15 +180,12 @@ const ArticleCard = React.memo(({
               maxRetries={3}
               retryDelay={1000}
               onLoad={() => {
-                console.debug('Image chargée avec succès')
                 // Marquer l'image comme chargée avec succès
                 setIsImageLoading(false)
               }}
               onError={(retryCount) => {
-                console.warn('Erreur image, tentative:', retryCount)
                 if (retryCount >= 3) {
                   // Après 3 tentatives, essayer de recharger l'image
-                  console.log('Tentative de rechargement de l\'image')
                   setTimeout(() => {
                     if (memoizedProductId) {
                       const retryImage = imageService.getImage(memoizedProductId)
