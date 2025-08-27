@@ -168,7 +168,7 @@ const ArticleCard = React.memo(({
       }}
     >
       {/* Image de fond avec overlay moderne */}
-      <div className="relative h-60 overflow-hidden">
+      <div className="relative h-60 overflow-hidden rounded-t-3xl">
         {/* Image de base */}
         {displayImageUrl ? (
           <div className="relative">
