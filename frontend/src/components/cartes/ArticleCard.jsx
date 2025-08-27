@@ -171,38 +171,70 @@ const ArticleCard = forwardRef(({
     return text
   }
 
-  // Charger l'assignation existante et synchroniser avec la prop
-  useEffect(() => {
-    const loadExistingAssignment = async () => {
-      if (article.product_id) {
-        try {
-          const existingAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
-          if (existingAssignment) {
+  // Charger l'assignation existante et l'enrichir avec les données de la tricoteuse
+  const loadExistingAssignment = useCallback(async () => {
+    if (article.product_id) {
+      try {
+        const existingAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
+        if (existingAssignment && existingAssignment.tricoteuse_id) {
+          // Enrichir l'assignation avec les données complètes de la tricoteuse
+          try {
+            const allTricoteuses = await tricoteusesService.getAllTricoteuses()
+            const tricoteuse = allTricoteuses.find(t => t._id === existingAssignment.tricoteuse_id)
+            if (tricoteuse) {
+              const enrichedAssignment = {
+                ...existingAssignment,
+                tricoteuse_photo: tricoteuse.photoUrl,
+                tricoteuse_color: tricoteuse.color,
+                tricoteuse_name: tricoteuse.firstName
+              }
+              setLocalAssignment(enrichedAssignment)
+            } else {
+              setLocalAssignment(existingAssignment)
+            }
+          } catch (tricoteuseError) {
+            console.error('Erreur lors du chargement de la tricoteuse:', tricoteuseError)
             setLocalAssignment(existingAssignment)
-          } else {
-            setLocalAssignment(assignment)
           }
-        } catch (error) {
-          console.error('Erreur lors du chargement de l\'assignation:', error)
+        } else {
           setLocalAssignment(assignment)
         }
-      } else {
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'assignation:', error)
         setLocalAssignment(assignment)
       }
+    } else {
+      setLocalAssignment(assignment)
     }
-
-    loadExistingAssignment()
   }, [article.product_id, assignment])
+
+  useEffect(() => {
+    loadExistingAssignment()
+  }, [loadExistingAssignment])
 
   // Charger la liste des tricoteuses
   const loadTricoteuses = useCallback(async () => {
     try {
       const data = await tricoteusesService.getAllTricoteuses()
       setTricoteuses(data)
+      
+      // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
+      if (localAssignment && localAssignment.tricoteuse_id) {
+        const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
+        if (tricoteuse) {
+          const enrichedAssignment = {
+            ...localAssignment,
+            tricoteuse_photo: tricoteuse.photoUrl,
+            tricoteuse_color: tricoteuse.color,
+            tricoteuse_name: tricoteuse.firstName
+          }
+          setLocalAssignment(enrichedAssignment)
+        }
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des tricoteuses:', error)
     }
-  }, [])
+  }, [localAssignment])
 
   // Ouvrir le modal de sélection de tricoteuse
   const openTricoteuseModal = useCallback(() => {
