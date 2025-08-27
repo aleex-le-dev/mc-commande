@@ -79,6 +79,11 @@ const ArticleCard = forwardRef(({
   // Mémoriser l'image URL pour éviter les re-renders
   const memoizedImageUrl = useMemo(() => article.image_url, [article.image_url])
   const memoizedProductId = useMemo(() => article.product_id, [article.product_id])
+  
+  // Créer un identifiant unique pour l'assignation (combinaison de product_id + orderNumber + customer)
+  const uniqueAssignmentId = useMemo(() => {
+    return `${article.product_id}_${article.orderNumber}_${article.customer}`
+  }, [article.product_id, article.orderNumber, article.customer])
 
   // Charger l'image quand les props changent OU quand le type de production change
   useEffect(() => {
@@ -175,12 +180,12 @@ const ArticleCard = forwardRef(({
 
   // Charger l'assignation existante et l'enrichir avec les données de la tricoteuse
   const loadExistingAssignment = useCallback(async () => {
-    if (article.product_id) {
+    if (uniqueAssignmentId) {
       setIsLoadingAssignment(true)
       try {
         // Charger assignation ET tricoteuses en parallèle pour plus de rapidité
         const [existingAssignment, allTricoteuses] = await Promise.all([
-          assignmentsService.getAssignmentByArticleId(article.product_id),
+          assignmentsService.getAssignmentByArticleId(uniqueAssignmentId),
           tricoteusesService.getAllTricoteuses()
         ])
         
@@ -211,7 +216,7 @@ const ArticleCard = forwardRef(({
       setLocalAssignment(assignment)
       setIsLoadingAssignment(false)
     }
-  }, [article.product_id, assignment])
+  }, [uniqueAssignmentId, assignment])
 
   useEffect(() => {
     loadExistingAssignment()
@@ -223,19 +228,23 @@ const ArticleCard = forwardRef(({
       const data = await tricoteusesService.getAllTricoteuses()
       setTricoteuses(data)
       
-      // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
-      if (localAssignment && localAssignment.tricoteuse_id) {
-        const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
-        if (tricoteuse) {
-          const enrichedAssignment = {
-            ...localAssignment,
-            tricoteuse_photo: tricoteuse.photoUrl,
-            tricoteuse_color: tricoteuse.color,
-            tricoteuse_name: tricoteuse.firstName
+              // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
+        if (localAssignment && localAssignment.tricoteuse_id) {
+          const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
+          if (tricoteuse) {
+            // Vérifier si l'assignation locale a besoin d'être enrichie
+            const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
+            if (needsEnrichment) {
+              const enrichedAssignment = {
+                ...localAssignment,
+                tricoteuse_photo: tricoteuse.photoUrl,
+                tricoteuse_color: tricoteuse.color,
+                tricoteuse_name: tricoteuse.firstName
+              }
+              setLocalAssignment(enrichedAssignment)
+            }
           }
-          setLocalAssignment(enrichedAssignment)
         }
-      }
     } catch (error) {
       console.error('Erreur lors du chargement des tricoteuses:', error)
     }
@@ -742,7 +751,10 @@ const ArticleCard = forwardRef(({
                   key={tricoteuse._id}
                   onClick={() => {
                     const assignmentData = {
-                      article_id: article.product_id,
+                      article_id: uniqueAssignmentId, // Identifiant unique pour éviter les conflits
+                      product_id: article.product_id, // Garder le product_id pour référence
+                      orderNumber: article.orderNumber, // Numéro de commande unique
+                      customer: article.customer, // Client pour identification
                       tricoteuse_id: tricoteuse._id,
                       tricoteuse_name: tricoteuse.firstName,
                       tricoteuse_photo: tricoteuse.photoUrl,
@@ -752,18 +764,14 @@ const ArticleCard = forwardRef(({
                     
                     assignmentsService.createOrUpdateAssignment(assignmentData)
                       .then(async (savedAssignment) => {
-                        // Récupérer l'assignation complète sauvegardée
-                        try {
-                          const completeAssignment = await assignmentsService.getAssignmentByArticleId(article.product_id)
-                          if (completeAssignment) {
-                            setLocalAssignment(completeAssignment)
-                          } else {
-                            setLocalAssignment(assignmentData)
-                          }
-                        } catch (error) {
-                          console.error('Erreur lors de la récupération de l\'assignation:', error)
-                          setLocalAssignment(assignmentData)
+                        // Enrichir immédiatement l'assignation locale avec les données complètes
+                        const enrichedAssignment = {
+                          ...assignmentData,
+                          tricoteuse_photo: tricoteuse.photoUrl,
+                          tricoteuse_color: tricoteuse.color,
+                          tricoteuse_name: tricoteuse.firstName
                         }
+                        setLocalAssignment(enrichedAssignment)
                         
                         if (onAssignmentUpdate) {
                           onAssignmentUpdate()
