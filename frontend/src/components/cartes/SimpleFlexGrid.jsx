@@ -24,6 +24,7 @@ const SimpleFlexGrid = ({
   const sentinelRef = useRef(null)
   const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
   const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
+  const calculEffectue = useRef(false)
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -66,6 +67,9 @@ const SimpleFlexGrid = ({
 
   // Charger la date limite depuis le service
   const loadDateLimite = useCallback(async () => {
+    // Éviter les calculs répétés
+    if (calculEffectue.current) return
+    
     try {
       // Récupérer la configuration des délais et les jours fériés
       const [configResponse, joursFeriesResponse] = await Promise.all([
@@ -125,10 +129,6 @@ const SimpleFlexGrid = ({
         let dateLimite = new Date(aujourdhui)
         let joursRetires = 0
         
-        console.log('🔍 === CALCUL DATE LIMITE SIMPLEFLEX ===')
-        console.log('📅 Date de départ (aujourd\'hui):', aujourdhui.toISOString().split('T')[0])
-        console.log('📊 Jours ouvrables à compter:', joursDelai)
-        
         while (joursRetires < joursDelai) {
           dateLimite.setDate(dateLimite.getDate() - 1)
           
@@ -139,29 +139,27 @@ const SimpleFlexGrid = ({
           // Vérifier si c'est un jour ouvrable ET pas un jour férié
           if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
             joursRetires++
-            console.log(`✅ Jour ${joursRetires}: ${dateStr} (${nomJour})`)
-          } else {
-            const raison = !joursOuvrables[nomJour] ? 'weekend' : 'jour férié'
-            console.log(`❌ Ignoré: ${dateStr} (${nomJour}) - ${raison}`)
           }
         }
         
         const dateLimiteStr = dateLimite.toISOString().split('T')[0]
         setDateLimite(dateLimiteStr)
-        console.log('🎯 Date limite finale:', dateLimiteStr)
-        console.log('🔍 === FIN CALCUL ===')
         
-        // Enregistrer la nouvelle date limite en BDD
-        try {
-          await delaiService.saveDelai({
-            ...configResponse.data,
-            dateLimite: dateLimiteStr,
-            derniereModification: new Date().toISOString()
-          })
-          console.log('💾 Date limite sauvegardée en BDD:', dateLimiteStr)
-        } catch (saveError) {
-          console.error('Erreur lors de la sauvegarde de la date limite:', saveError)
+        // Enregistrer la nouvelle date limite en BDD seulement si elle est différente
+        if (configResponse.data.dateLimite !== dateLimiteStr) {
+          try {
+            await delaiService.saveDelai({
+              ...configResponse.data,
+              dateLimite: dateLimiteStr,
+              derniereModification: new Date().toISOString()
+            })
+            console.log('💾 Date limite sauvegardée en BDD:', dateLimiteStr)
+          } catch (saveError) {
+            console.error('Erreur lors de la sauvegarde de la date limite:', saveError)
+          }
         }
+        
+        calculEffectue.current = true
       } else {
         console.log('⚠️ Pas de configuration de délai disponible')
       }

@@ -52,10 +52,6 @@ const DateLimiteTab = () => {
     let dateLimite = new Date(aujourdhui)
     let joursRetires = 0
 
-    console.log('🔍 === CALCUL DATE LIMITE ===')
-    console.log('📅 Date de départ (aujourd\'hui):', aujourdhui.toISOString().split('T')[0])
-    console.log('📊 Jours ouvrables à compter:', joursOuvrablesCount)
-
     // On remonte dans le temps pour trouver la date limite
     while (joursRetires < joursOuvrablesCount) {
       dateLimite.setDate(dateLimite.getDate() - 1)
@@ -67,15 +63,10 @@ const DateLimiteTab = () => {
       // Vérifier si c'est un jour ouvrable ET pas un jour férié
       if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
         joursRetires++
-        console.log(`✅ Jour ${joursRetires}: ${dateLimite.toISOString().split('T')[0]} (${nomJour})`)
-      } else {
-        const raison = !joursOuvrables[nomJour] ? 'weekend' : 'jour férié'
-        console.log(`❌ Ignoré: ${dateLimite.toISOString().split('T')[0]} (${nomJour}) - ${raison}`)
       }
     }
 
     console.log('🎯 Date limite finale:', dateLimite.toISOString().split('T')[0])
-    console.log('🔍 === FIN CALCUL ===')
 
     return dateLimite
   }
