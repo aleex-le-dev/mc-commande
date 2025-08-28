@@ -760,19 +760,12 @@ const ArticleCard = forwardRef(({
       {/* Modal d'assignation simple et élégante */}
       {showTricoteuseModal && (
         <div 
-          className="absolute top-2 left-2 right-2 bottom-2 bg-white/95 backdrop-blur-sm flex items-center justify-center z-20 rounded-2xl overflow-hidden"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              closeTricoteuseModal()
-            }
-          }}
+          className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-20"
+          onClick={closeTricoteuseModal}
         >
           <div 
-            className="bg-white rounded-xl p-4 w-full h-full overflow-y-auto"
-            style={{ 
-              position: 'relative',
-              isolation: 'isolate'
-            }}
+            className="bg-white rounded-2xl p-4 w-11/12 max-w-md max-h-96 overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* En-tête simple */}
             <div className="text-center mb-4">
@@ -933,6 +926,8 @@ const ArticleCard = forwardRef(({
                                if (onAssignmentUpdate) {
                                  onAssignmentUpdate()
                                }
+                               // Fermer la modal après la mise à jour
+                               closeTricoteuseModal()
                              })
                              .catch((error) => {
                                console.error('Erreur lors de la mise à jour du statut:', error)
@@ -940,7 +935,7 @@ const ArticleCard = forwardRef(({
                          }}
                          className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                            localAssignment.status === 'en_cours'
-                             ? 'text-black shadow-lg border-black'
+                             ? 'text-black shadow-lg'
                              : 'text-black hover:shadow-md'
                          }`}
                          style={{
@@ -953,12 +948,6 @@ const ArticleCard = forwardRef(({
                          }}
                        >
                          <div className="text-center">
-                           <div 
-                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mx-auto mb-1"
-                             style={{ backgroundColor: 'var(--couture-en-cours-dark)' }}
-                           >
-                             ⏳
-                           </div>
                            <p className="text-xs font-medium">En cours</p>
                          </div>
                        </button>
@@ -972,6 +961,8 @@ const ArticleCard = forwardRef(({
                                if (onAssignmentUpdate) {
                                  onAssignmentUpdate()
                                }
+                               // Fermer la modal après la mise à jour
+                               closeTricoteuseModal()
                              })
                              .catch((error) => {
                                console.error('Erreur lors de la mise à jour du statut:', error)
@@ -979,7 +970,7 @@ const ArticleCard = forwardRef(({
                          }}
                          className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                            localAssignment.status === 'en_pause'
-                             ? 'text-white shadow-lg border-black'
+                             ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
                          }`}
                          style={{
@@ -992,12 +983,6 @@ const ArticleCard = forwardRef(({
                          }}
                        >
                          <div className="text-center">
-                           <div 
-                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mx-auto mb-1"
-                             style={{ backgroundColor: 'var(--couture-en-pause-dark)' }}
-                           >
-                             ⏸️
-                           </div>
                            <p className="text-xs font-medium">En pause</p>
                          </div>
                        </button>
@@ -1011,6 +996,8 @@ const ArticleCard = forwardRef(({
                                if (onAssignmentUpdate) {
                                  onAssignmentUpdate()
                                }
+                               // Fermer la modal après la mise à jour
+                               closeTricoteuseModal()
                              })
                              .catch((error) => {
                                console.error('Erreur lors de la mise à jour du statut:', error)
@@ -1018,7 +1005,7 @@ const ArticleCard = forwardRef(({
                          }}
                          className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                            localAssignment.status === 'termine'
-                             ? 'text-white shadow-lg border-black'
+                             ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
                          }`}
                          style={{
@@ -1031,12 +1018,6 @@ const ArticleCard = forwardRef(({
                          }}
                        >
                          <div className="text-center">
-                           <div 
-                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mx-auto mb-1"
-                             style={{ backgroundColor: 'var(--couture-termine-dark)' }}
-                           >
-                             ✅
-                           </div>
                            <p className="text-xs font-medium">Terminé</p>
                          </div>
                        </button>
