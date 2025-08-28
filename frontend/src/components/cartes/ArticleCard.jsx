@@ -349,7 +349,7 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative bg-white rounded-3xl overflow-visible shadow-lg h-[420px] ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
+      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
       style={{ 
         animationName: searchTerm ? 'none' : 'fadeInUp',
         animationDuration: searchTerm ? '0s' : '0.6s',
