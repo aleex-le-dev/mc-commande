@@ -285,6 +285,7 @@ const InfiniteScrollGrid = ({
               key={cardId}
               ref={isLastArticle ? lastArticleRef : null}
               className="w-full relative"
+              style={{ zIndex: 1 }}
             >
               <ArticleCard 
                 article={article}
