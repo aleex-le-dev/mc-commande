@@ -23,7 +23,9 @@ const ArticleCard = forwardRef(({
   showDateLimiteSeparator = false, // Nouvelle prop pour afficher le trait de séparation
   isAfterDateLimite = false, // Indique si l'article est après la date limite
   isLastArticleOfDateLimite = false, // Indique si c'est le dernier article de la date limite
-  tricoteusesProp = [] // Prop pour les tricoteuses
+  tricoteusesProp = [], // Prop pour les tricoteuses
+  showRetardIndicator = true, // Nouvelle prop pour contrôler l'affichage de l'indicateur de retard
+  isEnRetard = false // Nouvelle prop pour indiquer si l'article est en retard
 }, ref) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
@@ -140,44 +142,9 @@ const ArticleCard = forwardRef(({
     }
   }, [dateLimite])
 
-  // Déterminer si l'article doit avoir un trait rouge (date de commande > date limite = EN RETARD)
-  const doitAvoirTraitRouge = useMemo(() => {
-    if (!dateLimite || !article.orderDate) {
-      return false
-    }
-    
-    const dateCommande = new Date(article.orderDate)
-    const dateLimiteObj = new Date(dateLimite)
-    
-    // Un article est EN RETARD si sa date de commande est APRÈS la date limite
-    // (c'est-à-dire qu'il a été commandé trop tard pour respecter le délai)
-    const estEnRetard = dateCommande.toDateString() > dateLimiteObj.toDateString()
-    
-            if (estEnRetard) {
-          // Article en retard détecté
-        }
-    
-    return estEnRetard
-  }, [dateLimite, article.orderDate, article.orderNumber])
-
-  // Déterminer si l'article est après la date limite (pour la bordure et les indicateurs)
-  const estApresDateLimite = useMemo(() => {
-    if (!dateLimite || !article.orderDate) {
-      return false
-    }
-    
-    const dateCommande = new Date(article.orderDate)
-    const dateLimiteObj = new Date(dateLimite)
-    
-    // Un article est "après la date limite" si sa date de commande est APRÈS la date limite
-    const estApres = dateCommande.toDateString() > dateLimiteObj.toDateString()
-    
-    if (estApres) {
-      // Article après date limite détecté
-    }
-    
-    return estApres
-  }, [dateLimite, article.orderDate, article.orderNumber])
+  // Utiliser les props passées depuis InfiniteScrollGrid pour la logique de retard
+  const doitAvoirTraitRouge = isEnRetard
+  const estApresDateLimite = isAfterDateLimite
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
   const getImageUrl = () => {
@@ -360,7 +327,7 @@ const ArticleCard = forwardRef(({
           localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
           localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
           localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
-        }` : estApresDateLimite ? '3px solid #ef4444' : 'none',
+        }` : 'none',
         zIndex: 1
       }}
     >
@@ -430,12 +397,7 @@ const ArticleCard = forwardRef(({
           </div>
         )}
         
-        {/* Indicateur de position par rapport à la date limite */}
-        {dateLimite && estApresDateLimite && (
-          <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-5 bg-red-500 text-white">
-            📅 Après limite
-          </div>
-        )}
+
 
         {/* Lien vers la fiche produit - uniquement sur l'image */}
         <a

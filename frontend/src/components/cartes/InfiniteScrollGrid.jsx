@@ -196,6 +196,48 @@ const InfiniteScrollGrid = ({
     }
   }, [allArticles])
 
+  // Fonction pour vérifier si un article doit avoir le badge en retard
+  const isArticleEnRetard = (article) => {
+    if (!dateLimite || !article.orderDate) {
+      console.log(`❌ Article ${article.orderNumber}: dateLimite=${dateLimite}, orderDate=${article.orderDate}`)
+      return false
+    }
+    
+    const dateCommande = new Date(article.orderDate)
+    const dateLimiteObj = new Date(dateLimite)
+    
+    // Normaliser les dates pour la comparaison (ignorer l'heure)
+    const dateCommandeNormalisee = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
+    const dateLimiteNormalisee = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
+    
+    // Un article est en retard si sa date de commande est AVANT ou ÉGALE à la date limite
+    const estEnRetard = dateCommandeNormalisee <= dateLimiteNormalisee
+    
+    console.log(`🔍 Article ${article.orderNumber}:`, {
+      dateCommande: dateCommandeNormalisee.toISOString().split('T')[0],
+      dateLimite: dateLimiteNormalisee.toISOString().split('T')[0],
+      estEnRetard,
+      comparaison: `${dateCommandeNormalisee.toISOString().split('T')[0]} <= ${dateLimiteNormalisee.toISOString().split('T')[0]}`
+    })
+    
+    return estEnRetard
+  }
+
+  // Fonction pour vérifier si un article est APRÈS la date limite (pour la bordure rouge)
+  const isArticleApresDateLimite = (article) => {
+    if (!dateLimite || !article.orderDate) return false
+    
+    const dateCommande = new Date(article.orderDate)
+    const dateLimiteObj = new Date(dateLimite)
+    
+    // Normaliser les dates pour la comparaison (ignorer l'heure)
+    const dateCommandeNormalisee = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
+    const dateLimiteNormalisee = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
+    
+    // Un article est APRÈS la date limite si sa date de commande est POSTÉRIEURE à la date limite
+    return dateCommandeNormalisee > dateLimiteNormalisee
+  }
+
   // Afficher le loading pendant les changements d'onglets
   if (assignmentsLoading || tricoteusesLoading) {
     return <LoadingSpinner />
@@ -247,9 +289,11 @@ const InfiniteScrollGrid = ({
                 productionType={productionType}
                 assignment={assignments[article.line_item_id]}
                 tricoteusesProp={tricoteuses}
-                onAssignmentUpdate={(articleId, assignment) => {
-                  setAssignments(prev => ({ ...prev, [articleId]: assignment }))
-                }}
+                                    onAssignmentUpdate={(articleId, assignment) => {
+                      setAssignments(prev => ({ ...prev, [articleId]: assignment }))
+                    }}
+                    isEnRetard={isArticleEnRetard(article)}
+                    isAfterDateLimite={isArticleApresDateLimite(article)}
               />
             </div>
           )
