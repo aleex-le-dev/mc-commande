@@ -292,7 +292,7 @@ const InfiniteScrollGrid = ({
             <div 
               key={cardId}
               ref={isLastArticle ? lastArticleRef : null}
-              className="w-full"
+              className="w-full relative"
             >
               <ArticleCard 
                 article={article}
@@ -313,9 +313,9 @@ const InfiniteScrollGrid = ({
                 isEnRetard={isArticleEnRetard(article)}
               />
               
-              {/* Trait rouge de séparation après le dernier article en retard */}
+              {/* Trait rouge vertical à droite de la dernière carte en retard avec padding */}
               {isDernierEnRetard && (
-                <div className="col-span-full w-full h-2 bg-red-500 my-6 rounded-full shadow-lg"></div>
+                <div className="absolute top-0 w-1 h-full bg-red-500 rounded-l-full shadow-lg" style={{ right: '-8px' }}></div>
               )}
             </div>
           )
