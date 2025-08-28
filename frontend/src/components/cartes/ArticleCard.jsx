@@ -5,6 +5,7 @@ import ImageLoader from './ImageLoader'
 import imageService from '../../services/imageService'
 import { tricoteusesService, assignmentsService } from '../../services/mongodbService'
 import delaiService from '../../services/delaiService'
+import TranslationIcon from './TranslationIcon'
 
 // Composant carte d'article moderne optimisé
 const ArticleCard = forwardRef(({ 
@@ -461,14 +462,19 @@ const ArticleCard = forwardRef(({
             </svg>
           </button>
         </div>
+
+        {/* Icône de traduction sur le bord gauche */}
+        <div className="absolute left-4 top-32 z-5 pointer-events-auto">
+          <TranslationIcon article={article} />
+        </div>
       </div>
 
       {/* Zone d'informations dynamique en bas */}
       <div className="h-24 bg-white/95 backdrop-blur-md transition-all duration-300 relative">
-        <div className="p-4">
+        <div className="p-3 pt-2">
           {/* Informations principales pour tricoteuses */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-gray-900 leading-tight">
               {highlightText(article.product_name, searchTerm)}
             </h3>
             <div className="grid gap-3 text-base text-gray-700" style={{ 
