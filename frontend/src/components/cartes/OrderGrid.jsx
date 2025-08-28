@@ -27,17 +27,35 @@ const OrderGrid = ({
     if (filteredArticles.length === 0) return null
     
     const columnCount = getColumnCount()
-    const columnWidth = Math.floor((window.innerWidth - 48) / columnCount) // 48px pour les marges
+    // Utiliser 100% de la largeur disponible au lieu d'une largeur fixe
+    const availableWidth = window.innerWidth - 32 // 32px pour les marges
+    const columnWidth = Math.floor(availableWidth / columnCount)
     const rowHeight = 450
+    
+    // Calculer la hauteur totale nécessaire pour afficher tous les articles
+    const totalRows = Math.ceil(filteredArticles.length / columnCount)
+    const totalHeight = totalRows * rowHeight + 100 // Hauteur calculée + marge
+    
+    // Logs détaillés pour diagnostiquer le problème
+    console.log('🔍 === DIAGNOSTIC ORDERGRID ===')
+    console.log('📊 Articles reçus:', filteredArticles.length)
+    console.log('📱 Largeur écran:', window.innerWidth)
+    console.log('📏 Largeur disponible:', availableWidth)
+    console.log('🏗️ Colonnes:', columnCount)
+    console.log('📏 Largeur colonne:', columnWidth)
+    console.log('📏 Hauteur ligne:', rowHeight)
+    console.log('📊 Lignes totales:', totalRows)
+    console.log('📏 Hauteur totale calculée:', totalHeight)
+    console.log('🔍 === FIN DIAGNOSTIC ===')
     
     return (
       <Grid
         columnCount={columnCount}
         columnWidth={columnWidth}
-        height={800}
-        rowCount={Math.ceil(filteredArticles.length / columnCount)}
+        height={totalHeight}
+        rowCount={totalRows}
         rowHeight={rowHeight}
-        width={window.innerWidth}
+        width={availableWidth}
         itemData={{
           articles: filteredArticles,
           getArticleSize,
@@ -61,6 +79,10 @@ const OrderGrid = ({
             (article.customer || '').toLowerCase().includes(data.searchTerm.toLowerCase()) ||
             (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
           )
+          
+          // Log pour compter les articles rendus
+          if (index === 0) console.log('🎯 Premier article rendu:', article.orderNumber)
+          if (index === data.articles.length - 1) console.log('🏁 Dernier article rendu:', article.orderNumber, 'Index:', index)
           
           return (
             <div style={style} className="p-3">

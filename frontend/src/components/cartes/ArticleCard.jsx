@@ -153,9 +153,9 @@ const ArticleCard = forwardRef(({
     // (c'est-à-dire qu'il a été commandé trop tard pour respecter le délai)
     const estEnRetard = dateCommande.toDateString() > dateLimiteObj.toDateString()
     
-    if (estEnRetard) {
-      console.log('🚨 Article en retard:', article.orderNumber, 'Date commande:', article.orderDate, 'Date limite:', dateLimite)
-    }
+            if (estEnRetard) {
+          // Article en retard détecté
+        }
     
     return estEnRetard
   }, [dateLimite, article.orderDate, article.orderNumber])
@@ -173,7 +173,7 @@ const ArticleCard = forwardRef(({
     const estApres = dateCommande.toDateString() > dateLimiteObj.toDateString()
     
     if (estApres) {
-      console.log('📅 Article après date limite:', article.orderNumber, 'Date commande:', article.orderDate, 'Date limite:', dateLimite)
+      // Article après date limite détecté
     }
     
     return estApres

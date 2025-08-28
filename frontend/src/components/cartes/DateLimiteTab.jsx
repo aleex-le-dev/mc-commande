@@ -19,7 +19,7 @@ const DateLimiteTab = () => {
   // État pour les jours fériés
   const [joursFeries, setJoursFeries] = useState({})
   const [isLoadingJoursFeries, setIsLoadingJoursFeries] = useState(false)
-  const [aujourdhui, setAujourdhui] = useState(new Date('2025-07-28T12:00:00.000Z'))
+  const [aujourdhui, setAujourdhui] = useState(new Date())
 
   // Charger le délai actuel au montage du composant
   useEffect(() => {
@@ -46,6 +46,10 @@ const DateLimiteTab = () => {
     let dateLimite = new Date(aujourdhui)
     let joursRetires = 0
 
+    console.log('🔍 === CALCUL DATE LIMITE ===')
+    console.log('📅 Date de départ (aujourd\'hui):', aujourdhui.toISOString().split('T')[0])
+    console.log('📊 Jours ouvrables à compter:', joursOuvrablesCount)
+
     // On remonte dans le temps pour trouver la date limite
     while (joursRetires < joursOuvrablesCount) {
       dateLimite.setDate(dateLimite.getDate() - 1)
@@ -57,11 +61,15 @@ const DateLimiteTab = () => {
       // Vérifier si c'est un jour ouvrable ET pas un jour férié
       if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
         joursRetires++
+        console.log(`✅ Jour ${joursRetires}: ${dateLimite.toISOString().split('T')[0]} (${nomJour})`)
+      } else {
+        const raison = !joursOuvrables[nomJour] ? 'weekend' : 'jour férié'
+        console.log(`❌ Ignoré: ${dateLimite.toISOString().split('T')[0]} (${nomJour}) - ${raison}`)
       }
     }
 
-    // Log simple de la date limite calculée
-    console.log('📅 Date limite calculée:', dateLimite.toISOString().split('T')[0])
+    console.log('🎯 Date limite finale:', dateLimite.toISOString().split('T')[0])
+    console.log('🔍 === FIN CALCUL ===')
 
     return dateLimite
   }
