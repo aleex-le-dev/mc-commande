@@ -160,6 +160,7 @@ export const useOrderData = (selectedType, propSelectedType) => {
     if (!dbOrders) return []
     
     const articles = []
+    
     dbOrders.forEach((order, orderIndex) => {
       order.items?.forEach((item, itemIndex) => {
         // Utiliser le type de production depuis la base de données si disponible

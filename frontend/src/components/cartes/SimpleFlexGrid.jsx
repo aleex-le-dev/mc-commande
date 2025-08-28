@@ -20,7 +20,7 @@ const SimpleFlexGrid = ({
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
   const [tricoteuses, setTricoteuses] = useState([])
   const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
-  const [visibleCount, setVisibleCount] = useState(40)
+  const [visibleCount, setVisibleCount] = useState(280) // Augmenter la limite initiale
   const sentinelRef = useRef(null)
   const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
   const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
@@ -176,7 +176,7 @@ const SimpleFlexGrid = ({
 
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
   useEffect(() => {
-    setVisibleCount(40)
+    setVisibleCount(280) // Afficher tous les articles par défaut
   }, [filteredArticles.length, productionType, searchTerm])
 
   // Observer pour le chargement progressif (virtualisation simple)

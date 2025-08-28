@@ -15,6 +15,7 @@ export const useOrderFilters = (propSelectedType, allArticles) => {
   // Filtrer les articles
   const filteredArticles = useMemo(() => {
     const term = searchTerm.toLowerCase().trim()
+    
     return allArticles.filter(article => {
       const typeMatch = selectedType === 'all' || article.productionType === selectedType
       if (!typeMatch) return false

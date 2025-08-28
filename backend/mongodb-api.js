@@ -532,40 +532,87 @@ app.get('/api/orders', async (req, res) => {
     const itemsCollection = db.collection('order_items')
     const statusCollection = db.collection('production_status')
     
-    // Récupérer toutes les commandes
-    const orders = await ordersCollection.find({}).sort({ order_date: 1 }).toArray()
+    // Récupérer toutes les commandes avec un timeout plus long
+    const orders = await ordersCollection.find({})
+      .sort({ order_date: 1 })
+      .maxTimeMS(30000) // 30 secondes max
+      .toArray()
     
-    // Pour chaque commande, récupérer les articles et statuts
-    const ordersWithDetails = await Promise.all(orders.map(async (order) => {
-      const items = await itemsCollection.find({ order_id: order.order_id }).toArray()
+    if (orders.length === 0) {
+      return res.json({ orders: [] })
+    }
+    
+    // Traiter les commandes par lots pour éviter les timeouts
+    const BATCH_SIZE = 50
+    const ordersWithDetails = []
+    
+    for (let i = 0; i < orders.length; i += BATCH_SIZE) {
+      const batch = orders.slice(i, i + BATCH_SIZE)
       
-      // Ajouter les statuts de production à chaque article
-      const itemsWithStatus = await Promise.all(items.map(async (item) => {
-        const status = await statusCollection.findOne({
-          order_id: order.order_id,
-          line_item_id: item.line_item_id
-        })
-        
-        return {
-          ...item,
-          production_status: status || {
-            status: 'a_faire',
-            production_type: null,
-            assigned_to: null
+      const batchResults = await Promise.all(batch.map(async (order) => {
+        try {
+          const items = await itemsCollection.find({ order_id: order.order_id })
+            .maxTimeMS(10000) // 10 secondes max par commande
+            .toArray()
+          
+          // Ajouter les statuts de production à chaque article
+          const itemsWithStatus = await Promise.all(items.map(async (item) => {
+            try {
+              const status = await statusCollection.findOne({
+                order_id: order.order_id,
+                line_item_id: item.line_item_id
+              }, { maxTimeMS: 5000 })
+              
+              return {
+                ...item,
+                production_status: status || {
+                  status: 'a_faire',
+                  production_type: null,
+                  assigned_to: null
+                }
+              }
+            } catch (itemError) {
+              console.error(`❌ Erreur statut article ${item.line_item_id}:`, itemError.message)
+              return {
+                ...item,
+                production_status: {
+                  status: 'a_faire',
+                  production_type: null,
+                  assigned_to: null
+                }
+              }
+            }
+          }))
+          
+          return {
+            ...order,
+            items: itemsWithStatus
+          }
+        } catch (orderError) {
+          console.error(`❌ Erreur commande ${order.order_number}:`, orderError.message)
+          return {
+            ...order,
+            items: []
           }
         }
       }))
       
-      return {
-        ...order,
-        items: itemsWithStatus
+      ordersWithDetails.push(...batchResults)
+      
+      // Petite pause entre les lots pour éviter de surcharger MongoDB
+      if (i + BATCH_SIZE < orders.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
       }
-    }))
+    }
     
     res.json({ orders: ordersWithDetails })
   } catch (error) {
-    console.error('Erreur GET /orders:', error)
-    res.status(500).json({ error: 'Erreur serveur' })
+    console.error('❌ Erreur GET /orders:', error)
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    })
   }
 })
 
