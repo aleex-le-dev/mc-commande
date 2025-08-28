@@ -346,12 +346,13 @@ const ArticleCard = forwardRef(({
           localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
           localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
           localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
-        }` : estApresDateLimite ? '3px solid #ef4444' : 'none'
+        }` : estApresDateLimite ? '3px solid #ef4444' : 'none',
+        zIndex: 1
       }}
     >
       {/* Trait de séparation de la date limite */}
       {showDateLimiteSeparator && (
-        <div className="absolute -top-2 left-0 right-0 z-50">
+        <div className="absolute -top-2 left-0 right-0 z-10">
           <div className="flex items-center justify-center">
             <div className="bg-gradient-to-r from-transparent via-red-500 to-transparent h-1 w-full"></div>
             <div className="absolute bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
@@ -391,14 +392,14 @@ const ArticleCard = forwardRef(({
             
             {/* Indicateur de cache */}
             {isFromCache && (
-              <div className="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full shadow-lg z-20">
+              <div className="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full shadow-lg z-10">
                 ⚡ Cache
               </div>
             )}
             
             {/* Indicateur d'image par défaut */}
             {imageUrl && imageUrl.startsWith('data:image/') && (
-              <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded-full shadow-lg z-20">
+              <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded-full shadow-lg z-10">
                 🎨 Par défaut
               </div>
             )}
@@ -418,7 +419,7 @@ const ArticleCard = forwardRef(({
 
         {/* Badge rouge pour article en retard */}
         {doitAvoirTraitRouge && (
-          <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-30 flex items-center justify-center">
+          <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-5 flex items-center justify-center">
             <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter mt-2">
               ⚠️ EN RETARD
             </span>
@@ -427,7 +428,7 @@ const ArticleCard = forwardRef(({
         
         {/* Indicateur de position par rapport à la date limite */}
         {dateLimite && estApresDateLimite && (
-          <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-30 bg-red-500 text-white">
+          <div className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold z-5 bg-red-500 text-white">
             📅 Après limite
           </div>
         )}
@@ -438,7 +439,7 @@ const ArticleCard = forwardRef(({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => { if (!article.permalink) e.preventDefault() }}
-          className="absolute inset-0 z-10 cursor-pointer"
+          className="absolute inset-0 z-5 cursor-pointer"
           title="Voir la fiche produit"
           aria-label="Voir la fiche produit"
         />
@@ -449,7 +450,7 @@ const ArticleCard = forwardRef(({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-3 right-3 z-30 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
+          className="absolute top-3 right-3 z-5 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
           title="Voir la commande complète"
           aria-label="Voir la commande complète"
         >
@@ -465,12 +466,12 @@ const ArticleCard = forwardRef(({
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
         
         {/* Numéro de commande - bien visible en haut à gauche */}
-        <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-20">
+        <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-5">
           #{article.orderNumber}
         </div>
         
         {/* Icône d'information client sur le bord gauche */}
-        <div className="absolute left-4 top-20 z-40 pointer-events-auto">
+        <div className="absolute left-4 top-20 z-5 pointer-events-auto">
           <button
             onClick={handleOverlayToggle}
             className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 ${
@@ -642,7 +643,7 @@ const ArticleCard = forwardRef(({
       {/* Overlay client affiché instantanément sans transition */}
       {isOverlayOpen && (
         <div 
-          className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 rounded-3xl"
+          className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="relative h-full p-6 flex flex-col">
@@ -769,7 +770,7 @@ const ArticleCard = forwardRef(({
       {/* Popover global de note, pleine largeur de la carte */}
       {isNoteOpen && article.customerNote && (
         <>
-          <div className="absolute left-0 right-0 bottom-20 px-3 z-50">
+          <div className="absolute left-0 right-0 bottom-20 px-3 z-5">
             <div ref={notePopoverRef} className="w-full max-h-80 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
               <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
               <div className="flex items-start justify-end mb-2 relative">
@@ -793,7 +794,8 @@ const ArticleCard = forwardRef(({
       {/* Modal d'assignation simple et élégante */}
       {showTricoteuseModal && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+          style={{ zIndex: 999999999 }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               closeTricoteuseModal()
@@ -802,6 +804,11 @@ const ArticleCard = forwardRef(({
         >
           <div 
             className="bg-white rounded-2xl p-6 w-full max-w-2xl mx-auto shadow-xl"
+            style={{ 
+              zIndex: 999999999, 
+              position: 'relative',
+              isolation: 'isolate'
+            }}
           >
             {/* En-tête simple */}
             <div className="text-center mb-6">
