@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import OrderList from './components/OrderList'
 import OrderForm from './components/OrderForm'
@@ -18,6 +18,43 @@ const queryClient = new QueryClient({
 
 function App() {
   const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
+
+  // Changer le titre de la page et le favicon selon l'onglet actif
+  useEffect(() => {
+    const getPageTitle = () => {
+      switch (activeTab) {
+        case 'couture':
+          return 'Couture - Maisoncléo'
+        case 'maille':
+          return 'Maille - Maisoncléo'
+        case 'parametres':
+          return 'Admin - Maisoncléo'
+        default:
+          return 'Maisoncléo'
+      }
+    }
+    
+    const getFavicon = () => {
+      switch (activeTab) {
+        case 'couture':
+          return '🧵'
+        case 'maille':
+          return '🪡'
+        case 'parametres':
+          return '👑'
+        default:
+          return '🏠'
+      }
+    }
+    
+    document.title = getPageTitle()
+    
+    // Changer le favicon avec l'emoji
+    const favicon = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]')
+    if (favicon) {
+      favicon.href = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="60">${getFavicon()}</text></svg>`
+    }
+  }, [activeTab])
 
   const tabs = [
     { id: 'couture', label: 'Couture', icon: '🧵' },
