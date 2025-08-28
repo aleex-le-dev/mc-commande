@@ -124,7 +124,7 @@ const CommandeTab = () => {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Modification des commandes</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Modification et suppressions des commandes</h2>
           <p className="text-gray-600">Changer le type de production et supprimer des commandes ou des articles.</p>
         </div>
 
