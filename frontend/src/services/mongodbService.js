@@ -166,6 +166,28 @@ export const syncOrders = async (woocommerceOrders = []) => {
     }
   }
 
+// Récupérer les commandes avec pagination côté serveur (ULTRA-RAPIDE)
+export const getOrdersPaginated = async (page = 1, limit = 50, type = 'all', search = '') => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      type: type,
+      search: search
+    })
+    
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/paginated?${params}`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur pagination:', error)
+    return { orders: [], pagination: { page: 1, limit: 50, total: 0, pages: 1 } }
+  }
+}
+
 // Récupérer toutes les commandes depuis la base de données
 export const getOrdersFromDatabase = async () => {
   try {

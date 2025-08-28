@@ -94,6 +94,33 @@ async function createCollectionsAndIndexes() {
 
 // Routes API
 
+// GET /api/health - Vérifier la santé du serveur
+app.get('/api/health', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ 
+        status: 'error', 
+        message: 'Base de données non connectée' 
+      })
+    }
+    
+    // Test simple de connexion
+    await db.admin().ping()
+    
+    res.json({ 
+      status: 'ok', 
+      message: 'Serveur opérationnel',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'error', 
+      message: 'Erreur de connexion à la base de données',
+      error: error.message
+    })
+  }
+})
+
 // GET /api/woocommerce/products/:productId/permalink - Récupérer le permalink d'un produit
 app.get('/api/woocommerce/products/:productId/permalink', async (req, res) => {
   try {
@@ -2259,3 +2286,101 @@ async function startServer() {
 }
 
 startServer().catch(console.error)
+
+// GET /api/orders/paginated - Récupérer les commandes avec pagination
+app.get('/api/orders/paginated', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, type = 'all', search = '' } = req.query
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    
+    const ordersCollection = db.collection('orders_sync')
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+    
+    // Construire le filtre de base
+    let filter = {}
+    if (search) {
+      filter.$or = [
+        { order_number: { $regex: search, $options: 'i' } },
+        { customer_name: { $regex: search, $options: 'i' } }
+      ]
+    }
+    
+    // Compter le total pour la pagination
+    const totalOrders = await ordersCollection.countDocuments(filter)
+    
+    // Récupérer les commandes de la page demandée
+    const orders = await ordersCollection.find(filter)
+      .sort({ order_date: 1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .maxTimeMS(30000)
+      .toArray()
+    
+    if (orders.length === 0) {
+      return res.json({ 
+        orders: [], 
+        pagination: { page: parseInt(page), limit: parseInt(limit), total: totalOrders, pages: Math.ceil(totalOrders / parseInt(limit)) }
+      })
+    }
+    
+    // Traiter seulement les commandes de la page
+    const ordersWithDetails = await Promise.all(orders.map(async (order) => {
+      try {
+        const items = await itemsCollection.find({ order_id: order.order_id })
+          .maxTimeMS(10000)
+          .toArray()
+        
+        // Ajouter les statuts de production
+        const itemsWithStatus = await Promise.all(items.map(async (item) => {
+          try {
+            const status = await statusCollection.findOne({
+              order_id: order.order_id,
+              line_item_id: item.line_item_id
+            }, { maxTimeMS: 5000 })
+            
+            return {
+              ...item,
+              production_status: status || {
+                status: 'a_faire',
+                production_type: null,
+                assigned_to: null
+              }
+            }
+          } catch (error) {
+            return {
+              ...item,
+              production_status: {
+                status: 'a_faire',
+                production_type: null,
+                assigned_to: null
+              }
+            }
+          }
+        }))
+        
+        return {
+          ...order,
+          items: itemsWithStatus
+        }
+      } catch (error) {
+        return { ...order, items: [] }
+      }
+    }))
+    
+    res.json({ 
+      orders: ordersWithDetails,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalOrders,
+        pages: Math.ceil(totalOrders / parseInt(limit)),
+        hasNext: skip + orders.length < totalOrders,
+        hasPrev: page > 1
+      }
+    })
+  } catch (error) {
+    console.error('❌ Erreur GET /orders/paginated:', error)
+    res.status(500).json({ error: 'Erreur serveur', message: error.message })
+  }
+})

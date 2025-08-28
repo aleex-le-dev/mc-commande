@@ -1,52 +1,128 @@
-import React from 'react'
+import React, { useState } from 'react'
 import LoadingSpinner from './LoadingSpinner'
 import ImagePreloader from './ImagePreloader'
 import { 
   SyncProgress, 
   OrderHeader, 
-  SimpleFlexGrid,
-  useOrderData,
-  useSyncProgress,
-  useOrderFilters
+  InfiniteScrollGrid,
+  useAllArticles,
+  useSyncProgress
 } from './cartes'
 
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
-  // Utiliser les hooks personnalisés
+  const { syncProgress, syncLogs } = useSyncProgress()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
+
+  // Utiliser le hook simple pour récupérer tous les articles
   const {
-    productionStatuses,
-    statusesLoading,
-    dbOrders,
-    dbOrdersLoading,
-    dbOrdersError,
-    prepareArticles,
-    getArticleSize,
-    getArticleColor,
-    getArticleOptions,
-    performSync
-  } = useOrderData(propSelectedType, propSelectedType)
+    articles,
+    isLoading,
+    error,
+    totalArticles
+  } = useAllArticles(propSelectedType)
 
-  const { syncProgress, syncLogs } = useSyncProgress(performSync)
+  // Gérer l'ouverture des overlays
+  const handleOverlayOpen = (cardId) => {
+    setOpenOverlayCardId(prevId => prevId === cardId ? null : cardId)
+  }
 
-  const {
-    selectedType,
-    searchTerm,
-    setSearchTerm,
-    filteredArticles,
-    openOverlayCardId,
-    handleOverlayOpen
-  } = useOrderFilters(propSelectedType, prepareArticles)
+  // Fonction pour extraire la taille d'un article
+  const getArticleSize = (metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return null
+    
+    // Recherche exhaustive de toutes les variantes de taille
+    const sizeMeta = metaData.find(meta => 
+      meta.key && (
+        meta.key.toLowerCase().includes('taille') ||
+        meta.key.toLowerCase().includes('size') ||
+        meta.key.toLowerCase().includes('dimension') ||
+        meta.key.toLowerCase().includes('pa_taille') ||
+        meta.key.toLowerCase().includes('attribute_pa_taille') ||
+        meta.key.toLowerCase().includes('_taille') ||
+        meta.key.toLowerCase().includes('_size') ||
+        meta.key === 'taille' ||
+        meta.key === 'size' ||
+        meta.key === 'pa_taille'
+      )
+    )
+    
+    if (sizeMeta && sizeMeta.value) {
+      const cleanValue = sizeMeta.value.trim()
+      return cleanValue || null
+    }
+    
+    return null
+  }
 
-  if (dbOrdersLoading || statusesLoading) {
+  // Fonction pour extraire la couleur d'un article
+  const getArticleColor = (metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return null
+    
+    // Recherche exhaustive de toutes les variantes de couleur
+    const colorMeta = metaData.find(meta => 
+      meta.key && (
+        meta.key.toLowerCase().includes('couleur') ||
+        meta.key.toLowerCase().includes('color') ||
+        meta.key.toLowerCase().includes('colour') ||
+        meta.key.toLowerCase().includes('pa_couleur') ||
+        meta.key.toLowerCase().includes('attribute_pa_couleur') ||
+        meta.key.toLowerCase().includes('_couleur') ||
+        meta.key.toLowerCase().includes('_color') ||
+        meta.key === 'couleur' ||
+        meta.key === 'color' ||
+        meta.key === 'pa_couleur' ||
+        meta.key === 'attribute_pa_couleur'
+      )
+    )
+    
+    if (colorMeta && colorMeta.value) {
+      const cleanValue = colorMeta.value.trim()
+      return cleanValue || null
+    }
+    
+    return null
+  }
+
+  // Fonction pour extraire les options d'un article
+  const getArticleOptions = (metaData) => {
+    if (!metaData || !Array.isArray(metaData)) return 'Aucune'
+    
+    const options = metaData
+      .filter(meta => 
+        meta.key && 
+        !meta.key.toLowerCase().includes('taille') && 
+        !meta.key.toLowerCase().includes('size') &&
+        !meta.key.toLowerCase().includes('couleur') &&
+        !meta.key.toLowerCase().includes('color') &&
+        meta.key !== '_qty' &&
+        meta.key !== '_tax_class' &&
+        meta.key !== '_product_id' &&
+        meta.key !== '_variation_id' &&
+        meta.key !== '_line_subtotal' &&
+        meta.key !== '_line_subtotal_tax' &&
+        meta.key !== '_line_total' &&
+        meta.key !== '_line_tax' &&
+        meta.key !== '_line_tax_data' &&
+        meta.key !== '_reduced_stock'
+      )
+      .map(meta => `${meta.key}: ${meta.value}`)
+      .join(', ')
+    
+    return options || 'Aucune'
+  }
+
+  if (isLoading) {
     return <LoadingSpinner />
   }
 
-  if (dbOrdersError) {
+  if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
         <div className="flex">
           <div className="text-red-800">
             <p className="font-medium">Erreur lors du chargement des commandes</p>
-            <p className="text-sm">{dbOrdersError.message}</p>
+            <p className="text-sm">{error.message}</p>
           </div>
         </div>
       </div>
@@ -60,28 +136,28 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
       {/* En-tête avec titre et recherche */}
       <OrderHeader 
-        selectedType={selectedType}
-        filteredArticlesCount={filteredArticles.length}
+        selectedType={propSelectedType}
+        filteredArticlesCount={totalArticles}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       />
 
-      {/* Affichage des articles en cartes avec flexbox et flex-wrap */}
-      <SimpleFlexGrid 
-        filteredArticles={filteredArticles}
+      {/* Grille avec scroll infini - chargement progressif par 30 */}
+      <InfiniteScrollGrid 
+        allArticles={articles}
         getArticleSize={getArticleSize}
         getArticleColor={getArticleColor}
         getArticleOptions={getArticleOptions}
         handleOverlayOpen={handleOverlayOpen}
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
-        productionType={selectedType} // Passer le type de production
+        productionType={propSelectedType}
       />
 
       {/* Préchargeur d'images en arrière-plan */}
       <ImagePreloader 
-        articles={filteredArticles}
-        onPreloadComplete={() => console.log('Toutes les images sont préchargées et disponibles instantanément !')}
+        articles={articles}
+        onPreloadComplete={() => console.log('Images préchargées !')}
       />
     </div>
   )
