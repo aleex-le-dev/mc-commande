@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
-import { assignmentsService } from '../../services/mongodbService'
+import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
 
 // Composant simple avec flexbox et flex-wrap pour les cartes
 const SimpleFlexGrid = ({ 
@@ -17,6 +17,8 @@ const SimpleFlexGrid = ({
   const [isLoading, setIsLoading] = useState(true)
   const [assignments, setAssignments] = useState({})
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
+  const [tricoteuses, setTricoteuses] = useState([])
+  const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -35,9 +37,24 @@ const SimpleFlexGrid = ({
     }
   }, [])
 
+  // Charger toutes les tricoteuses une seule fois
+  const loadTricoteuses = useCallback(async () => {
+    try {
+      setTricoteusesLoading(true)
+      const data = await tricoteusesService.getAllTricoteuses()
+      setTricoteuses(data || [])
+    } catch (error) {
+      console.error('Erreur chargement tricoteuses:', error)
+      setTricoteuses([])
+    } finally {
+      setTricoteusesLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadAssignments()
-  }, [loadAssignments, productionType]) // Recharger quand on change d'onglet
+    loadTricoteuses()
+  }, [loadAssignments, loadTricoteuses, productionType]) // Recharger quand on change d'onglet
 
   // Gérer l'état de loading lors des changements d'onglets
   useEffect(() => {
@@ -82,6 +99,7 @@ const SimpleFlexGrid = ({
             searchTerm={searchTerm}
             productionType={productionType} // Passer le type de production
             assignment={assignments[article.line_item_id]} // Passer l'assignation directement
+            tricoteuses={tricoteuses}
             onAssignmentUpdate={loadAssignments} // Fonction pour rafraîchir les assignations
           />
         </div>
@@ -95,26 +113,18 @@ const SimpleFlexGrid = ({
     handleOverlayOpen, 
     openOverlayCardId, 
     searchTerm,
-    productionType // Ajouter aux dépendances
+    productionType, // Ajouter aux dépendances
+    assignments,
+    tricoteuses
   ])
 
   // Afficher le loading pendant les changements d'onglets
-  if (isLoading) {
+  if (isLoading || assignmentsLoading || tricoteusesLoading) {
     return <LoadingSpinner />
   }
 
   if (filteredArticles.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Aucun article trouvé avec les filtres sélectionnés</p>
-        <p className="text-sm text-gray-400 mt-2">
-          Total d'articles en base: {filteredArticles.length} | Type sélectionné: {filteredArticles.length > 0 ? 'tous' : 'aucun'}
-        </p>
-        <p className="text-sm text-gray-400 mt-1">
-          Actualisez la page pour synchroniser les nouvelles commandes
-        </p>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

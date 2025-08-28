@@ -233,43 +233,39 @@ const ArticleCard = forwardRef(({
 
   // Charger l'assignation existante et l'enrichir avec les données de la tricoteuse
   const loadExistingAssignment = useCallback(async () => {
-    if (uniqueAssignmentId) {
+    // Si l'assignation est fournie par le parent et/ou la liste des tricoteuses aussi,
+    // enrichir localement sans appels réseau
+    if (assignment) {
       setIsLoadingAssignment(true)
       try {
-        // Charger assignation ET tricoteuses en parallèle pour plus de rapidité
-        const [existingAssignment, allTricoteuses] = await Promise.all([
-          assignmentsService.getAssignmentByArticleId(uniqueAssignmentId),
-          tricoteusesService.getAllTricoteuses()
-        ])
-        
-        if (existingAssignment && existingAssignment.tricoteuse_id) {
-          // Enrichir immédiatement avec les données de la tricoteuse
-          const tricoteuse = allTricoteuses.find(t => t._id === existingAssignment.tricoteuse_id)
+        if (tricoteuses && assignment.tricoteuse_id) {
+          const tricoteuse = tricoteuses.find(t => t._id === assignment.tricoteuse_id)
           if (tricoteuse) {
             const enrichedAssignment = {
-              ...existingAssignment,
+              ...assignment,
               tricoteuse_photo: tricoteuse.photoUrl,
               tricoteuse_color: tricoteuse.color,
               tricoteuse_name: tricoteuse.firstName
             }
             setLocalAssignment(enrichedAssignment)
           } else {
-            setLocalAssignment(existingAssignment)
+            setLocalAssignment(assignment)
           }
         } else {
           setLocalAssignment(assignment)
         }
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'assignation:', error)
         setLocalAssignment(assignment)
       } finally {
         setIsLoadingAssignment(false)
       }
-    } else {
-      setLocalAssignment(assignment)
-      setIsLoadingAssignment(false)
+      return
     }
-  }, [uniqueAssignmentId, assignment])
+
+    // Fallback sans appel réseau: si aucune assignation n'est fournie, considérer non assigné
+    setLocalAssignment(null)
+    setIsLoadingAssignment(false)
+  }, [uniqueAssignmentId, assignment, tricoteuses])
 
   useEffect(() => {
     loadExistingAssignment()

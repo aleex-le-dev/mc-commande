@@ -54,37 +54,24 @@ export const useSyncProgress = (performSync) => {
         }
       }, 1000) // Ralenti à 1 seconde pour éviter les appels en boucle
       
-      console.log('🔄 useSyncProgress - Appel de performSync...')
       const syncResult = await performSync()
-      console.log('🔄 useSyncProgress - Résultat de performSync:', syncResult)
       
       // Arrêter la récupération des logs
       clearInterval(logsInterval)
-      console.log('🔄 useSyncProgress - Intervalle de logs arrêté')
       
       try {
-        console.log('🔄 useSyncProgress - Début du try-catch')
-        
-        console.log('🔄 useSyncProgress - syncResult complet:', syncResult)
-        console.log('🔄 useSyncProgress - syncResult.results:', syncResult?.results)
-        console.log('🔄 useSyncProgress - syncResult.message:', syncResult?.message)
-        
         // Étape 6: Afficher le résultat dans le toast
         if (syncResult && syncResult.results) {
           const { ordersCreated, itemsCreated } = syncResult.results
           const totalNew = ordersCreated + itemsCreated
           
-          console.log('🔄 useSyncProgress - Résultats de la sync:', { ordersCreated, itemsCreated, totalNew })
-          
           if (totalNew > 0) {
-            console.log('🔄 useSyncProgress - Nouvelles commandes détectées, message:', `${ordersCreated} commande${ordersCreated > 1 ? 's' : ''} récupérée${ordersCreated > 1 ? 's' : ''}`)
             setSyncProgress(prev => ({ 
               ...prev, 
               progress: 100, 
               message: `${ordersCreated} commande${ordersCreated > 1 ? 's' : ''} récupérée${ordersCreated > 1 ? 's' : ''}`
             }))
           } else {
-            console.log('🔄 useSyncProgress - Aucune nouvelle commande, message: Tout est à jour')
             setSyncProgress(prev => ({ 
               ...prev, 
               progress: 100, 
@@ -92,35 +79,26 @@ export const useSyncProgress = (performSync) => {
             }))
           }
           
-          console.log('🔄 useSyncProgress - Démarrage du timer de fermeture (6 secondes)')
           // Masquer le toast après 6 secondes
           setTimeout(() => {
-            console.log('🔄 useSyncProgress - Timer de fermeture déclenché, masquage du toast')
             setSyncProgress({ isRunning: false, progress: 0, message: '' })
           }, 6000)
         } else if (syncResult && syncResult.message) {
           // Si pas de résultats mais un message, utiliser le message
-          console.log('🔄 useSyncProgress - Pas de résultats mais message disponible:', syncResult.message)
           setSyncProgress(prev => ({ 
             ...prev, 
             progress: 100, 
             message: syncResult.message
           }))
           
-          console.log('🔄 useSyncProgress - Démarrage du timer de fermeture (6 secondes)')
           setTimeout(() => {
-            console.log('🔄 useSyncProgress - Timer de fermeture déclenché, masquage du toast')
             setSyncProgress({ isRunning: false, progress: 0, message: '' })
           }, 6000)
         } else {
           // Si rien du tout, fermer immédiatement
-          console.log('🔄 useSyncProgress - Aucun résultat ni message, fermeture immédiate du toast')
           setSyncProgress({ isRunning: false, progress: 0, message: '' })
         }
-        
-        console.log('🔄 useSyncProgress - Fin du try-catch, tout s\'est bien passé')
       } catch (error) {
-        console.error('❌ useSyncProgress - Erreur lors du traitement du résultat:', error)
         // En cas d'erreur, fermer le toast
         setSyncProgress({ isRunning: false, progress: 0, message: '' })
       }

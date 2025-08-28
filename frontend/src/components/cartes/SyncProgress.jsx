@@ -31,16 +31,14 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
       if (intervalId) clearInterval(intervalId)
     }
   }, [syncProgress && syncProgress.isRunning])
+
   if (!syncProgress.isRunning) return null
 
   // Déterminer le message et l'emoji selon le statut
   const getSyncStatus = () => {
-    console.log('🔄 SyncProgress - getSyncStatus appelé avec progress:', syncProgress.progress, 'message:', syncProgress.message)
-    
     if (syncProgress.progress === 100) {
       // Synchronisation terminée
       if (syncProgress.message.includes('commande')) {
-        console.log('🔄 SyncProgress - Statut: commandes récupérées')
         return {
           emoji: '✅',
           message: syncProgress.message,
@@ -49,7 +47,6 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
           emojiPosition: 'start'
         }
       } else if (syncProgress.message.includes('Tout est à jour') || syncProgress.message.includes('Aucune nouvelle commande')) {
-        console.log('🔄 SyncProgress - Statut: tout est à jour')
         return {
           emoji: '✅',
           message: 'Tout est à jour',
@@ -58,7 +55,6 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
           emojiPosition: 'end'
         }
       } else {
-        console.log('🔄 SyncProgress - Statut: erreur')
         return {
           emoji: '❌',
           message: syncProgress.message,
@@ -69,7 +65,6 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
       }
     } else {
       // Synchronisation en cours - utiliser le message du syncProgress, pas du lastLog
-      console.log('🔄 SyncProgress - Statut: en cours, message du syncProgress:', syncProgress.message)
       return {
         emoji: '⚙️',
         message: syncProgress.message,

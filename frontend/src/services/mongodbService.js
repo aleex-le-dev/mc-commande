@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://localhost:3001/api'
 
 // Limiteur simple + retry/backoff pour réduire les erreurs réseau au démarrage
 let concurrentRequests = 0
-const MAX_CONCURRENT = 4
+const MAX_CONCURRENT = 24  // Augmenté pour absorber les charges lors des changements d'onglet
 const waitQueue = []
 
 const acquireSlot = () => new Promise((resolve) => {
@@ -38,6 +38,10 @@ async function requestWithRetry(url, options = {}, retries = 2) {
     }
     return res
   } catch (e) {
+    // Ne pas retyer en cas d'abort explicite pour éviter les boucles
+    if (e && e.name === 'AbortError') {
+      throw e
+    }
     if (retries > 0) {
       await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
       return requestWithRetry(url, options, retries - 1)

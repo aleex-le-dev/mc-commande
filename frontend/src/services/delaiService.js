@@ -33,6 +33,9 @@ class DelaiService {
     // Anti-rafale en cas d'échec backend
     this.lastFailureAt = {}
     this.failureCooldownMs = 10 * 60 * 1000
+    // Nouveaux attributs pour getDateLimiteActuelle
+    this.isLoadingDateLimite = false
+    this.lastDateLimiteFailure = 0
   }
 
   // Récupérer la configuration actuelle du délai
@@ -47,40 +50,40 @@ class DelaiService {
     }
   }
 
-  // Récupérer la date limite actuelle calculée
+  // Récupérer la date limite actuelle depuis la configuration
   async getDateLimiteActuelle() {
     try {
-      const response = await fetch(`${API_BASE_URL}/delais/configuration`)
-      const data = await response.json()
-      
-      if (data.success && data.data) {
-        // Calculer la date limite actuelle basée sur la configuration
-        const aujourdhui = new Date()
-        const { joursDelai, joursOuvrables } = data.data
-        
-        if (joursDelai && joursOuvrables) {
-          let dateLimite = new Date(aujourdhui)
-          let joursRetires = 0
-          
-          // Remonter dans le temps pour trouver la date limite
-          while (joursRetires < joursDelai) {
-            dateLimite.setDate(dateLimite.getDate() - 1)
-            
-            const jourSemaine = dateLimite.getDay()
-            const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
-            
-            // Vérifier si c'est un jour ouvrable configuré ET pas un jour férié
-            if (joursOuvrables[nomJour] && !(await this.estJourFerie(dateLimite))) {
-              joursRetires++
-            }
-          }
-          
-          return { success: true, dateLimite: dateLimite.toISOString().split('T')[0] }
-        }
+      // Éviter les appels multiples simultanés
+      if (this.isLoadingDateLimite) {
+        return { success: false, error: 'Chargement en cours' }
       }
       
-      return { success: false, dateLimite: null }
+      // Éviter les appels répétés en cas d'échec récent (5 minutes)
+      if (this.lastDateLimiteFailure && (Date.now() - this.lastDateLimiteFailure) < 5 * 60 * 1000) {
+        console.log('Skipping getDateLimiteActuelle - échec récent')
+        return { success: false, error: 'Échec récent, réessayez plus tard' }
+      }
+      
+      this.isLoadingDateLimite = true
+      
+      const configuration = await this.getDelai() // Utiliser getDelai pour obtenir la configuration
+      
+      if (!configuration || !configuration.data || !configuration.data.joursOuvrables) {
+        this.isLoadingDateLimite = false
+        return { success: false, error: 'Configuration des délais non trouvée' }
+      }
+      
+      const dateLimite = await this.calculerDateLimite(
+        new Date().toISOString(),
+        configuration.data.joursOuvrables,
+        configuration.data.delaiJours
+      )
+      
+      this.isLoadingDateLimite = false
+      return dateLimite
     } catch (error) {
+      this.isLoadingDateLimite = false
+      this.lastDateLimiteFailure = Date.now()
       console.error('Erreur lors de la récupération de la date limite:', error)
       return { success: false, error: error.message }
     }
