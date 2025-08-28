@@ -17,13 +17,20 @@ export const useAllArticles = (selectedType = 'all') => {
       }
       return getOrdersFromDatabase()
     },
-    staleTime: 30000, // 30 secondes
+    staleTime: 300000, // 5 minutes (augmenté)
+    gcTime: 600000, // 10 minutes (anciennement cacheTime)
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Ne pas refetch au montage
+    retry: 3,
+    retryDelay: 1000,
   })
 
   // Préparer les articles avec statuts
   const articles = useMemo(() => {
-    if (!dbOrders || dbOrders.length === 0) return []
+    // Si pas de données, retourner un tableau vide
+    if (!dbOrders || dbOrders.length === 0) {
+      return []
+    }
     
     const articles = []
     dbOrders.forEach((order) => {
@@ -50,7 +57,7 @@ export const useAllArticles = (selectedType = 'all') => {
     })
     
     return articles
-  }, [dbOrders])
+  }, [dbOrders, selectedType])
 
   return {
     articles,

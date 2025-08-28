@@ -3,18 +3,28 @@ const API_BASE_URL = 'http://localhost:3001/api'
 // Petit wrapper avec retry/backoff pour limiter les erreurs réseau au démarrage
 async function fetchWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 8000)
+  const timeout = setTimeout(() => {
+    console.warn(`⏰ [delaiService] Timeout après ${options.timeoutMs || 15000}ms pour ${url}`)
+    controller.abort()
+  }, options.timeoutMs || 15000) // Augmenté à 15 secondes
+  
   try {
     const res = await fetch(url, { ...options, signal: controller.signal })
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
+        console.log(`🔄 [delaiService] Retry ${retries} pour ${url} (status: ${res.status})`)
         await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
         return fetchWithRetry(url, options, retries - 1)
       }
     }
     return res
   } catch (e) {
+    if (e && e.name === 'AbortError') {
+      console.error(`⏰ [delaiService] Requête annulée pour ${url}: timeout`)
+      throw e
+    }
     if (retries > 0) {
+      console.log(`🔄 [delaiService] Retry ${retries} pour ${url} après erreur:`, e.message)
       await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
       return fetchWithRetry(url, options, retries - 1)
     }
@@ -41,11 +51,17 @@ class DelaiService {
   // Récupérer la configuration actuelle du délai
   async getDelai() {
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`)
+      const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
+        timeoutMs: 20000 // 20 secondes pour la configuration
+      })
       const data = await response.json()
       return data
     } catch (error) {
-      console.error('Erreur lors de la récupération du délai:', error)
+      if (error.name === 'AbortError') {
+        console.error('⏰ [delaiService] Timeout lors de la récupération du délai')
+        return { success: false, error: 'Timeout - serveur trop lent' }
+      }
+      console.error('❌ [delaiService] Erreur lors de la récupération du délai:', error)
       return { success: false, error: error.message }
     }
   }
@@ -84,7 +100,13 @@ class DelaiService {
     } catch (error) {
       this.isLoadingDateLimite = false
       this.lastDateLimiteFailure = Date.now()
-      console.error('Erreur lors de la récupération de la date limite:', error)
+      
+      if (error.name === 'AbortError') {
+        console.error('⏰ [delaiService] Timeout lors de la récupération de la date limite')
+        return { success: false, error: 'Timeout - serveur trop lent' }
+      }
+      
+      console.error('❌ [delaiService] Erreur lors de la récupération de la date limite:', error)
       return { success: false, error: error.message }
     }
   }

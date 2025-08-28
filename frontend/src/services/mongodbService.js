@@ -44,7 +44,10 @@ function cacheSet(key, data) {
 
 async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 8000)
+  const timeout = setTimeout(() => {
+    controller.abort()
+  }, options.timeoutMs || 12000) // Réduit à 12 secondes par défaut
+  
   try {
     await acquireSlot()
     const res = await fetch(url, { ...options, signal: controller.signal })
@@ -56,7 +59,6 @@ async function requestWithRetry(url, options = {}, retries = 2) {
     }
     return res
   } catch (e) {
-    // Ne pas retyer en cas d'abort explicite pour éviter les boucles
     if (e && e.name === 'AbortError') {
       throw e
     }
@@ -191,14 +193,20 @@ export const getOrdersPaginated = async (page = 1, limit = 50, type = 'all', sea
 // Récupérer toutes les commandes depuis la base de données
 export const getOrdersFromDatabase = async () => {
   try {
-    const response = await requestWithRetry(`${API_BASE_URL}/orders`)
+    const response = await requestWithRetry(`${API_BASE_URL}/orders`, {
+      timeoutMs: 15000 // 15 secondes optimisé
+    })
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
+    
     const data = await response.json()
     return data.orders || []
   } catch (error) {
-    // Erreur silencieuse lors de la récupération des commandes
+    if (error.name === 'AbortError') {
+      return []
+    }
     return []
   }
 }
@@ -206,14 +214,20 @@ export const getOrdersFromDatabase = async () => {
 // Récupérer les commandes par type de production
 export const getOrdersByProductionType = async (productionType) => {
   try {
-    const response = await requestWithRetry(`${API_BASE_URL}/orders/production/${productionType}`)
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/production/${productionType}`, {
+      timeoutMs: 15000 // 15 secondes optimisé
+    })
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
+    
     const data = await response.json()
     return data.orders || []
   } catch (error) {
-    // Erreur silencieuse lors de la récupération des commandes
+    if (error.name === 'AbortError') {
+      return []
+    }
     return []
   }
 }
