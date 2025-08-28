@@ -323,7 +323,7 @@ const ArticleCard = forwardRef(({
         animationTimingFunction: searchTerm ? 'ease-out' : undefined,
         animationFillMode: searchTerm ? 'forwards' : undefined,
         animationDelay: searchTerm ? '0ms' : `${index * 150}ms`,
-        border: localAssignment ? `3px solid ${
+        border: localAssignment ? `5px solid ${
           localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
           localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
           localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
