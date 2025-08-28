@@ -1,8 +1,8 @@
-# Maisoncléo - Gestion de Production
+# Maisoncléo - Gestion des commandes
 
 ## 📋 Description
 
-Application web de gestion de production pour Maisoncléo, permettant de gérer les commandes, les délais d'expédition et l'assignation des articles aux tricoteuses. L'application synchronise automatiquement les données depuis WooCommerce et gère intelligemment les jours fériés français.
+Application web de gestion des commandes pour Maisoncléo, permettant de gérer les commandes, les délais d'expédition et l'assignation des articles aux tricoteuses. L'application synchronise automatiquement les données depuis WooCommerce et gère intelligemment les jours fériés français.
 
 ## 🎯 Fonctionnalités Principales
 

@@ -8,7 +8,7 @@ const ParametresPanel = () => {
   const [activeTab, setActiveTab] = useState('modification')
 
   const tabs = [
-    { id: 'modification', label: 'Modification', icon: '✏️' },
+    { id: 'modification', label: 'Commandes', icon: '🛒' },
     { id: 'tricoteuses', label: 'Tricoteuses', icon: '🧶' },
     { id: 'status', label: 'Statut', icon: '📊' },
     { id: 'dateLimite', label: 'Date limite', icon: '⏰' }
