@@ -248,6 +248,25 @@ app.post('/api/sync/orders', async (req, res) => {
       } else {
         addSyncLog(`⚠️ Paramètre since invalide: ${sinceRaw}`, 'warning')
       }
+    } else {
+      // Mode incrémental par défaut: récupérer uniquement après la dernière commande connue
+      try {
+        const latest = await db.collection('orders_sync').find({}).sort({ order_date: -1 }).limit(1).toArray()
+        if (latest && latest.length > 0 && latest[0].order_date) {
+          const lastDate = new Date(latest[0].order_date)
+          if (!isNaN(lastDate)) {
+            afterIso = lastDate.toISOString()
+            addSyncLog(`📅 Incrémental: récupération après ${afterIso}`, 'info')
+          }
+        } else {
+          // Si aucune commande en base, ne pas forcer d'historique: partir de maintenant
+          const now = new Date()
+          afterIso = now.toISOString()
+          addSyncLog(`📅 Aucun historique: récupération à partir de maintenant (${afterIso})`, 'info')
+        }
+      } catch (e) {
+        addSyncLog(`⚠️ Impossible de déterminer la dernière commande: ${e.message}`, 'warning')
+      }
     }
     
     if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
@@ -256,13 +275,14 @@ app.post('/api/sync/orders', async (req, res) => {
         const perPage = 100
         let page = 1
         let fetched = []
+        currentSyncAbortController = new AbortController()
         while (true) {
           const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
           const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
           const response = await fetch(url, {
             method: 'GET',
             headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(15000)
+            signal: currentSyncAbortController.signal
           })
           if (!response.ok) {
             addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes (page ${page})`, 'warning')
@@ -277,6 +297,8 @@ app.post('/api/sync/orders', async (req, res) => {
         woocommerceOrders = fetched
       } catch (error) {
         addSyncLog(`⚠️ Erreur lors de la récupération des commandes WooCommerce: ${error.message}`, 'error')
+      } finally {
+        currentSyncAbortController = null
       }
     } else {
       addSyncLog('⚠️ Clés WooCommerce non configurées, synchronisation impossible', 'error')
@@ -1948,6 +1970,8 @@ async function estJourFerieLocal(date) {
 
 // Variable globale pour stocker le dernier log de synchronisation
 let lastSyncLog = null
+// Contrôleur d'annulation pour interrompre une synchro en cours
+let currentSyncAbortController = null
 
 // Fonction pour ajouter un log (remplace le précédent)
 function addSyncLog(message, type = 'info') {
@@ -1979,6 +2003,21 @@ app.post('/api/sync/logs/clear', (req, res) => {
     success: true,
     message: 'Log vidé avec succès'
   })
+})
+
+// POST /api/sync/cancel - Annuler la synchronisation en cours
+app.post('/api/sync/cancel', (req, res) => {
+  try {
+    if (currentSyncAbortController) {
+      currentSyncAbortController.abort()
+      addSyncLog('⛔ Synchronisation annulée par l’utilisateur', 'warning')
+      currentSyncAbortController = null
+      return res.json({ success: true, cancelled: true })
+    }
+    return res.json({ success: true, cancelled: false })
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message })
+  }
 })
 
 // GET /api/test/connection - Test de connexion WordPress

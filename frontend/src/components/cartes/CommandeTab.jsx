@@ -8,6 +8,45 @@ const CommandeTab = () => {
   const [order, setOrder] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setStatus] = useState({ type: '', text: '' })
+  const [syncSince, setSyncSince] = useState('')
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [lastSyncLog, setLastSyncLog] = useState('')
+
+  // Suivi des logs de synchronisation côté backend
+  React.useEffect(() => {
+    let intervalId
+    const fetchLog = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/sync/logs')
+        if (!res.ok) return
+        const data = await res.json()
+        if (data && data.success && data.log) {
+          const type = data.log.type ? data.log.type.toUpperCase() : 'INFO'
+          const time = data.log.timestamp ? new Date(data.log.timestamp).toLocaleTimeString('fr-FR', { hour12: false }) : ''
+          const line = time ? `[${type} ${time}] ${data.log.message}` : `[${type}] ${data.log.message}`
+          setLastSyncLog(line)
+          const msg = data.log.message || ''
+          const looksRunning = (
+            (msg.includes('Début de la synchronisation') || msg.includes('📥 Page') || msg.includes('Traitement de')) &&
+            !msg.includes('terminée') && !msg.includes('Aucune nouvelle commande')
+          )
+          if (looksRunning) {
+            setIsSyncing(true)
+          } else if (msg.includes('terminée') || msg.includes('Aucune nouvelle commande')) {
+            setIsSyncing(false)
+          }
+        }
+      } catch (_) {
+        // silencieux
+      }
+    }
+    // Toujours surveiller pour reprendre les logs si l'utilisateur revient
+    fetchLog()
+    intervalId = setInterval(fetchLog, 1000)
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [])
 
   const searchOrder = async (e) => {
     e.preventDefault()
@@ -89,6 +128,8 @@ const CommandeTab = () => {
           <p className="text-gray-600">Changer le type de production et supprimer des commandes ou des articles.</p>
         </div>
 
+        
+
         {/* Formulaire de recherche */}
         <form onSubmit={searchOrder} className="mb-6">
           <div className="flex gap-3">
@@ -119,6 +160,69 @@ const CommandeTab = () => {
             </div>
           </div>
         </form>
+
+        {/* Titre de section : Synchronisation des commandes */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Synchronisation des commandes</h2>
+          <p className="text-gray-600">Lancer une récupération des commandes WooCommerce à partir d'une date donnée.</p>
+        </div>
+
+        {/* Section indépendante : Synchroniser les commandes */}
+        <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-orange-900 mb-2">🔄 Synchroniser les commandes</h3>
+          <p className="text-sm text-orange-800 mb-3">Récupère les commandes WooCommerce à partir de la date indiquée (inclus).</p>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+            <div>
+              <label htmlFor="sinceDate" className="block text-sm font-medium text-orange-900 mb-1">Date de début</label>
+              <input
+                id="sinceDate"
+                type="date"
+                value={syncSince}
+                onChange={(e) => setSyncSince(e.target.value)}
+                className="px-3 py-2 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={!syncSince || isSyncing}
+              onClick={async () => {
+                if (!syncSince) return
+                setIsSyncing(true)
+                try {
+                  const res = await fetch(`http://localhost:3001/api/sync/orders?since=${encodeURIComponent(syncSince)}`, { method: 'POST' })
+                  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                  const data = await res.json()
+                  setStatus({ type: 'success', text: `Synchro lancée: ${data.message || 'OK'}` })
+                } catch (e) {
+                  setStatus({ type: 'error', text: `Erreur synchro: ${e.message}` })
+                  setIsSyncing(false)
+                }
+              }}
+              className="px-5 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
+            >
+              {isSyncing ? 'Synchronisation…' : 'Lancer la synchro'}
+            </button>
+            {isSyncing && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await fetch('http://localhost:3001/api/sync/cancel', { method: 'POST' })
+                  } catch (_) {}
+                  setIsSyncing(false)
+                }}
+                className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+          {lastSyncLog && (
+            <div className="mt-3 text-xs text-orange-900 whitespace-nowrap overflow-hidden text-ellipsis">
+              {lastSyncLog}
+            </div>
+          )}
+        </div>
 
         {/* Messages */}
         {message.text && (
