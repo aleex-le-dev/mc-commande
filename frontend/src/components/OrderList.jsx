@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import LoadingSpinner from './LoadingSpinner'
 import ImagePreloader from './ImagePreloader'
 import { 
@@ -21,6 +21,20 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     error,
     totalArticles
   } = useAllArticles(propSelectedType)
+
+  // Calculer le nombre d'articles filtrés
+  const filteredArticlesCount = useMemo(() => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return totalArticles
+    }
+    
+    const term = searchTerm.toLowerCase().trim()
+    return articles.filter(article => 
+      `${article.orderNumber}`.toLowerCase().includes(term) ||
+      (article.customer || '').toLowerCase().includes(term) ||
+      (article.product_name || '').toLowerCase().includes(term)
+    ).length
+  }, [articles, searchTerm, totalArticles])
 
   // Gérer l'ouverture des overlays
   const handleOverlayOpen = (cardId) => {
@@ -137,7 +151,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       {/* En-tête avec titre et recherche */}
       <OrderHeader 
         selectedType={propSelectedType}
-        filteredArticlesCount={totalArticles}
+        filteredArticlesCount={filteredArticlesCount}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       />

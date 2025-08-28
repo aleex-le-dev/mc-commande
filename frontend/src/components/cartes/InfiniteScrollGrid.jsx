@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
 import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
@@ -28,6 +28,20 @@ const InfiniteScrollGrid = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const BATCH_SIZE = 30
+
+  // Filtrer les articles en fonction du terme de recherche
+  const filteredArticles = useMemo(() => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return allArticles
+    }
+    
+    const term = searchTerm.toLowerCase().trim()
+    return allArticles.filter(article => 
+      `${article.orderNumber}`.toLowerCase().includes(term) ||
+      (article.customer || '').toLowerCase().includes(term) ||
+      (article.product_name || '').toLowerCase().includes(term)
+    )
+  }, [allArticles, searchTerm])
   
   // Observer pour détecter quand on approche du bas
   const observerRef = useRef()
@@ -56,19 +70,19 @@ const InfiniteScrollGrid = ({
       const nextBatch = currentBatch + 1
       const startIndex = nextBatch * BATCH_SIZE
       const endIndex = startIndex + BATCH_SIZE
-      const newArticles = allArticles.slice(startIndex, endIndex)
+      const newArticles = filteredArticles.slice(startIndex, endIndex)
       
       if (newArticles.length > 0) {
         setVisibleArticles(prev => [...prev, ...newArticles])
         setCurrentBatch(nextBatch)
-        setHasMore(endIndex < allArticles.length)
+        setHasMore(endIndex < filteredArticles.length)
       } else {
         setHasMore(false)
       }
       
       setIsLoadingMore(false)
     }, 300)
-  }, [currentBatch, allArticles.length, isLoadingMore, hasMore])
+  }, [currentBatch, filteredArticles.length, isLoadingMore, hasMore])
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -186,15 +200,29 @@ const InfiniteScrollGrid = ({
     loadDateLimite()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
-  // Charger le premier lot d'articles
+  // Réinitialiser le chargement progressif quand la recherche change
   useEffect(() => {
-    if (allArticles.length > 0) {
+    if (filteredArticles.length > 0) {
+      const firstBatch = filteredArticles.slice(0, BATCH_SIZE)
+      setVisibleArticles(firstBatch)
+      setCurrentBatch(0)
+      setHasMore(filteredArticles.length > BATCH_SIZE)
+    } else {
+      setVisibleArticles([])
+      setCurrentBatch(0)
+      setHasMore(false)
+    }
+  }, [filteredArticles])
+
+  // Charger le premier lot d'articles (seulement si pas de recherche)
+  useEffect(() => {
+    if (allArticles.length > 0 && !searchTerm) {
       const firstBatch = allArticles.slice(0, BATCH_SIZE)
       setVisibleArticles(firstBatch)
       setCurrentBatch(0)
       setHasMore(allArticles.length > BATCH_SIZE)
     }
-  }, [allArticles])
+  }, [allArticles, searchTerm])
 
   // Fonction pour vérifier si un article doit avoir le badge en retard
   const isArticleEnRetard = (article) => {
@@ -230,12 +258,12 @@ const InfiniteScrollGrid = ({
     return dateCommandeNormalisee > dateLimiteNormalisee
   }
 
-  // Trouver l'index du dernier article en retard dans toute la liste
+  // Trouver l'index du dernier article en retard dans la liste filtrée
   const getLastRetardIndex = () => {
     if (!dateLimite) return -1
     
-    for (let i = allArticles.length - 1; i >= 0; i--) {
-      if (isArticleEnRetard(allArticles[i])) {
+    for (let i = filteredArticles.length - 1; i >= 0; i--) {
+      if (isArticleEnRetard(filteredArticles[i])) {
         return i
       }
     }
@@ -250,12 +278,14 @@ const InfiniteScrollGrid = ({
   }
 
   // Si pas d'articles, afficher un message
-  if (allArticles.length === 0) {
+  if (filteredArticles.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Aucun article trouvé avec les filtres sélectionnés</p>
+        <p className="text-gray-500">
+          {searchTerm ? `Aucun article trouvé pour "${searchTerm}"` : 'Aucun article trouvé avec les filtres sélectionnés'}
+        </p>
         <p className="text-sm text-gray-400 mt-2">
-          Total d'articles en base: {allArticles.length} | Type sélectionné: {productionType}
+          Total d'articles en base: {allArticles.length} | Articles filtrés: {filteredArticles.length} | Type sélectionné: {productionType}
         </p>
       </div>
     )
@@ -278,7 +308,7 @@ const InfiniteScrollGrid = ({
           
           // Vérifier si c'est le dernier article en retard (en utilisant l'index global)
           const isDernierEnRetard = lastRetardIndex !== -1 && 
-            allArticles.indexOf(article) === lastRetardIndex
+            filteredArticles.indexOf(article) === lastRetardIndex
           
           return (
             <div 
@@ -329,7 +359,8 @@ const InfiniteScrollGrid = ({
       {!hasMore && visibleArticles.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">
-            ✅ Tous les {allArticles.length} articles ont été chargés
+            ✅ Tous les {filteredArticles.length} articles ont été chargés
+            {searchTerm && ` pour "${searchTerm}"`}
           </p>
         </div>
       )}
