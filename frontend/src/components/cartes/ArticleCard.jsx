@@ -21,7 +21,8 @@ const ArticleCard = forwardRef(({
   getArticleColor, // Fonction pour obtenir la couleur de l'article
   getArticleOptions, // Fonction pour obtenir les options de l'article
   showDateLimiteSeparator = false, // Nouvelle prop pour afficher le trait de séparation
-  isAfterDateLimite = false // Indique si l'article est après la date limite
+  isAfterDateLimite = false, // Indique si l'article est après la date limite
+  tricoteusesProp = [] // Prop pour les tricoteuses
 }, ref) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
@@ -33,6 +34,7 @@ const ArticleCard = forwardRef(({
   const [showTricoteuseModal, setShowTricoteuseModal] = useState(false)
   const [tricoteuses, setTricoteuses] = useState([])
   const [isLoadingTricoteuses, setIsLoadingTricoteuses] = useState(false)
+  const [isAssigning, setIsAssigning] = useState(false) // État pour l'assignation en cours
   // État local pour l'assignation (pour mise à jour immédiate)
   const [localAssignment, setLocalAssignment] = useState(assignment)
   // État de chargement de l'assignation
@@ -86,10 +88,10 @@ const ArticleCard = forwardRef(({
   const memoizedImageUrl = useMemo(() => article.image_url, [article.image_url])
   const memoizedProductId = useMemo(() => article.product_id, [article.product_id])
   
-  // Créer un identifiant unique pour l'assignation (combinaison de product_id + orderNumber + customer)
+  // Créer un identifiant unique pour l'assignation (utiliser line_item_id pour la cohérence)
   const uniqueAssignmentId = useMemo(() => {
-    return `${article.product_id}_${article.orderNumber}_${article.customer}`
-  }, [article.product_id, article.orderNumber, article.customer])
+    return article.line_item_id || `${article.product_id}_${article.orderNumber}_${article.customer}`
+  }, [article.line_item_id, article.product_id, article.orderNumber, article.customer])
 
   // Charger l'image quand les props changent OU quand le type de production change
   useEffect(() => {
@@ -271,41 +273,25 @@ const ArticleCard = forwardRef(({
     loadExistingAssignment()
   }, [loadExistingAssignment])
 
-  // Charger la liste des tricoteuses
-  const loadTricoteuses = useCallback(async () => {
-    setIsLoadingTricoteuses(true)
-    try {
-      const data = await tricoteusesService.getAllTricoteuses()
-      setTricoteuses(data)
-      
-              // Rafraîchir l'assignation locale avec les nouvelles données de tricoteuses
-        if (localAssignment && localAssignment.tricoteuse_id) {
-          const tricoteuse = data.find(t => t._id === localAssignment.tricoteuse_id)
-          if (tricoteuse) {
-            // Vérifier si l'assignation locale a besoin d'être enrichie
-            const needsEnrichment = !localAssignment.tricoteuse_photo || !localAssignment.tricoteuse_color
-            if (needsEnrichment) {
-              const enrichedAssignment = {
-                ...localAssignment,
-                tricoteuse_photo: tricoteuse.photoUrl,
-                tricoteuse_color: tricoteuse.color,
-                tricoteuse_name: tricoteuse.firstName
-              }
-              setLocalAssignment(enrichedAssignment)
-            }
-          }
-        }
-    } catch (error) {
-      console.error('Erreur lors du chargement des tricoteuses:', error)
-    } finally {
+  // Charger la liste des tricoteuses depuis les props (plus d'appel réseau)
+  const loadTricoteuses = useCallback(() => {
+    // Les tricoteuses sont déjà fournies par SimpleFlexGrid
+    setTricoteuses(tricoteusesProp || [])
+    setIsLoadingTricoteuses(false)
+  }, [tricoteusesProp])
+
+  // Initialiser les tricoteuses quand la prop change
+  useEffect(() => {
+    if (tricoteusesProp && tricoteusesProp.length > 0) {
+      setTricoteuses(tricoteusesProp)
       setIsLoadingTricoteuses(false)
     }
-  }, [localAssignment])
+  }, [tricoteusesProp])
 
   // Ouvrir le modal de sélection de tricoteuse
   const openTricoteuseModal = useCallback(() => {
-    setShowTricoteuseModal(true)
     loadTricoteuses()
+    setShowTricoteuseModal(true)
   }, [loadTricoteuses])
 
   // Fermer le modal
@@ -550,26 +536,7 @@ const ArticleCard = forwardRef(({
             </div>
             
             {/* Indicateur d'assignation */}
-            {assignment && (
-              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                      style={{ backgroundColor: assignment.tricoteuse_color || '#6b7280' }}
-                    >
-                      {assignment.tricoteuse_name?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <span className="text-sm text-blue-800 font-medium">
-                      Assigné à {assignment.tricoteuse_name}
-                    </span>
-                  </div>
-                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                    {assignment.status === 'en_cours' ? 'En cours' : assignment.status}
-                  </span>
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
@@ -646,6 +613,8 @@ const ArticleCard = forwardRef(({
                     <line x1="15" y1="12" x2="3" y2="12" />
                   </svg>
                 </div>
+                
+
               </button>
             ) : (
               /* Bouton d'assignation par défaut */
@@ -841,10 +810,18 @@ const ArticleCard = forwardRef(({
               </h3>
               <p className="text-sm text-gray-600">
                 {localAssignment 
-                  ? `Article actuellement assigné à ${localAssignment.tricoteuse_name}`
+                  ? `Article assigné à ${localAssignment.tricoteuse_name}`
                   : 'Sélectionnez la tricoteuse responsable de cet article'
                 }
               </p>
+              {isAssigning && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 text-blue-700">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400 border-t-transparent"></div>
+                    <span className="text-sm font-medium">Assignation en cours...</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Grille simple 2 par ligne */}
@@ -880,40 +857,46 @@ const ArticleCard = forwardRef(({
                 .map((tricoteuse) => (
                 <button
                   key={tricoteuse._id}
-                  onClick={() => {
+                  onClick={async () => {
+                    if (isAssigning) return // Éviter les clics multiples
+                    
+                    setIsAssigning(true)
                     const assignmentData = {
                       article_id: uniqueAssignmentId, // Identifiant unique pour éviter les conflits
-                      product_id: article.product_id, // Garder le product_id pour référence
-                      orderNumber: article.orderNumber, // Numéro de commande unique
-                      customer: article.customer, // Client pour identification
                       tricoteuse_id: tricoteuse._id,
                       tricoteuse_name: tricoteuse.firstName,
-                      tricoteuse_photo: tricoteuse.photoUrl,
-                      tricoteuse_color: tricoteuse.color,
                       status: 'en_cours'
                     }
                     
-                    assignmentsService.createOrUpdateAssignment(assignmentData)
-                      .then(async (savedAssignment) => {
-                        // Enrichir immédiatement l'assignation locale avec les données complètes
-                        const enrichedAssignment = {
-                          ...assignmentData,
-                          tricoteuse_photo: tricoteuse.photoUrl,
-                          tricoteuse_color: tricoteuse.color,
-                          tricoteuse_name: tricoteuse.firstName
-                        }
-                        setLocalAssignment(enrichedAssignment)
-                        
-                        if (onAssignmentUpdate) {
-                          onAssignmentUpdate()
-                        }
-                        closeTricoteuseModal()
-                      })
-                      .catch((error) => {
-                        console.error('Erreur lors de la sauvegarde:', error)
-                      })
+                    try {
+                      const savedAssignment = await assignmentsService.createOrUpdateAssignment(assignmentData)
+                      
+                      // Enrichir immédiatement l'assignation locale avec les données complètes
+                      const enrichedAssignment = {
+                        ...assignmentData,
+                        tricoteuse_photo: tricoteuse.photoUrl,
+                        tricoteuse_color: tricoteuse.color,
+                        tricoteuse_name: tricoteuse.firstName
+                      }
+                      setLocalAssignment(enrichedAssignment)
+                      
+                      if (onAssignmentUpdate) {
+                        onAssignmentUpdate(uniqueAssignmentId, enrichedAssignment)
+                      }
+                      closeTricoteuseModal()
+                    } catch (error) {
+                      console.error('Erreur lors de la sauvegarde:', error)
+                      alert('Erreur lors de l\'assignation. Veuillez réessayer.')
+                    } finally {
+                      setIsAssigning(false)
+                    }
                   }}
-                  className="group p-4 rounded-xl border-2 border-gray-200 hover:border-rose-400 hover:bg-rose-50 transition-all duration-200"
+                  className={`group p-4 rounded-xl border-2 transition-all duration-200 ${
+                    isAssigning 
+                      ? 'border-gray-300 bg-gray-100 cursor-not-allowed opacity-50' 
+                      : 'border-gray-200 hover:border-rose-400 hover:bg-rose-50'
+                  }`}
+                  disabled={isAssigning}
                 >
                   <div className="flex flex-col items-center space-y-3">
                     {/* Photo de la tricoteuse */}
@@ -944,8 +927,13 @@ const ArticleCard = forwardRef(({
                     
                     {/* Nom seulement */}
                     <p className="font-semibold text-gray-900 text-center">
-                      {tricoteuse.firstName}
+                      {isAssigning ? 'Assignation...' : tricoteuse.firstName}
                     </p>
+                    
+                    {/* Indicateur de chargement */}
+                    {isAssigning && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-rose-400 border-t-transparent"></div>
+                    )}
                   </div>
                 </button>
               ))}

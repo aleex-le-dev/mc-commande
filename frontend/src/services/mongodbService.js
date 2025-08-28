@@ -24,6 +24,24 @@ const releaseSlot = () => {
   }
 }
 
+// Cache mémoire global avec TTL pour données partagées
+const GLOBAL_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+const globalCache = {
+  tricoteuses: { data: null, at: 0 },
+  assignments: { data: null, at: 0 }
+}
+
+function cacheGet(key) {
+  const entry = globalCache[key]
+  if (!entry) return null
+  if (Date.now() - entry.at > GLOBAL_CACHE_TTL_MS) return null
+  return entry.data
+}
+
+function cacheSet(key, data) {
+  globalCache[key] = { data, at: Date.now() }
+}
+
 async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 8000)
@@ -340,10 +358,14 @@ export const tricoteusesService = {
   // Récupérer toutes les tricoteuses
   async getAllTricoteuses() {
     try {
+      const cached = cacheGet('tricoteuses')
+      if (cached) return cached
       const response = await requestWithRetry('http://localhost:3001/api/tricoteuses')
       if (!response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
-      return result.data || []
+      const data = result.data || []
+      cacheSet('tricoteuses', data)
+      return data
     } catch (error) {
       console.error('Erreur récupération tricoteuses:', error)
       return []
@@ -409,10 +431,14 @@ export const assignmentsService = {
   // Récupérer toutes les assignations
   async getAllAssignments() {
     try {
+      const cached = cacheGet('assignments')
+      if (cached) return cached
       const response = await requestWithRetry('http://localhost:3001/api/assignments')
       if (!response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
-      return result.data || []
+      const data = result.data || []
+      cacheSet('assignments', data)
+      return data
     } catch (error) {
       console.error('Erreur récupération assignations:', error)
       return []
@@ -454,6 +480,8 @@ export const assignmentsService = {
       })
       if (!response.ok) throw new Error('Erreur lors de la sauvegarde de l\'assignation')
       const result = await response.json()
+      // Invalider le cache pour refléter la mise à jour
+      cacheSet('assignments', null)
       return result.data
     } catch (error) {
       console.error('Erreur sauvegarde assignation:', error)
@@ -469,10 +497,24 @@ export const assignmentsService = {
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression de l\'assignation')
       const result = await response.json()
+      // Invalider le cache
+      cacheSet('assignments', null)
       return result.success
     } catch (error) {
       console.error('Erreur suppression assignation:', error)
       throw error
     }
+  }
+}
+
+// Préchargement des données à l'ouverture de l'app
+export async function prefetchAppData() {
+  try {
+    await Promise.all([
+      tricoteusesService.getAllTricoteuses(),
+      assignmentsService.getAllAssignments()
+    ])
+  } catch {
+    // silencieux
   }
 }

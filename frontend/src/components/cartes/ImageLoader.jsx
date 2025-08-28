@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 /**
  * Composant ImageLoader optimisé pour gérer les erreurs HTTP/2
@@ -18,6 +18,23 @@ const ImageLoader = React.memo(({
   const [hasError, setHasError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
+  const imgRef = useRef(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  // Observer la visibilité pour prioriser le viewport
+  useEffect(() => {
+    const node = imgRef.current
+    if (!node) return
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0]
+      if (entry.isIntersecting) {
+        setIsVisible(true)
+        observer.disconnect()
+      }
+    }, { root: null, rootMargin: '400px', threshold: 0 })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   // Réinitialiser l'état quand la source change
   useEffect(() => {
@@ -26,7 +43,7 @@ const ImageLoader = React.memo(({
     setRetryCount(0)
     
     // Vérifier si l'image est déjà en cache
-    if (src) {
+    if (src && isVisible) {
       const img = new Image()
       img.onload = () => {
         // Image déjà en cache, affichage immédiat
@@ -41,7 +58,7 @@ const ImageLoader = React.memo(({
     } else {
       setIsLoading(false)
     }
-  }, [src, onLoad])
+  }, [src, onLoad, isVisible])
 
   // Gestion d'erreur avec retry automatique
   const handleError = useCallback(() => {
@@ -117,6 +134,7 @@ const ImageLoader = React.memo(({
       )}
       
       <img 
+        ref={imgRef}
         src={imageSrc}
         alt={alt}
         className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}

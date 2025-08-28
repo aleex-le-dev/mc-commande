@@ -40,6 +40,14 @@ const SimpleFlexGrid = ({
     }
   }, [])
 
+  // Fonction de mise à jour ciblée pour éviter les re-renders complets
+  const updateAssignment = useCallback((articleId, newAssignment) => {
+    setAssignments(prev => ({
+      ...prev,
+      [articleId]: newAssignment
+    }))
+  }, [])
+
   // Charger toutes les tricoteuses une seule fois
   const loadTricoteuses = useCallback(async () => {
     try {
@@ -118,8 +126,8 @@ const SimpleFlexGrid = ({
             searchTerm={searchTerm}
             productionType={productionType} // Passer le type de production
             assignment={assignments[article.line_item_id]} // Passer l'assignation directement
-            tricoteuses={tricoteuses}
-            onAssignmentUpdate={loadAssignments} // Fonction pour rafraîchir les assignations
+            tricoteusesProp={tricoteuses}
+            onAssignmentUpdate={(articleId, assignment) => updateAssignment(articleId, assignment)} // Fonction pour rafraîchir les assignations
           />
         </div>
       )
