@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react'
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
 import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
@@ -19,6 +19,9 @@ const SimpleFlexGrid = ({
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
   const [tricoteuses, setTricoteuses] = useState([])
   const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(40)
+  const sentinelRef = useRef(null)
+  const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -56,25 +59,41 @@ const SimpleFlexGrid = ({
     loadTricoteuses()
   }, [loadAssignments, loadTricoteuses, productionType]) // Recharger quand on change d'onglet
 
+  // Réinitialiser le nombre d'éléments visibles quand les filtres changent
+  useEffect(() => {
+    setVisibleCount(40)
+  }, [filteredArticles.length, productionType, searchTerm])
+
+  // Observer pour le chargement progressif (virtualisation simple)
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0]
+      if (entry.isIntersecting) {
+        setVisibleCount((prev) => Math.min(prev + 40, filteredArticles.length))
+      }
+    }, { root: null, rootMargin: '600px', threshold: 0 })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [filteredArticles.length])
+
   // Gérer l'état de loading lors des changements d'onglets
   useEffect(() => {
-    // Toujours afficher le loading au début
-    if (filteredArticles.length === 0) {
-      setIsLoading(true)
-      // Simuler un délai de chargement
-      const timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 800)
-      return () => clearTimeout(timer)
-    } else {
-      // Articles disponibles, masquer le loading
+    if (filteredArticles.length > 0) {
       setIsLoading(false)
+      setLastNonEmptyArticles(filteredArticles)
+    } else {
+      // Si on perd temporairement les articles, continuer d'afficher la dernière liste connue
+      setIsLoading(lastNonEmptyArticles.length === 0)
     }
-  }, [filteredArticles.length, productionType]) // Retirer previousArticlesCount des dépendances
+  }, [filteredArticles, filteredArticles.length, productionType, lastNonEmptyArticles.length])
 
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
-    return filteredArticles.map((article, index) => {
+    const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticles)
+    const subset = source.slice(0, visibleCount)
+    return subset.map((article, index) => {
       const cardId = `${article.orderId}-${article.line_item_id}`
       const isHighlighted = searchTerm && (
         `${article.orderNumber}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,7 +142,8 @@ const SimpleFlexGrid = ({
     return <LoadingSpinner />
   }
 
-  if (filteredArticles.length === 0) {
+  // Si toujours pas d'articles et pas de cache, afficher un loader
+  if (filteredArticles.length === 0 && lastNonEmptyArticles.length === 0) {
     return <LoadingSpinner />
   }
 
@@ -131,6 +151,8 @@ const SimpleFlexGrid = ({
     <div className="w-full">
       <div className="flex flex-wrap gap-6 justify-start items-start w-full">
         {memoizedCards}
+        {/* Sentinelle pour charger plus d'éléments au scroll */}
+        <div ref={sentinelRef} style={{ width: 1, height: 1 }} />
       </div>
     </div>
   )
