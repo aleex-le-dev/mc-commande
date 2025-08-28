@@ -10,7 +10,7 @@ export { default as SyncProgress } from './SyncProgress.jsx'
 
 // Composants d'onglets Admin
 export { default as StatusTab } from './StatusTab.jsx'
-export { default as ModificationTab } from './ModificationTab.jsx'
+export { default as CommandeTab } from './CommandeTab.jsx'
 export { default as TricoteusesTab } from './TricoteusesTab.jsx'
 
 // Hooks personnalisés

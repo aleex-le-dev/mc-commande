@@ -503,6 +503,79 @@ app.get('/api/orders', async (req, res) => {
   }
 })
 
+// DELETE /api/orders/:orderId - Supprimer une commande et ses éléments associés
+app.delete('/api/orders/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const numericOrderId = parseInt(orderId)
+    if (Number.isNaN(numericOrderId)) {
+      return res.status(400).json({ success: false, error: 'orderId invalide' })
+    }
+
+    const ordersCollection = db.collection('orders_sync')
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+
+    const orderDelete = await ordersCollection.deleteOne({ order_id: numericOrderId })
+    const itemsDelete = await itemsCollection.deleteMany({ order_id: numericOrderId })
+    const statusDelete = await statusCollection.deleteMany({ order_id: numericOrderId })
+
+    if (orderDelete.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Commande introuvable' })
+    }
+
+    console.log(`🗑️ Commande ${numericOrderId} supprimée (${itemsDelete.deletedCount} articles, ${statusDelete.deletedCount} statuts)`)
+    res.json({
+      success: true,
+      orderId: numericOrderId,
+      deleted: {
+        order: orderDelete.deletedCount,
+        items: itemsDelete.deletedCount,
+        statuses: statusDelete.deletedCount
+      }
+    })
+  } catch (error) {
+    console.error('Erreur DELETE /orders/:orderId:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+// DELETE /api/orders/:orderId/items/:lineItemId - Supprimer un article d'une commande
+app.delete('/api/orders/:orderId/items/:lineItemId', async (req, res) => {
+  try {
+    const { orderId, lineItemId } = req.params
+    const numericOrderId = parseInt(orderId)
+    const numericLineItemId = parseInt(lineItemId)
+    if (Number.isNaN(numericOrderId) || Number.isNaN(numericLineItemId)) {
+      return res.status(400).json({ success: false, error: 'Paramètres invalides' })
+    }
+
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+
+    const itemDelete = await itemsCollection.deleteOne({ order_id: numericOrderId, line_item_id: numericLineItemId })
+    const statusDelete = await statusCollection.deleteOne({ order_id: numericOrderId, line_item_id: numericLineItemId })
+
+    if (itemDelete.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Article introuvable' })
+    }
+
+    console.log(`🗑️ Article ${numericLineItemId} supprimé de la commande ${numericOrderId} (statut supprimé: ${statusDelete.deletedCount})`)
+    res.json({
+      success: true,
+      orderId: numericOrderId,
+      lineItemId: numericLineItemId,
+      deleted: {
+        item: itemDelete.deletedCount,
+        status: statusDelete.deletedCount
+      }
+    })
+  } catch (error) {
+    console.error('Erreur DELETE /orders/:orderId/items/:lineItemId:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
 // GET /api/orders/production/:type - Récupérer les commandes par type de production
 app.get('/api/orders/production/:type', async (req, res) => {
   try {

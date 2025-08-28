@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { getOrderByNumber, updateOrderStatus } from '../../services/mongodbService'
 
-const ModificationTab = () => {
+// Composant CommandeTab
+// Permet de rechercher une commande par numéro et de modifier le type de production des articles
+const CommandeTab = () => {
   const [searchOrderNumber, setSearchOrderNumber] = useState('')
   const [order, setOrder] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,7 +37,6 @@ const ModificationTab = () => {
 
   const updateItemProductionType = async (lineItemId, newProductionType) => {
     try {
-      // Mettre à jour le type de production pour cet article spécifique
       const response = await fetch(`http://localhost:3001/api/production-status/${lineItemId}/type`, {
         method: 'PUT',
         headers: {
@@ -48,9 +49,7 @@ const ModificationTab = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
-      
-      // Mettre à jour l'état local
+      await response.json()
       setOrder(prev => ({
         ...prev,
         items: prev.items.map(item => 
@@ -86,10 +85,8 @@ const ModificationTab = () => {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">✏️ Modification des commandes</h2>
-          <p className="text-gray-600">
-            Recherchez une commande par numéro et modifiez le type de production de chaque article.
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Modification des commandes</h2>
+          <p className="text-gray-600">Changer le type de production et supprimer des commandes ou des articles.</p>
         </div>
 
         {/* Formulaire de recherche */}
@@ -167,6 +164,24 @@ const ModificationTab = () => {
                 <p className="text-gray-900">{order.total ? `${order.total}€` : 'Non défini'}</p>
               </div>
             </div>
+            <div className="mt-4">
+              <button
+                onClick={async () => {
+                  if (!confirm('Supprimer cette commande et tous ses articles ?')) return
+                  try {
+                    const res = await fetch(`http://localhost:3001/api/orders/${order.order_id}`, { method: 'DELETE' })
+                    if (!res.ok) throw new Error('Suppression échouée')
+                    setOrder(null)
+                    setStatus({ type: 'success', text: `Commande ${order.order_id} supprimée` })
+                  } catch (e) {
+                    setStatus({ type: 'error', text: e.message })
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                🗑️ Supprimer la commande
+              </button>
+            </div>
           </div>
         )}
 
@@ -220,6 +235,25 @@ const ModificationTab = () => {
                       >
                         🧶 Maille
                       </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Supprimer l'article ${item.line_item_id} ?`)) return
+                          try {
+                            const res = await fetch(`http://localhost:3001/api/orders/${item.order_id}/items/${item.line_item_id}`, { method: 'DELETE' })
+                            if (!res.ok) throw new Error('Suppression échouée')
+                            setOrder(prev => ({
+                              ...prev,
+                              items: prev.items.filter(i => i.line_item_id !== item.line_item_id)
+                            }))
+                            setStatus({ type: 'success', text: `Article ${item.line_item_id} supprimé` })
+                          } catch (e) {
+                            setStatus({ type: 'error', text: e.message })
+                          }
+                        }}
+                        className="px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md hover:bg-red-100 text-sm"
+                      >
+                        Supprimer
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -232,5 +266,6 @@ const ModificationTab = () => {
   )
 }
 
-export default ModificationTab
+export default CommandeTab
+
 

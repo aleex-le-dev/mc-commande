@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
-import ModificationTab from './cartes/ModificationTab'
+import CommandeTab from './cartes/CommandeTab'
 import TricoteusesTab from './cartes/TricoteusesTab'
 import StatusTab from './cartes/StatusTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
 
 const ParametresPanel = () => {
-  const [activeTab, setActiveTab] = useState('modification')
+  const [activeTab, setActiveTab] = useState('commande')
 
   const tabs = [
-    { id: 'modification', label: 'Commandes', icon: '🛒' },
+    { id: 'commande', label: 'Commandes', icon: '🛒' },
     { id: 'tricoteuses', label: 'Tricoteuses', icon: '🧶' },
     { id: 'status', label: 'Statut', icon: '📊' },
     { id: 'dateLimite', label: 'Date limite', icon: '⏰' }
@@ -16,8 +16,8 @@ const ParametresPanel = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'modification':
-        return <ModificationTab />
+      case 'commande':
+        return <CommandeTab />
       case 'tricoteuses':
         return <TricoteusesTab />
       case 'status':
@@ -25,7 +25,7 @@ const ParametresPanel = () => {
       case 'dateLimite':
         return <DateLimiteTab />
       default:
-        return <ModificationTab />
+        return <CommandeTab />
     }
   }
 
