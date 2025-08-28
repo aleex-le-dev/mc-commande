@@ -1,10 +1,58 @@
 // Service pour l'API MongoDB
 const API_BASE_URL = 'http://localhost:3001/api'
 
+// Limiteur simple + retry/backoff pour réduire les erreurs réseau au démarrage
+let concurrentRequests = 0
+const MAX_CONCURRENT = 4
+const waitQueue = []
+
+const acquireSlot = () => new Promise((resolve) => {
+  if (concurrentRequests < MAX_CONCURRENT) {
+    concurrentRequests += 1
+    resolve()
+  } else {
+    waitQueue.push(resolve)
+  }
+})
+
+const releaseSlot = () => {
+  concurrentRequests = Math.max(0, concurrentRequests - 1)
+  const next = waitQueue.shift()
+  if (next) {
+    concurrentRequests += 1
+    next()
+  }
+}
+
+async function requestWithRetry(url, options = {}, retries = 2) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 8000)
+  try {
+    await acquireSlot()
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) {
+      if (retries > 0 && res.status >= 500) {
+        await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+        return requestWithRetry(url, options, retries - 1)
+      }
+    }
+    return res
+  } catch (e) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+      return requestWithRetry(url, options, retries - 1)
+    }
+    throw e
+  } finally {
+    clearTimeout(timeout)
+    releaseSlot()
+  }
+}
+
 // Récupérer tous les statuts de production
 export const getProductionStatuses = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/production-status`)
+    const response = await requestWithRetry(`${API_BASE_URL}/production-status`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -19,7 +67,7 @@ export const getProductionStatuses = async () => {
 // Mettre à jour le statut d'un article
 export const updateArticleStatus = async (orderId, lineItemId, status, notes = null) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/production/status`, {
+    const response = await requestWithRetry(`${API_BASE_URL}/production/status`, {
       method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -47,7 +95,7 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
 // Dispatcher un article vers la production
 export const dispatchToProduction = async (orderId, lineItemId, productionType, assignedTo = null) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/production/dispatch`, {
+    const response = await requestWithRetry(`${API_BASE_URL}/production/dispatch`, {
       method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +124,7 @@ export const dispatchToProduction = async (orderId, lineItemId, productionType, 
 export const syncOrders = async (woocommerceOrders = []) => {
   try {
     // Appeler le backend qui se chargera de récupérer les données WooCommerce
-    const response = await fetch(`${API_BASE_URL}/sync/orders`, {
+    const response = await requestWithRetry(`${API_BASE_URL}/sync/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +147,7 @@ export const syncOrders = async (woocommerceOrders = []) => {
 // Récupérer toutes les commandes depuis la base de données
 export const getOrdersFromDatabase = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders`)
+    const response = await requestWithRetry(`${API_BASE_URL}/orders`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -114,7 +162,7 @@ export const getOrdersFromDatabase = async () => {
 // Récupérer les commandes par type de production
 export const getOrdersByProductionType = async (productionType) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/production/${productionType}`)
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/production/${productionType}`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -129,7 +177,7 @@ export const getOrdersByProductionType = async (productionType) => {
 // Récupérer les statistiques de production
 export const getProductionStats = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/production-status/stats`)
+    const response = await requestWithRetry(`${API_BASE_URL}/production-status/stats`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -144,7 +192,7 @@ export const getProductionStats = async () => {
 // Récupérer le permalink d'un produit via le backend
 export const getProductPermalink = async (productId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/woocommerce/products/${productId}/permalink`)
+    const response = await requestWithRetry(`${API_BASE_URL}/woocommerce/products/${productId}/permalink`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -159,7 +207,7 @@ export const getProductPermalink = async (productId) => {
 // Récupérer les permalinks de plusieurs produits en lot
 export const getProductPermalinksBatch = async (productIds) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/woocommerce/products/permalink/batch`, {
+    const response = await requestWithRetry(`${API_BASE_URL}/woocommerce/products/permalink/batch`, {
       method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +230,7 @@ export const getProductPermalinksBatch = async (productIds) => {
 // Récupérer le dernier log de synchronisation
 export const getSyncLogs = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/sync/logs`)
+    const response = await requestWithRetry(`${API_BASE_URL}/sync/logs`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -197,7 +245,7 @@ export const getSyncLogs = async () => {
 // Vider le log de synchronisation
 export const clearSyncLogs = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/sync/logs/clear`, {
+    const response = await requestWithRetry(`${API_BASE_URL}/sync/logs/clear`, {
       method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -219,7 +267,7 @@ export const clearSyncLogs = async () => {
 // Test de connexion à la base de données
 export const testConnection = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/test/connection`)
+    const response = await requestWithRetry(`${API_BASE_URL}/test/connection`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -233,7 +281,7 @@ export const testConnection = async () => {
 // Test de synchronisation
 export const testSync = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/test/sync`)
+    const response = await requestWithRetry(`${API_BASE_URL}/test/sync`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -247,7 +295,7 @@ export const testSync = async () => {
 // Récupérer une commande par numéro
 export const getOrderByNumber = async (orderNumber) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/search/${orderNumber}`)
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/search/${orderNumber}`)
     if (!response.ok) {
       if (response.status === 404) {
         return null // Commande non trouvée
@@ -288,7 +336,7 @@ export const tricoteusesService = {
   // Récupérer toutes les tricoteuses
   async getAllTricoteuses() {
     try {
-      const response = await fetch('http://localhost:3001/api/tricoteuses')
+      const response = await requestWithRetry('http://localhost:3001/api/tricoteuses')
       if (!response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       return result.data || []
@@ -301,7 +349,7 @@ export const tricoteusesService = {
   // Créer une nouvelle tricoteuse
   async createTricoteuse(tricoteuseData) {
     try {
-      const response = await fetch('http://localhost:3001/api/tricoteuses', {
+      const response = await requestWithRetry('http://localhost:3001/api/tricoteuses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +368,7 @@ export const tricoteusesService = {
   // Modifier une tricoteuse
   async updateTricoteuse(id, tricoteuseData) {
     try {
-      const response = await fetch(`http://localhost:3001/api/tricoteuses/${id}`, {
+      const response = await requestWithRetry(`http://localhost:3001/api/tricoteuses/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -339,7 +387,7 @@ export const tricoteusesService = {
   // Supprimer une tricoteuse
   async deleteTricoteuse(id) {
     try {
-      const response = await fetch(`http://localhost:3001/api/tricoteuses/${id}`, {
+      const response = await requestWithRetry(`http://localhost:3001/api/tricoteuses/${id}`, {
         method: 'DELETE'
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression de la tricoteuse')
@@ -357,7 +405,7 @@ export const assignmentsService = {
   // Récupérer toutes les assignations
   async getAllAssignments() {
     try {
-      const response = await fetch('http://localhost:3001/api/assignments')
+      const response = await requestWithRetry('http://localhost:3001/api/assignments')
       if (!response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       return result.data || []
@@ -371,7 +419,7 @@ export const assignmentsService = {
   async getAssignmentByArticleId(articleId) {
     try {
       // Récupérer toutes les assignations en une fois (pas d'erreur 404)
-      const response = await fetch('http://localhost:3001/api/assignments')
+      const response = await requestWithRetry('http://localhost:3001/api/assignments')
       
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des assignations')
@@ -393,7 +441,7 @@ export const assignmentsService = {
   // Créer ou mettre à jour une assignation
   async createOrUpdateAssignment(assignmentData) {
     try {
-      const response = await fetch('http://localhost:3001/api/assignments', {
+      const response = await requestWithRetry('http://localhost:3001/api/assignments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -412,7 +460,7 @@ export const assignmentsService = {
   // Supprimer une assignation
   async deleteAssignment(articleId) {
     try {
-      const response = await fetch(`http://localhost:3001/api/assignments/${articleId}`, {
+      const response = await requestWithRetry(`http://localhost:3001/api/assignments/${articleId}`, {
         method: 'DELETE'
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression de l\'assignation')

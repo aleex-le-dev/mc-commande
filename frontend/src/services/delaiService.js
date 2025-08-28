@@ -1,5 +1,29 @@
 const API_BASE_URL = 'http://localhost:3001/api'
 
+// Petit wrapper avec retry/backoff pour limiter les erreurs réseau au démarrage
+async function fetchWithRetry(url, options = {}, retries = 2) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 8000)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    if (!res.ok) {
+      if (retries > 0 && res.status >= 500) {
+        await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+        return fetchWithRetry(url, options, retries - 1)
+      }
+    }
+    return res
+  } catch (e) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+      return fetchWithRetry(url, options, retries - 1)
+    }
+    throw e
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 class DelaiService {
   constructor() {
     // Cache pour les jours fériés
@@ -14,7 +38,7 @@ class DelaiService {
   // Récupérer la configuration actuelle du délai
   async getDelai() {
     try {
-      const response = await fetch(`${API_BASE_URL}/delais/configuration`)
+      const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`)
       const data = await response.json()
       return data
     } catch (error) {

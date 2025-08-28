@@ -272,6 +272,25 @@ app.post('/api/sync/orders', async (req, res) => {
     if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
       try {
         const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
+        // 1) Vérification rapide: y a-t-il des commandes nouvelles après la dernière date ?
+        if (afterIso) {
+          const quickUrlBase = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=1&page=1&status=processing,completed&orderby=date&order=desc&_fields=id,date`
+          const quickUrl = `${quickUrlBase}&after=${encodeURIComponent(afterIso)}`
+          const quickRes = await fetch(quickUrl, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(8000) })
+          if (quickRes.ok) {
+            const quickData = await quickRes.json()
+            if (Array.isArray(quickData) && quickData.length === 0) {
+              addSyncLog('ℹ️ Aucune commande à synchroniser (vérification rapide)', 'info')
+              return res.json({
+                success: true,
+                message: 'Aucune nouvelle commande',
+                results: { ordersCreated: 0, ordersUpdated: 0, itemsCreated: 0, itemsUpdated: 0 }
+              })
+            }
+          }
+        }
+
+        // 2) Récupération paginée seulement si nécessaire
         const perPage = 100
         let page = 1
         let fetched = []
@@ -279,8 +298,8 @@ app.post('/api/sync/orders', async (req, res) => {
         while (true) {
           const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
           const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
-          const response = await fetch(url, {
-            method: 'GET',
+        const response = await fetch(url, {
+          method: 'GET',
             headers: { 'Accept': 'application/json' },
             signal: currentSyncAbortController.signal
           })
@@ -310,6 +329,7 @@ app.post('/api/sync/orders', async (req, res) => {
     
     if (woocommerceOrders.length === 0) {
       addSyncLog('ℹ️ Aucune commande à synchroniser', 'info')
+      console.log('🔄 Backend - Aucune commande à synchroniser, envoi de la réponse')
       return res.json({
         success: true,
         message: 'Aucune nouvelle commande',
@@ -325,14 +345,18 @@ app.post('/api/sync/orders', async (req, res) => {
     // Synchroniser les commandes
     addSyncLog('🔄 Début de la synchronisation avec la base de données...', 'info')
     const syncResults = await syncOrdersToDatabase(woocommerceOrders)
+    console.log('🔄 Backend - Résultats de la synchronisation:', syncResults)
     
     // Afficher le message approprié selon le résultat
     if (syncResults.ordersCreated === 0 && syncResults.itemsCreated === 0) {
       addSyncLog('ℹ️ Aucune nouvelle commande à traiter', 'info')
+      console.log('🔄 Backend - Aucune nouvelle commande à traiter')
     } else {
-    addSyncLog('✅ Synchronisation terminée avec succès', 'success')
+      addSyncLog('✅ Synchronisation terminée avec succès', 'success')
+      console.log('🔄 Backend - Synchronisation terminée avec succès')
     }
     
+    console.log('🔄 Backend - Envoi de la réponse finale avec les résultats:', syncResults)
     res.json({
       success: true,
       message: 'Synchronisation réussie',
@@ -1830,7 +1854,7 @@ app.post('/api/delais/calculer', async (req, res) => {
           const estJourFerie = await estJourFerieLocal(dateLimite)
           // Si ce n'est pas un jour férié, compter le jour
           if (!estJourFerie) {
-            joursAjoutes++
+          joursAjoutes++
           }
         }
       }
@@ -2010,7 +2034,7 @@ app.post('/api/sync/cancel', (req, res) => {
   try {
     if (currentSyncAbortController) {
       currentSyncAbortController.abort()
-      addSyncLog('⛔ Synchronisation annulée par l’utilisateur', 'warning')
+      addSyncLog('⛔ Synchronisation annulée par l\'utilisateur', 'warning')
       currentSyncAbortController = null
       return res.json({ success: true, cancelled: true })
     }
