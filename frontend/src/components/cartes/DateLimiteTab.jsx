@@ -19,6 +19,7 @@ const DateLimiteTab = () => {
   // État pour les jours fériés
   const [joursFeries, setJoursFeries] = useState({})
   const [isLoadingJoursFeries, setIsLoadingJoursFeries] = useState(false)
+  const [aujourdhui, setAujourdhui] = useState(new Date('2025-07-28T12:00:00.000Z'))
 
   // Charger le délai actuel au montage du composant
   useEffect(() => {
@@ -42,7 +43,6 @@ const DateLimiteTab = () => {
 
   // Fonction pour calculer la date limite en arrière depuis aujourd'hui
   const calculerDateLimiteOuvrable = (joursOuvrablesCount) => {
-    const aujourdhui = new Date()
     let dateLimite = new Date(aujourdhui)
     let joursRetires = 0
 
@@ -59,6 +59,9 @@ const DateLimiteTab = () => {
         joursRetires++
       }
     }
+
+    // Log simple de la date limite calculée
+    console.log('📅 Date limite calculée:', dateLimite.toISOString().split('T')[0])
 
     return dateLimite
   }
@@ -387,6 +390,13 @@ const DateLimiteTab = () => {
             
 
           </div>
+        </div>
+      )}
+
+      {/* Trait de séparation après la date limite */}
+      {!isCalculating && !isLoadingJoursFeries && dateLimite && getNombreJoursOuvrables() > 0 && (
+        <div className="mb-6">
+          <hr className="border-2 border-gray-300 rounded-full" />
         </div>
       )}
 

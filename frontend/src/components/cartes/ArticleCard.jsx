@@ -22,6 +22,7 @@ const ArticleCard = forwardRef(({
   getArticleOptions, // Fonction pour obtenir les options de l'article
   showDateLimiteSeparator = false, // Nouvelle prop pour afficher le trait de séparation
   isAfterDateLimite = false, // Indique si l'article est après la date limite
+  isLastArticleOfDateLimite = false, // Indique si c'est le dernier article de la date limite
   tricoteusesProp = [] // Prop pour les tricoteuses
 }, ref) => {
   const [copiedText, setCopiedText] = useState('')
@@ -123,9 +124,10 @@ const ArticleCard = forwardRef(({
     const loadDateLimite = async () => {
       try {
         // Utiliser le service centralisé qui gère le cache
-        const response = await delaiService.getDateLimiteActuelle()
-        if (response.success && response.dateLimite) {
-          setDateLimite(response.dateLimite)
+        const response = await delaiService.getDelai()
+        if (response.success && response.data && response.data.dateLimite) {
+          const dateLimiteStr = response.data.dateLimite.split('T')[0]
+          setDateLimite(dateLimiteStr)
         }
       } catch (error) {
         console.error('Erreur lors du chargement de la date limite:', error)
@@ -149,8 +151,14 @@ const ArticleCard = forwardRef(({
     
     // Un article est EN RETARD si sa date de commande est APRÈS la date limite
     // (c'est-à-dire qu'il a été commandé trop tard pour respecter le délai)
-    return dateCommande.toDateString() > dateLimiteObj.toDateString()
-  }, [dateLimite, article.orderDate])
+    const estEnRetard = dateCommande.toDateString() > dateLimiteObj.toDateString()
+    
+    if (estEnRetard) {
+      console.log('🚨 Article en retard:', article.orderNumber, 'Date commande:', article.orderDate, 'Date limite:', dateLimite)
+    }
+    
+    return estEnRetard
+  }, [dateLimite, article.orderDate, article.orderNumber])
 
   // Déterminer si l'article est après la date limite (pour la bordure et les indicateurs)
   const estApresDateLimite = useMemo(() => {
@@ -162,8 +170,14 @@ const ArticleCard = forwardRef(({
     const dateLimiteObj = new Date(dateLimite)
     
     // Un article est "après la date limite" si sa date de commande est APRÈS la date limite
-    return dateCommande.toDateString() > dateLimiteObj.toDateString()
-  }, [dateLimite, article.orderDate])
+    const estApres = dateCommande.toDateString() > dateLimiteObj.toDateString()
+    
+    if (estApres) {
+      console.log('📅 Article après date limite:', article.orderNumber, 'Date commande:', article.orderDate, 'Date limite:', dateLimite)
+    }
+    
+    return estApres
+  }, [dateLimite, article.orderDate, article.orderNumber])
 
   // Fonction pour obtenir l'URL de l'image (priorité au cache)
   const getImageUrl = () => {
@@ -350,17 +364,7 @@ const ArticleCard = forwardRef(({
         zIndex: 1
       }}
     >
-      {/* Trait de séparation de la date limite */}
-      {showDateLimiteSeparator && (
-        <div className="absolute -top-2 left-0 right-0 z-10">
-          <div className="flex items-center justify-center">
-            <div className="bg-gradient-to-r from-transparent via-red-500 to-transparent h-1 w-full"></div>
-            <div className="absolute bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-              📅 Date limite
-            </div>
-          </div>
-        </div>
-      )}
+
       {/* Image de fond avec overlay moderne */}
       <div className="relative h-60 overflow-hidden rounded-t-3xl">
         {/* Image de base */}

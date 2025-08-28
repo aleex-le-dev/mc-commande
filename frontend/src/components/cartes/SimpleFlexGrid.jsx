@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
 import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
+import delaiService from '../../services/delaiService'
 
 // Composant simple avec flexbox et flex-wrap pour les cartes
 const SimpleFlexGrid = ({ 
@@ -22,6 +23,7 @@ const SimpleFlexGrid = ({
   const [visibleCount, setVisibleCount] = useState(40)
   const sentinelRef = useRef(null)
   const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
+  const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -62,10 +64,31 @@ const SimpleFlexGrid = ({
     }
   }, [])
 
+  // Charger la date limite depuis le service
+  const loadDateLimite = useCallback(async () => {
+    try {
+              // Récupérer la configuration des délais
+        const configResponse = await delaiService.getDelai()
+        if (configResponse.success && configResponse.data) {
+          // Utiliser directement la date limite déjà calculée et stockée en BDD
+          if (configResponse.data.dateLimite) {
+            const dateLimiteStr = configResponse.data.dateLimite.split('T')[0]
+            setDateLimite(dateLimiteStr)
+            console.log('📅 Date limite utilisée depuis la BDD:', dateLimiteStr)
+          } else {
+            console.log('⚠️ Pas de date limite stockée en BDD, calcul impossible')
+          }
+        }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la date limite:', error)
+    }
+  }, [])
+
   useEffect(() => {
     loadAssignments()
     loadTricoteuses()
-  }, [loadAssignments, loadTricoteuses, productionType]) // Recharger quand on change d'onglet
+    loadDateLimite()
+  }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType]) // Recharger quand on change d'onglet
 
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
   useEffect(() => {
@@ -101,7 +124,9 @@ const SimpleFlexGrid = ({
   const memoizedCards = useMemo(() => {
     const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticles)
     const subset = source.slice(0, visibleCount)
-    return subset.map((article, index) => {
+    const cards = []
+    
+    subset.forEach((article, index) => {
       const cardId = `${article.orderId}-${article.line_item_id}`
       const isHighlighted = searchTerm && (
         `${article.orderNumber}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,10 +134,11 @@ const SimpleFlexGrid = ({
         (article.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
       
-      return (
+      // Ajouter la carte
+      cards.push(
         <div 
           key={`${productionType}-${cardId}`} // Clé unique incluant le type de production
-          className="flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)] 2xl:w-[calc(20%-19.2px)]"
+          className="w-full"
         >
           <ArticleCard 
             article={article}
@@ -131,7 +157,41 @@ const SimpleFlexGrid = ({
           />
         </div>
       )
+      
+      // Vérifier si c'est le dernier article de la date limite
+      const isLastArticleOfDateLimite = index === subset.length - 1 || 
+        (subset[index + 1] && subset[index + 1].orderDate !== article.orderDate)
+      
+      // Si c'est le dernier article de la date limite, ajouter un trait de séparation
+      if (isLastArticleOfDateLimite && article.orderDate && dateLimite) {
+        const dateCommande = new Date(article.orderDate)
+        const dateLimiteObj = new Date(dateLimite)
+        
+        // Vérifier si la commande est de la date limite calculée
+        if (dateCommande.toDateString() === dateLimiteObj.toDateString()) {
+          console.log('📅 Ajout du trait de séparation après la commande:', article.orderNumber, 'Date:', article.orderDate, 'Date limite calculée:', dateLimite)
+          
+          // Ajouter le trait de séparation qui traverse toute la largeur
+          cards.push(
+            <div 
+              key={`separator-${article.orderNumber}`}
+              className="col-span-full w-full h-2 bg-red-500 my-4 rounded-lg shadow-lg"
+              style={{ 
+                gridColumn: '1 / -1',
+                width: '100%',
+                margin: '16px 0'
+              }}
+            >
+              <div className="flex items-center justify-center h-full">
+                <span className="text-white text-sm font-bold">📅 Date limite - {dateLimiteObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+              </div>
+            </div>
+          )
+        }
+      }
     })
+    
+    return cards
   }, [
     filteredArticles, 
     getArticleSize, 
@@ -157,7 +217,7 @@ const SimpleFlexGrid = ({
 
   return (
     <div className="w-full">
-      <div className="flex flex-wrap gap-6 justify-start items-start w-full">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
         {memoizedCards}
         {/* Sentinelle pour charger plus d'éléments au scroll */}
         <div ref={sentinelRef} style={{ width: 1, height: 1 }} />
