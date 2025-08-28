@@ -8,7 +8,6 @@ const StatusTab = () => {
   const [loadingStates, setLoadingStates] = useState({
     wordpress: false,
     wordpressProducts: false,
-    wordpressOrders: false,
     database: false,
     stats: false,
     images: false,
@@ -46,23 +45,7 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, wordpressProducts: false }))
   }
 
-  const testWordPressOrders = async () => {
-    setLoadingStates(prev => ({ ...prev, wordpressOrders: true }))
-    try {
-      // Test de récupération des commandes via une route différente
-      const response = await fetch('http://localhost:3001/api/production-status?limit=1')
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const data = await response.json()
-      setTestResults(prev => ({ ...prev, wordpressOrders: { success: true, data } }))
-      setStatus('Test des commandes WordPress réussi')
-    } catch (error) {
-      setTestResults(prev => ({ ...prev, wordpressOrders: { success: false, error: error.message } }))
-      setStatus('Erreur lors du test des commandes WordPress')
-    }
-    setLoadingStates(prev => ({ ...prev, wordpressOrders: false }))
-  }
+  
 
   const testDatabaseConnection = async () => {
     setLoadingStates(prev => ({ ...prev, database: true }))
@@ -208,13 +191,7 @@ const StatusTab = () => {
                 >
                   {loadingStates.wordpressProducts ? 'Test en cours...' : 'Commandes DB'}
                 </button>
-                <button
-                  onClick={testWordPressOrders}
-                  disabled={loadingStates.wordpressOrders}
-                  className="w-full px-4 py-2 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:opacity-50"
-                >
-                  {loadingStates.wordpressOrders ? 'Test en cours...' : 'Statuts Prod'}
-                </button>
+                
               </div>
             </div>
 
@@ -308,22 +285,7 @@ const StatusTab = () => {
                         )}
                       </div>
                     )}
-                    {testResults.wordpressOrders && (
-                      <div className={`p-3 rounded-md ${testResults.wordpressOrders.success ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-                            <span className="font-medium">📋 Statuts de Production</span>
-                          </div>
-                          <span className={`text-sm ${testResults.wordpressOrders.success ? 'text-green-800' : 'text-red-800'}`}>
-                            {testResults.wordpressOrders.success ? '✅ Succès' : '❌ Échec'}
-                          </span>
-                        </div>
-                        {!testResults.wordpressOrders.success && (
-                          <p className="text-sm text-red-700 mt-1">{testResults.wordpressOrders.error}</p>
-                        )}
-                      </div>
-                    )}
+                    
                     {testResults.database && (
                       <div className={`p-3 rounded-md ${testResults.database.success ? 'bg-green-50' : 'bg-red-50'}`}>
                         <div className="flex items-center justify-between">

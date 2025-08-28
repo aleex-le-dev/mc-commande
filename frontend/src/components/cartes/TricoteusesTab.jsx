@@ -241,9 +241,6 @@ const TricoteusesTab = () => {
                           onError={() => {
                             console.warn(`Impossible de charger la photo de ${k.firstName}:`, k.photoUrl)
                           }}
-                          onLoad={() => {
-                            console.log(`Photo chargée avec succès pour ${k.firstName}:`, k.photoUrl)
-                          }}
                         />
                       ) : (
                         <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{ backgroundColor: k.color }}>

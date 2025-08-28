@@ -6,6 +6,9 @@ class DelaiService {
     this.joursFeriesCache = {}
     this.cacheExpiration = {}
     this.isLoadingJoursFeries = false
+    // Anti-rafale en cas d'échec backend
+    this.lastFailureAt = {}
+    this.failureCooldownMs = 10 * 60 * 1000
   }
 
   // Récupérer la configuration actuelle du délai
@@ -72,8 +75,10 @@ class DelaiService {
         return this.joursFeriesCache[annee][dateStr] !== undefined
       }
       
-      // Si pas en cache ou expiré, charger depuis l'API
-      if (!this.isLoadingJoursFeries) {
+      // Si pas en cache ou expiré, charger depuis l'API (sauf si cooldown suite à un échec récent)
+      const lastFail = this.lastFailureAt[annee] || 0
+      const inCooldown = Date.now() - lastFail < this.failureCooldownMs
+      if (!this.isLoadingJoursFeries && !inCooldown) {
         await this.chargerJoursFeriesAnnee(annee)
       }
       
@@ -107,9 +112,11 @@ class DelaiService {
         }
       } else {
         console.warn(`Erreur HTTP jours fériés pour ${annee}:`, response.status)
+        this.lastFailureAt[annee] = Date.now()
       }
     } catch (error) {
       console.warn(`Erreur lors du chargement des jours fériés pour ${annee}:`, error)
+      this.lastFailureAt[annee] = Date.now()
     } finally {
       this.isLoadingJoursFeries = false
     }
