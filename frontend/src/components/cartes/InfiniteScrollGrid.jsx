@@ -199,7 +199,6 @@ const InfiniteScrollGrid = ({
   // Fonction pour vérifier si un article doit avoir le badge en retard
   const isArticleEnRetard = (article) => {
     if (!dateLimite || !article.orderDate) {
-      console.log(`❌ Article ${article.orderNumber}: dateLimite=${dateLimite}, orderDate=${article.orderDate}`)
       return false
     }
     
@@ -212,13 +211,6 @@ const InfiniteScrollGrid = ({
     
     // Un article est en retard si sa date de commande est AVANT ou ÉGALE à la date limite
     const estEnRetard = dateCommandeNormalisee <= dateLimiteNormalisee
-    
-    console.log(`🔍 Article ${article.orderNumber}:`, {
-      dateCommande: dateCommandeNormalisee.toISOString().split('T')[0],
-      dateLimite: dateLimiteNormalisee.toISOString().split('T')[0],
-      estEnRetard,
-      comparaison: `${dateCommandeNormalisee.toISOString().split('T')[0]} <= ${dateLimiteNormalisee.toISOString().split('T')[0]}`
-    })
     
     return estEnRetard
   }
