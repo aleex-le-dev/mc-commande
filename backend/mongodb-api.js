@@ -2246,6 +2246,81 @@ app.get('/api/debug/status', async (req, res) => {
   }
 })
 
+// GET /api/debug/articles-couture - Debug spécifique pour les articles couture
+app.get('/api/debug/articles-couture', async (req, res) => {
+  try {
+    const statusCollection = db.collection('production_status')
+    const itemsCollection = db.collection('order_items')
+    
+    // 1. Compter tous les articles en base
+    const totalArticlesInBase = await itemsCollection.countDocuments({})
+    
+    // 2. Compter les articles par type de production
+    const allStatuses = await statusCollection.find({}).toArray()
+    const articlesByType = {}
+    allStatuses.forEach(status => {
+      const type = status.production_type || 'non_dispatché'
+      articlesByType[type] = (articlesByType[type] || 0) + 1
+    })
+    
+    // 3. Compter les articles non dispatchés
+    const nonDispatchedCount = totalArticlesInBase - allStatuses.length
+    
+    // 4. Analyser les articles non dispatchés
+    const nonDispatchedItems = await itemsCollection.aggregate([
+      {
+        $lookup: {
+          from: 'production_status',
+          localField: 'line_item_id',
+          foreignField: 'line_item_id',
+          as: 'status'
+        }
+      },
+      {
+        $match: {
+          status: { $size: 0 }
+        }
+      }
+    ]).toArray()
+    
+    // 5. Analyser les articles de type couture
+    const coutureStatuses = allStatuses.filter(s => s.production_type === 'couture')
+    const coutureItems = await Promise.all(coutureStatuses.map(async (status) => {
+      const item = await itemsCollection.findOne({
+        order_id: status.order_id,
+        line_item_id: status.line_item_id
+      })
+      return item
+    }))
+    
+    res.json({
+      success: true,
+      debug: {
+        totalArticlesInBase,
+        articlesByType,
+        nonDispatchedCount,
+        nonDispatchedItems: nonDispatchedItems.length,
+        coutureArticles: {
+          count: coutureStatuses.length,
+          items: coutureItems.map(item => ({
+            line_item_id: item.line_item_id,
+            product_name: item.product_name,
+            order_id: item.order_id
+          }))
+        },
+        sampleNonDispatched: nonDispatchedItems.slice(0, 5).map(item => ({
+          line_item_id: item.line_item_id,
+          product_name: item.product_name,
+          order_id: item.order_id
+        }))
+      }
+    })
+  } catch (error) {
+    console.error('Erreur debug articles couture:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
 // Démarrage du serveur
 async function startServer() {
   await connectToMongo()
@@ -2263,6 +2338,7 @@ async function startServer() {
     console.log(`   GET  /api/production-status - Statuts de production`)
     console.log(`   GET  /api/production-status/stats - Statistiques de production`)
     console.log(`   POST /api/production-status - Mettre à jour statut`)
+    console.log(`   GET  /api/debug/articles-couture - Debug articles couture`)
     console.log(`   GET  /api/woocommerce/products/:productId/permalink - Permalink d'un produit`)
     console.log(`   POST /api/woocommerce/products/permalink/batch - Permalinks en lot`)
     console.log(`   GET  /api/sync/logs - Logs de synchronisation`)
@@ -2291,101 +2367,3 @@ async function startServer() {
 }
 
 startServer().catch(console.error)
-
-// GET /api/orders/paginated - Récupérer les commandes avec pagination
-app.get('/api/orders/paginated', async (req, res) => {
-  try {
-    const { page = 1, limit = 50, type = 'all', search = '' } = req.query
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-    
-    const ordersCollection = db.collection('orders_sync')
-    const itemsCollection = db.collection('order_items')
-    const statusCollection = db.collection('production_status')
-    
-    // Construire le filtre de base
-    let filter = {}
-    if (search) {
-      filter.$or = [
-        { order_number: { $regex: search, $options: 'i' } },
-        { customer_name: { $regex: search, $options: 'i' } }
-      ]
-    }
-    
-    // Compter le total pour la pagination
-    const totalOrders = await ordersCollection.countDocuments(filter)
-    
-    // Récupérer les commandes de la page demandée
-    const orders = await ordersCollection.find(filter)
-      .sort({ order_date: 1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .maxTimeMS(30000)
-      .toArray()
-    
-    if (orders.length === 0) {
-      return res.json({ 
-        orders: [], 
-        pagination: { page: parseInt(page), limit: parseInt(limit), total: totalOrders, pages: Math.ceil(totalOrders / parseInt(limit)) }
-      })
-    }
-    
-    // Traiter seulement les commandes de la page
-    const ordersWithDetails = await Promise.all(orders.map(async (order) => {
-      try {
-        const items = await itemsCollection.find({ order_id: order.order_id })
-          .maxTimeMS(10000)
-          .toArray()
-        
-        // Ajouter les statuts de production
-        const itemsWithStatus = await Promise.all(items.map(async (item) => {
-          try {
-            const status = await statusCollection.findOne({
-              order_id: order.order_id,
-              line_item_id: item.line_item_id
-            }, { maxTimeMS: 5000 })
-            
-            return {
-              ...item,
-              production_status: status || {
-                status: 'a_faire',
-                production_type: null,
-                assigned_to: null
-              }
-            }
-          } catch (error) {
-            return {
-              ...item,
-              production_status: {
-                status: 'a_faire',
-                production_type: null,
-                assigned_to: null
-              }
-            }
-          }
-        }))
-        
-        return {
-          ...order,
-          items: itemsWithStatus
-        }
-      } catch (error) {
-        return { ...order, items: [] }
-      }
-    }))
-    
-    res.json({ 
-      orders: ordersWithDetails,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: totalOrders,
-        pages: Math.ceil(totalOrders / parseInt(limit)),
-        hasNext: skip + orders.length < totalOrders,
-        hasPrev: page > 1
-      }
-    })
-  } catch (error) {
-    console.error('❌ Erreur GET /orders/paginated:', error)
-    res.status(500).json({ error: 'Erreur serveur', message: error.message })
-  }
-})

@@ -6,14 +6,11 @@ import {
   OrderHeader, 
   InfiniteScrollGrid,
   useAllArticles,
-  useSyncProgress
+  useSyncProgress,
+  useOrderData
 } from './cartes'
 
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
-  const { syncProgress, syncLogs } = useSyncProgress()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
-
   // Utiliser le hook simple pour récupérer tous les articles
   const {
     articles,
@@ -21,6 +18,15 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     error,
     totalArticles
   } = useAllArticles(propSelectedType)
+
+  // Utiliser le hook pour les données des articles et la synchronisation
+  const { performSync } = useOrderData(propSelectedType)
+
+  // Passer la fonction performSync au hook de synchronisation
+  const { syncProgress, syncLogs } = useSyncProgress(performSync)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
 
   // Calculer le nombre d'articles filtrés
   const filteredArticlesCount = useMemo(() => {
