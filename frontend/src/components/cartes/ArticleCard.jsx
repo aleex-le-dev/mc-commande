@@ -281,9 +281,9 @@ const ArticleCard = forwardRef(({
 
   // Fonction pour retirer l'assignation
   const removeAssignment = useCallback(async () => {
-    if (localAssignment && uniqueAssignmentId) {
+    if (localAssignment && localAssignment._id) {
       try {
-        await assignmentsService.deleteAssignment(uniqueAssignmentId)
+        await assignmentsService.deleteAssignment(localAssignment._id)
         setLocalAssignment(null)
         if (onAssignmentUpdate) {
           onAssignmentUpdate()
@@ -292,8 +292,10 @@ const ArticleCard = forwardRef(({
       } catch (error) {
         console.error('Erreur lors de la suppression de l\'assignation:', error)
       }
+    } else {
+      console.error('Impossible de supprimer l\'assignation: ID manquant')
     }
-  }, [localAssignment, uniqueAssignmentId, onAssignmentUpdate, closeTricoteuseModal])
+  }, [localAssignment, onAssignmentUpdate, closeTricoteuseModal])
 
   // Supprimé: saveTricoteuseSelection function (plus nécessaire)
 

@@ -1653,20 +1653,25 @@ app.post('/api/assignments', async (req, res) => {
   }
 })
 
-// DELETE /api/assignments/:articleId - Supprimer une assignation
-app.delete('/api/assignments/:articleId', async (req, res) => {
+// DELETE /api/assignments/:assignmentId - Supprimer une assignation
+app.delete('/api/assignments/:assignmentId', async (req, res) => {
   try {
     if (!db) {
       return res.status(500).json({ error: 'Base de données non connectée' })
     }
     
-    const { articleId } = req.params
+    const { assignmentId } = req.params
     const assignmentsCollection = db.collection('article_assignments')
     
-    const result = await assignmentsCollection.deleteOne({ article_id: articleId })
+    // Vérifier que l'ID est un ObjectId valide
+    if (!ObjectId.isValid(assignmentId)) {
+      return res.status(400).json({ error: 'ID d\'assignation invalide' })
+    }
+    
+    const result = await assignmentsCollection.deleteOne({ _id: new ObjectId(assignmentId) })
     
     if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
+      return res.status(404).json({ error: 'Aucune assignation trouvée avec cet ID' })
     }
     
     res.json({
@@ -2272,7 +2277,7 @@ async function startServer() {
     console.log(`   GET  /api/assignments - Récupérer toutes les assignations`)
     console.log(`   GET  /api/assignments/:articleId - Récupérer une assignation`)
     console.log(`   POST /api/assignments - Créer/mettre à jour une assignation`)
-    console.log(`   DELETE /api/assignments/:articleId - Supprimer une assignation`)
+    console.log(`   DELETE /api/assignments/:assignmentId - Supprimer une assignation`)
     console.log(`   GET  /api/delais - Récupérer tous les délais d'expédition`)
     console.log(`   POST /api/delais - Créer un nouveau délai d'expédition`)
     console.log(`   PUT  /api/delais/:id - Modifier un délai d'expédition`)
