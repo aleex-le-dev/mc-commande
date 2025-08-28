@@ -11,7 +11,8 @@ const Root = () => {
   return <App />
 }
 
-createRoot(document.getElementById('root')).render(
+const root = createRoot(document.getElementById('root'))
+root.render(
   <StrictMode>
     <Root />
   </StrictMode>,

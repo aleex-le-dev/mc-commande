@@ -23,6 +23,10 @@ export const useAllArticles = (selectedType = 'all') => {
     refetchOnMount: false, // Ne pas refetch au montage
     retry: 3,
     retryDelay: 1000,
+    // Empêcher l'annulation des requêtes
+    retryOnMount: false,
+    // Garder les données même en cas d'erreur
+    keepPreviousData: true,
   })
 
   // Préparer les articles avec statuts

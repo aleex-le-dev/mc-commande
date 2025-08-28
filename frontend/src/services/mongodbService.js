@@ -205,7 +205,8 @@ export const getOrdersFromDatabase = async () => {
     return data.orders || []
   } catch (error) {
     if (error.name === 'AbortError') {
-      return []
+      // Ne pas retourner de tableau vide, laisser React Query gérer
+      throw error
     }
     return []
   }
@@ -215,7 +216,7 @@ export const getOrdersFromDatabase = async () => {
 export const getOrdersByProductionType = async (productionType) => {
   try {
     const response = await requestWithRetry(`${API_BASE_URL}/orders/production/${productionType}`, {
-      timeoutMs: 15000 // 15 secondes optimisé
+      timeoutMs: 15000 // 15 secondes optimisés
     })
     
     if (!response.ok) {
@@ -226,7 +227,8 @@ export const getOrdersByProductionType = async (productionType) => {
     return data.orders || []
   } catch (error) {
     if (error.name === 'AbortError') {
-      return []
+      // Ne pas retourner de tableau vide, laisser React Query gérer
+      throw error
     }
     return []
   }

@@ -9,17 +9,17 @@
   /* Couleurs de couture */
   --couture-en-cours: yellow; /* Jaune */
   --couture-en-cours-hover: yellow;
-  --couture-en-cours-border: --color-gray-300;
+  --couture-en-cours-border: #d1d5db;
   --couture-en-cours-dark: yellow;
   
   --couture-en-pause: orange; /* Orange */
   --couture-en-pause-hover: orange;
-  --couture-en-pause-border: --color-gray-300;
+  --couture-en-pause-border: #d1d5db;
   --couture-en-pause-dark: orange;
   
   --couture-termine: green; /* Vert */
   --couture-termine-hover: green;
-  --couture-termine-border: --color-gray-300;
+  --couture-termine-border: #d1d5db;
   --couture-termine-dark: green;
 }
 

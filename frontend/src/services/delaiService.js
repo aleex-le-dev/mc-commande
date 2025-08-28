@@ -52,7 +52,7 @@ class DelaiService {
   async getDelai() {
     try {
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 20000 // 20 secondes pour la configuration
+        timeoutMs: 8000 // Réduit à 8 secondes
       })
       const data = await response.json()
       return data
