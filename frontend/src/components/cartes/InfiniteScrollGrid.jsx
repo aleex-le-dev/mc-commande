@@ -238,6 +238,20 @@ const InfiniteScrollGrid = ({
     return dateCommandeNormalisee > dateLimiteNormalisee
   }
 
+  // Trouver l'index du dernier article en retard dans toute la liste
+  const getLastRetardIndex = () => {
+    if (!dateLimite) return -1
+    
+    for (let i = allArticles.length - 1; i >= 0; i--) {
+      if (isArticleEnRetard(allArticles[i])) {
+        return i
+      }
+    }
+    return -1
+  }
+
+  const lastRetardIndex = getLastRetardIndex()
+
   // Afficher le loading pendant les changements d'onglets
   if (assignmentsLoading || tricoteusesLoading) {
     return <LoadingSpinner />
@@ -270,9 +284,9 @@ const InfiniteScrollGrid = ({
           // Référence pour le dernier article (pour l'observer)
           const isLastArticle = index === visibleArticles.length - 1
           
-          // Vérifier si c'est le dernier article en retard
-          const isDernierEnRetard = isArticleEnRetard(article) && 
-            (index === visibleArticles.length - 1 || !isArticleEnRetard(visibleArticles[index + 1]))
+          // Vérifier si c'est le dernier article en retard (en utilisant l'index global)
+          const isDernierEnRetard = lastRetardIndex !== -1 && 
+            allArticles.indexOf(article) === lastRetardIndex
           
           return (
             <div 
@@ -301,7 +315,7 @@ const InfiniteScrollGrid = ({
               
               {/* Trait rouge de séparation après le dernier article en retard */}
               {isDernierEnRetard && (
-                <div className="fixed left-0 right-0 w-screen h-2 bg-red-500 my-6 rounded-full shadow-lg z-10"></div>
+                <div className="col-span-full w-full h-2 bg-red-500 my-6 rounded-full shadow-lg"></div>
               )}
             </div>
           )
