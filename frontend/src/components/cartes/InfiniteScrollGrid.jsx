@@ -270,6 +270,10 @@ const InfiniteScrollGrid = ({
           // Référence pour le dernier article (pour l'observer)
           const isLastArticle = index === visibleArticles.length - 1
           
+          // Vérifier si c'est le dernier article en retard
+          const isDernierEnRetard = isArticleEnRetard(article) && 
+            (index === visibleArticles.length - 1 || !isArticleEnRetard(visibleArticles[index + 1]))
+          
           return (
             <div 
               key={cardId}
@@ -289,12 +293,16 @@ const InfiniteScrollGrid = ({
                 productionType={productionType}
                 assignment={assignments[article.line_item_id]}
                 tricoteusesProp={tricoteuses}
-                                    onAssignmentUpdate={(articleId, assignment) => {
-                      setAssignments(prev => ({ ...prev, [articleId]: assignment }))
-                    }}
-                    isEnRetard={isArticleEnRetard(article)}
-                    isAfterDateLimite={isArticleApresDateLimite(article)}
+                onAssignmentUpdate={(articleId, assignment) => {
+                  setAssignments(prev => ({ ...prev, [articleId]: assignment }))
+                }}
+                isEnRetard={isArticleEnRetard(article)}
               />
+              
+              {/* Trait rouge de séparation après le dernier article en retard */}
+              {isDernierEnRetard && (
+                <div className="fixed left-0 right-0 w-screen h-2 bg-red-500 my-6 rounded-full shadow-lg z-10"></div>
+              )}
             </div>
           )
         })}

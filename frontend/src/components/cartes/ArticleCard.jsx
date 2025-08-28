@@ -171,8 +171,6 @@ const ArticleCard = forwardRef(({
     }
   }, [displayImageUrl, memoizedProductId])
 
-
-
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
     if (!address || typeof address !== 'string') {
@@ -203,11 +201,11 @@ const ArticleCard = forwardRef(({
     const source = text.toLowerCase()
     
     if (source.includes(term)) {
-      const parts = text.split(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+      const parts = text.split(new RegExp(`(${term})`, 'gi'))
       return parts.map((part, i) => 
         part.toLowerCase() === term ? 
-          <span key={i} className="highlight-accent">{part}</span> : 
-          <span key={i}>{part}</span>
+          <mark key={i} className="bg-yellow-200 px-1 rounded">{part}</mark> : 
+          part
       )
     }
     
@@ -320,14 +318,14 @@ const ArticleCard = forwardRef(({
       style={{ 
         animationName: searchTerm ? 'none' : 'fadeInUp',
         animationDuration: searchTerm ? '0s' : '0.6s',
-        animationTimingFunction: searchTerm ? undefined : 'ease-out',
-        animationFillMode: searchTerm ? undefined : 'forwards',
+        animationTimingFunction: searchTerm ? 'ease-out' : undefined,
+        animationFillMode: searchTerm ? 'forwards' : undefined,
         animationDelay: searchTerm ? '0ms' : `${index * 150}ms`,
         border: localAssignment ? `3px solid ${
           localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
           localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
           localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
-        }` : 'none',
+        }` : isEnRetard ? '3px solid #ef4444' : 'none',
         zIndex: 1
       }}
     >
