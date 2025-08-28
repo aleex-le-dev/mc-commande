@@ -236,25 +236,45 @@ app.post('/api/sync/orders', async (req, res) => {
     
     // Récupérer les commandes depuis WooCommerce
     let woocommerceOrders = []
+    const sinceRaw = (req.query && req.query.since) || (req.body && req.body.since) || null
+    let afterIso = null
+    if (sinceRaw) {
+      const sinceDate = new Date(sinceRaw)
+      if (!isNaN(sinceDate)) {
+        // WooCommerce attend un ISO8601 complet
+        sinceDate.setHours(0,0,0,0)
+        afterIso = sinceDate.toISOString()
+        addSyncLog(`📅 Filtre date activé: depuis ${afterIso}`, 'info')
+      } else {
+        addSyncLog(`⚠️ Paramètre since invalide: ${sinceRaw}`, 'warning')
+      }
+    }
     
     if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
       try {
         const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
-        const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=50&status=processing,completed&orderby=date&order=desc`
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-          signal: AbortSignal.timeout(10000)
-        })
-        
-        if (response.ok) {
-          woocommerceOrders = await response.json()
-        } else {
-          addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes`, 'warning')
+        const perPage = 100
+        let page = 1
+        let fetched = []
+        while (true) {
+          const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
+          const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(15000)
+          })
+          if (!response.ok) {
+            addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes (page ${page})`, 'warning')
+            break
+          }
+          const data = await response.json()
+          fetched = fetched.concat(data)
+          addSyncLog(`📥 Page ${page} récupérée: ${data.length} commandes`, 'info')
+          if (data.length < perPage) break
+          page += 1
         }
+        woocommerceOrders = fetched
       } catch (error) {
         addSyncLog(`⚠️ Erreur lors de la récupération des commandes WooCommerce: ${error.message}`, 'error')
       }
