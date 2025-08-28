@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import delaiService from '../../services/delaiService'
 
 const DateLimiteTab = () => {
@@ -20,6 +20,7 @@ const DateLimiteTab = () => {
   const [joursFeries, setJoursFeries] = useState({})
   const [isLoadingJoursFeries, setIsLoadingJoursFeries] = useState(false)
   const [aujourdhui, setAujourdhui] = useState(new Date())
+  const calculEffectue = useRef(false)
 
   // Charger le délai actuel au montage du composant
   useEffect(() => {
@@ -29,14 +30,19 @@ const DateLimiteTab = () => {
 
   // Calculer la date limite quand le délai, les jours ouvrables OU les jours fériés changent
   useEffect(() => {
+    // Éviter les calculs répétés
+    if (calculEffectue.current) return
+    
     if (joursDelai && !isNaN(joursDelai) && joursDelai > 0 && !isLoadingJoursFeries && Object.keys(joursFeries).length > 0) {
       const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
       setDateLimite(dateLimite.toISOString().split('T')[0])
+      calculEffectue.current = true
     } else if (!isLoadingJoursFeries && Object.keys(joursFeries).length === 0) {
       // Si pas de jours fériés disponibles, on peut quand même calculer
       if (joursDelai && !isNaN(joursDelai) && joursDelai > 0) {
         const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
         setDateLimite(dateLimite.toISOString().split('T')[0])
+        calculEffectue.current = true
       }
     }
   }, [joursDelai, joursOuvrables, joursFeries, isLoadingJoursFeries])

@@ -67,18 +67,104 @@ const SimpleFlexGrid = ({
   // Charger la date limite depuis le service
   const loadDateLimite = useCallback(async () => {
     try {
-              // Récupérer la configuration des délais
-        const configResponse = await delaiService.getDelai()
-        if (configResponse.success && configResponse.data) {
-          // Utiliser directement la date limite déjà calculée et stockée en BDD
-          if (configResponse.data.dateLimite) {
-            const dateLimiteStr = configResponse.data.dateLimite.split('T')[0]
-            setDateLimite(dateLimiteStr)
-            console.log('📅 Date limite utilisée depuis la BDD:', dateLimiteStr)
+      // Récupérer la configuration des délais et les jours fériés
+      const [configResponse, joursFeriesResponse] = await Promise.all([
+        delaiService.getDelai(),
+        delaiService.getJoursFeries()
+      ])
+      
+      if (configResponse.success && configResponse.data) {
+        // Log de la date limite actuellement en BDD
+        if (configResponse.data.dateLimite) {
+          console.log('🗄️ Date limite actuellement en BDD:', configResponse.data.dateLimite.split('T')[0])
+        } else {
+          console.log('🗄️ Aucune date limite stockée en BDD')
+        }
+        
+        const joursDelai = configResponse.data.joursDelai || 21
+        const joursOuvrables = configResponse.data.joursOuvrables || {
+          lundi: true, mardi: true, mercredi: true, jeudi: true, vendredi: true, samedi: false, dimanche: false
+        }
+        const joursFeries = joursFeriesResponse.success ? joursFeriesResponse.joursFeries : {}
+        
+        // Fonction pour vérifier si une date est un jour férié
+        const estJourFerie = (date) => {
+          const dateStr = date.toISOString().split('T')[0]
+          
+          // Vérifier d'abord dans les jours fériés chargés depuis l'API
+          if (joursFeries && joursFeries[dateStr]) {
+            return true
+          }
+          
+          // Si pas de jours fériés depuis l'API, utiliser les jours fériés par défaut
+          if (Object.keys(joursFeries || {}).length === 0) {
+            const anneeActuelle = date.getFullYear()
+            const joursFeriesDefaut = {
+              '1er janvier': `${anneeActuelle}-01-01`,
+              'Lundi de Pâques': `${anneeActuelle}-04-${anneeActuelle === 2025 ? '21' : anneeActuelle === 2024 ? '01' : '22'}`,
+              '1er mai': `${anneeActuelle}-05-01`,
+              '8 mai': `${anneeActuelle}-05-08`,
+              'Ascension': `${anneeActuelle}-05-${anneeActuelle === 2025 ? '29' : anneeActuelle === 2024 ? '09' : '30'}`,
+              'Lundi de Pentecôte': `${anneeActuelle}-06-${anneeActuelle === 2025 ? '09' : anneeActuelle === 2024 ? '17' : '10'}`,
+              '14 juillet': `${anneeActuelle}-07-14`,
+              '15 août': `${anneeActuelle}-08-15`,
+              '1er novembre': `${anneeActuelle}-11-01`,
+              '11 novembre': `${anneeActuelle}-11-11`,
+              '25 décembre': `${anneeActuelle}-12-25`
+            }
+            
+            // Vérifier si la date est dans les jours fériés par défaut
+            return Object.values(joursFeriesDefaut).includes(dateStr)
+          }
+          
+          return false
+        }
+        
+        // Calculer la date limite en remontant depuis aujourd'hui
+        const aujourdhui = new Date()
+        let dateLimite = new Date(aujourdhui)
+        let joursRetires = 0
+        
+        console.log('🔍 === CALCUL DATE LIMITE SIMPLEFLEX ===')
+        console.log('📅 Date de départ (aujourd\'hui):', aujourdhui.toISOString().split('T')[0])
+        console.log('📊 Jours ouvrables à compter:', joursDelai)
+        
+        while (joursRetires < joursDelai) {
+          dateLimite.setDate(dateLimite.getDate() - 1)
+          
+          const jourSemaine = dateLimite.getDay()
+          const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
+          const dateStr = dateLimite.toISOString().split('T')[0]
+          
+          // Vérifier si c'est un jour ouvrable ET pas un jour férié
+          if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
+            joursRetires++
+            console.log(`✅ Jour ${joursRetires}: ${dateStr} (${nomJour})`)
           } else {
-            console.log('⚠️ Pas de date limite stockée en BDD, calcul impossible')
+            const raison = !joursOuvrables[nomJour] ? 'weekend' : 'jour férié'
+            console.log(`❌ Ignoré: ${dateStr} (${nomJour}) - ${raison}`)
           }
         }
+        
+        const dateLimiteStr = dateLimite.toISOString().split('T')[0]
+        setDateLimite(dateLimiteStr)
+        console.log('🎯 Date limite finale:', dateLimiteStr)
+        console.log('🔍 === FIN CALCUL ===')
+        
+        // Enregistrer la nouvelle date limite en BDD
+        try {
+          await delaiService.saveDelai({
+            ...configResponse.data,
+            dateLimite: dateLimiteStr,
+            derniereModification: new Date().toISOString()
+          })
+          console.log('💾 Date limite sauvegardée en BDD:', dateLimiteStr)
+        } catch (saveError) {
+          console.error('Erreur lors de la sauvegarde de la date limite:', saveError)
+        }
+      } else {
+        console.log('⚠️ Pas de configuration de délai disponible')
+      }
     } catch (error) {
       console.error('Erreur lors du chargement de la date limite:', error)
     }
