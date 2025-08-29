@@ -6,6 +6,7 @@ import imageService from '../../services/imageService'
 import { tricoteusesService, assignmentsService } from '../../services/mongodbService'
 import delaiService from '../../services/delaiService'
 import TranslationIcon from './TranslationIcon'
+import Confetti from '../Confetti'
 
 // Composant carte d'article moderne optimisé
 const ArticleCard = forwardRef(({ 
@@ -47,6 +48,9 @@ const ArticleCard = forwardRef(({
   const [dateLimite, setDateLimite] = useState(null)
   // État pour les traductions
   const [translatedData, setTranslatedData] = useState(null)
+  // État pour les confettis
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 })
   // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
   // Supprimé: const [isLoading, setIsLoading] = useState(false)
 
@@ -74,6 +78,16 @@ const ArticleCard = forwardRef(({
     document.addEventListener('mousedown', handleClickOutside, true)
     return () => document.removeEventListener('mousedown', handleClickOutside, true)
   }, [isNoteOpen])
+
+  // Réinitialiser les confettis après l'animation
+  useEffect(() => {
+    if (showConfetti) {
+      const timer = setTimeout(() => {
+        setShowConfetti(false)
+      }, 2500) // Durée totale de l'animation des confettis
+      return () => clearTimeout(timer)
+    }
+  }, [showConfetti])
 
   const handleCopy = useCallback(async (text, label) => {
     try {
@@ -1013,22 +1027,30 @@ const ArticleCard = forwardRef(({
                          </div>
                        </button>
 
-                       <button
-                         onClick={() => {
-                           const updatedAssignment = { ...localAssignment, status: 'termine' }
-                           assignmentsService.createOrUpdateAssignment(updatedAssignment)
-                             .then(() => {
-                               setLocalAssignment(updatedAssignment)
-                               if (onAssignmentUpdate) {
-                                 onAssignmentUpdate()
-                               }
-                               // Fermer la modal après la mise à jour
-                               closeTricoteuseModal()
-                             })
-                             .catch((error) => {
-                               console.error('Erreur lors de la mise à jour du statut:', error)
-                             })
-                         }}
+                                               <button
+                          onClick={(e) => {
+                            // Obtenir la position du bouton pour les confettis
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setConfettiPosition({ 
+                              x: rect.left + rect.width / 2, 
+                              y: rect.top + rect.height / 2 
+                            })
+                            setShowConfetti(true)
+                            
+                            const updatedAssignment = { ...localAssignment, status: 'termine' }
+                            assignmentsService.createOrUpdateAssignment(updatedAssignment)
+                              .then(() => {
+                                setLocalAssignment(updatedAssignment)
+                                if (onAssignmentUpdate) {
+                                  onAssignmentUpdate()
+                                }
+                                // Fermer la modal après la mise à jour
+                                closeTricoteuseModal()
+                              })
+                              .catch((error) => {
+                                console.error('Erreur lors de la mise à jour du statut:', error)
+                              })
+                          }}
                          className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-green-200 ${
                            localAssignment.status === 'termine'
                              ? 'text-white shadow-lg'
@@ -1065,6 +1087,9 @@ const ArticleCard = forwardRef(({
           </div>
         </div>
       )}
+      
+      {/* Composant Confetti */}
+      <Confetti isActive={showConfetti} position={confettiPosition} />
     </div>
   )
 })
