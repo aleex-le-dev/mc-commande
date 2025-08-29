@@ -85,6 +85,10 @@ async function createCollectionsAndIndexes() {
     const delaisCollection = db.collection('delais_expedition')
     await delaisCollection.createIndex({ dateCreation: -1 })
     await delaisCollection.createIndex({ derniereModification: -1 })
+
+    // Collection des traductions personnalisées
+    const customTranslations = db.collection('custom_translations')
+    await customTranslations.createIndex({ key: 1 }, { unique: true })
     
     console.log('✅ Collections et index créés')
   } catch (error) {
@@ -93,6 +97,56 @@ async function createCollectionsAndIndexes() {
 }
 
 // Routes API
+// GET /api/translations - Récupérer toutes les traductions personnalisées
+app.get('/api/translations', async (req, res) => {
+  try {
+    const items = await db.collection('custom_translations').find({}).sort({ key: 1 }).toArray()
+    res.json({ success: true, items: items.map(doc => ({ key: doc.key, value: doc.value })) })
+  } catch (error) {
+    console.error('Erreur GET /api/translations:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/translations - Créer/mettre à jour une traduction personnalisée
+// Body: { key: string, value: string }
+app.post('/api/translations', async (req, res) => {
+  try {
+    const { key, value } = req.body || {}
+    if (!key || !value || typeof key !== 'string' || typeof value !== 'string') {
+      return res.status(400).json({ success: false, error: 'Paramètres invalides' })
+    }
+    const normalizedKey = key.trim()
+    const normalizedValue = value.trim()
+    if (!normalizedKey || !normalizedValue) {
+      return res.status(400).json({ success: false, error: 'Paramètres vides' })
+    }
+    await db.collection('custom_translations').updateOne(
+      { key: normalizedKey },
+      { $set: { key: normalizedKey, value: normalizedValue, updatedAt: new Date() } },
+      { upsert: true }
+    )
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Erreur POST /api/translations:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' })
+  }
+})
+
+// DELETE /api/translations/:key - Supprimer une traduction personnalisée
+app.delete('/api/translations/:key', async (req, res) => {
+  try {
+    const key = req.params.key
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'Clé manquante' })
+    }
+    await db.collection('custom_translations').deleteOne({ key })
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Erreur DELETE /api/translations/:key:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' })
+  }
+})
 
 // GET /api/health - Vérifier la santé du serveur
 app.get('/api/health', async (req, res) => {

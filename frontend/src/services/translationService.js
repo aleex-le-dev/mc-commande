@@ -268,6 +268,65 @@ class TranslationService {
       'full-length': 'longueur complète',
       'full length': 'longueur complète'
     }
+    // Stockage local des traductions personnalisées (clé → valeur)
+    this.customKey = 'mc_custom_translations'
+    this.apiBase = (typeof window !== 'undefined' && window.location && window.location.origin)
+      ? `${window.location.origin.replace(/:\\d+$/, '')}:3001/api`
+      : '/api'
+  }
+
+  // Récupérer la liste des traductions personnalisées [{key, value}]
+  getCustomTranslations() {
+    try {
+      const raw = localStorage.getItem(this.customKey)
+      const obj = raw ? JSON.parse(raw) : {}
+      return Object.entries(obj).map(([key, value]) => ({ key, value }))
+    } catch (e) {
+      return []
+    }
+  }
+
+  // Ajouter ou mettre à jour une traduction personnalisée
+  upsertCustomTranslation(key, value) {
+    const k = String(key || '').trim()
+    const v = String(value || '').trim()
+    if (!k || !v) return
+    // Sauvegarde locale immédiate (optimiste)
+    const raw = localStorage.getItem(this.customKey)
+    const obj = raw ? JSON.parse(raw) : {}
+    obj[k] = v
+    localStorage.setItem(this.customKey, JSON.stringify(obj))
+    // Sauvegarde serveur
+    fetch(`${this.apiBase}/translations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: k, value: v })
+    }).catch(() => {})
+  }
+
+  // Supprimer une traduction personnalisée
+  removeCustomTranslation(key) {
+    const raw = localStorage.getItem(this.customKey)
+    const obj = raw ? JSON.parse(raw) : {}
+    if (key in obj) {
+      delete obj[key]
+      localStorage.setItem(this.customKey, JSON.stringify(obj))
+    }
+    fetch(`${this.apiBase}/translations/${encodeURIComponent(key)}`, { method: 'DELETE' }).catch(() => {})
+  }
+
+  // Synchroniser depuis la BDD vers le localStorage (à appeler à l'ouverture de l'onglet)
+  async syncCustomTranslations() {
+    try {
+      const res = await fetch(`${this.apiBase}/translations`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data && Array.isArray(data.items)) {
+        const obj = {}
+        for (const { key, value } of data.items) obj[key] = value
+        localStorage.setItem(this.customKey, JSON.stringify(obj))
+      }
+    } catch (_) {}
   }
 
   // Fonction principale de traduction
@@ -385,6 +444,17 @@ class TranslationService {
   // Appliquer les traductions manuelles
   applyManualTranslations(text) {
     let translatedText = text.toLowerCase()
+
+    // 1) Appliquer d'abord les traductions personnalisées exactes (prioritaires)
+    try {
+      const raw = localStorage.getItem(this.customKey)
+      const custom = raw ? JSON.parse(raw) : {}
+      Object.entries(custom).forEach(([k, v]) => {
+        const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`\\b${escaped}\\b`, 'gi')
+        translatedText = translatedText.replace(regex, v)
+      })
+    } catch (_) {}
     
     // Remplacer les termes techniques
     Object.entries(this.manualTranslations).forEach(([english, french]) => {
@@ -420,6 +490,12 @@ class TranslationService {
       'long dress': 'robe longue',
       'knitted dress': 'robe tricotée',
       'english embroidered': 'broderie anglaise',
+      'puffy sleeves': 'manches bouffantes',
+      'puffy sleeve': 'manche bouffante',
+      'puff sleeves': 'manches bouffantes',
+      'puff sleeve': 'manche bouffante',
+      'puffy': 'bouffant',
+      'laced': 'à lacets',
       'inches': 'pouces',
       'neck': 'cou',
       'bust': 'buste',
@@ -458,7 +534,7 @@ class TranslationService {
   // Vérifier si le texte est entièrement traduit manuellement
   isFullyTranslated(text) {
     // Si le texte contient encore des mots anglais typiques, il n'est pas entièrement traduit
-    const englishWords = /\b(the|and|or|but|in|on|at|to|for|of|with|by|from|up|down|out|off|over|under|between|among|through|during|before|after|since|until|while|when|where|why|how|what|which|who|whom|whose|this|that|these|those|a|an|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|must|can|shall|buttoned|runway|look|black|ready|ship|organic|ruffled|flared|mid\s*-?length|english|embroidered|sequins?)\b/i
+    const englishWords = /\b(the|and|or|but|in|on|at|to|for|of|with|by|from|up|down|out|off|over|under|between|among|through|during|before|after|since|until|while|when|where|why|how|what|which|who|whom|whose|this|that|these|those|a|an|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|must|can|shall|buttoned|runway|look|black|ready|ship|organic|ruffled|flared|mid\s*-?length|english|embroidered|sequins?|puffy|puff|laced|sleeves?)\b/i
     const hasEnglishWords = englishWords.test(text)
     
     if (hasEnglishWords) {
