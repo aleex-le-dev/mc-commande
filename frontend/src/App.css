@@ -19,17 +19,17 @@
   /* Couleurs de couture */
   --couture-en-cours: yellow; /* Jaune */
   --couture-en-cours-hover: yellow;
-  --couture-en-cours-border: #d1d5db;
+  --couture-en-cours-border: white;
   --couture-en-cours-dark: yellow;
   
   --couture-en-pause: orange; /* Orange */
   --couture-en-pause-hover: orange;
-  --couture-en-pause-border: #d1d5db;
+  --couture-en-pause-border: white;
   --couture-en-pause-dark: orange;
   
   --couture-termine: green; /* Vert */
   --couture-termine-hover: green;
-  --couture-termine-border: #d1d5db;
+  --couture-termine-border: white;
   --couture-termine-dark: green;
 }
 
@@ -43,6 +43,22 @@
   --text-tertiary: #d1d5db;
   --border-primary: #374151;
   --border-secondary: #4b5563;
+  
+  /* Couleurs de couture en mode sombre - mêmes couleurs qu'en mode clair */
+  --couture-en-cours: yellow;
+  --couture-en-cours-hover: yellow;
+  --couture-en-cours-border: white;
+  --couture-en-cours-dark: yellow;
+  
+  --couture-en-pause: orange;
+  --couture-en-pause-hover: orange;
+  --couture-en-pause-border: white;
+  --couture-en-pause-dark: orange;
+  
+  --couture-termine: green;
+  --couture-termine-hover: green;
+  --couture-termine-border: white;
+  --couture-termine-dark: green;
 }
 
 /* Règles ciblées pour le thème sombre */
@@ -97,6 +113,45 @@
   background-color: var(--bg-primary) !important;
   border: 2px solid var(--border-primary) !important;
   box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Exception pour les boutons de statut - garder leurs couleurs */
+.dark button[style*="var(--couture-en-cours)"] {
+  background-color: var(--couture-en-cours) !important;
+}
+
+.dark button[style*="var(--couture-en-pause)"] {
+  background-color: var(--couture-en-pause) !important;
+}
+
+.dark button[style*="var(--couture-termine)"] {
+  background-color: var(--couture-termine) !important;
+}
+
+/* Règles spécifiques pour les boutons de statut avec priorité maximale */
+.dark button[style*="background-color: var(--couture-en-cours)"] {
+  background-color: var(--couture-en-cours) !important;
+}
+
+.dark button[style*="background-color: var(--couture-en-pause)"] {
+  background-color: var(--couture-en-pause) !important;
+}
+
+.dark button[style*="background-color: var(--couture-termine)"] {
+  background-color: var(--couture-termine) !important;
+}
+
+/* Forcer tous les boutons de statut à avoir leurs couleurs en mode sombre */
+.dark button[style*="var(--couture-"] {
+  background-color: var(--couture-en-cours) !important;
+}
+
+.dark button[style*="var(--couture-en-pause"] {
+  background-color: var(--couture-en-pause) !important;
+}
+
+.dark button[style*="var(--couture-termine"] {
+  background-color: var(--couture-termine) !important;
 }
 
 /* Bordures spécifiques pour les cartes principales */
