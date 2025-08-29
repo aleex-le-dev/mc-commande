@@ -28,6 +28,8 @@ function App() {
           return 'Couture - Maisoncléo'
         case 'maille':
           return 'Maille - Maisoncléo'
+        case 'termine':
+          return 'Terminé - Maisoncléo'
         case 'parametres':
           return 'Admin - Maisoncléo'
         default:
@@ -41,6 +43,8 @@ function App() {
           return '🧵'
         case 'maille':
           return '🪡'
+        case 'termine':
+          return '✅'
         case 'parametres':
           return '👑'
         default:
@@ -60,6 +64,7 @@ function App() {
   const tabs = [
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' },
+    { id: 'termine', label: 'Terminé', icon: '✅' },
     { id: 'parametres', label: 'Admin', icon: '👑' }
   ]
 
@@ -69,6 +74,8 @@ function App() {
         return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
       case 'maille':
         return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
+      case 'termine':
+        return <OrderList onNavigateToType={setActiveTab} selectedType="termine" />
       case 'parametres':
         return <ParametresPanel />
       default:
