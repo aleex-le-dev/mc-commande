@@ -20,7 +20,7 @@ const ThemeToggle = () => {
   }
 
   return (
-    <label className="inline-flex items-center relative">
+    <label className="inline-flex items-center relative cursor-pointer">
       <input 
         className="peer hidden" 
         id="toggle" 

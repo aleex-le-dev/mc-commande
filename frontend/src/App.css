@@ -345,26 +345,26 @@ body {
 /* Classes CSS personnalisées pour les bordures des statuts avec priorité absolue */
 .dark .border-status-en-cours,
 .border-status-en-cours {
-  border: 5px solid #f59e0b !important;
-  border-color: #f59e0b !important;
+  border: 5px solid yellow !important;
+  border-color: yellow !important;
 }
 
 .dark .border-status-en-pause,
 .border-status-en-pause {
-  border: 5px solid #ea580c !important;
-  border-color: #ea580c !important;
+  border: 5px solid orange !important;
+  border-color: orange !important;
 }
 
 .dark .border-status-termine,
 .border-status-termine {
-  border: 5px solid #16a34a !important;
-  border-color: #16a34a !important;
+  border: 5px solid green !important;
+  border-color: green !important;
 }
 
 .dark .border-status-retard,
 .border-status-retard {
-  border: 2px solid #b91c1c !important;
-  border-color: #b91c1c !important;
+  border: 2px solid red !important;
+  border-color: red !important;
 }
 
 /* Point du bouton assigner qui reste blanc en mode sombre */

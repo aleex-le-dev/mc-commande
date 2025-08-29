@@ -611,8 +611,8 @@ const ArticleCard = forwardRef(({
                   openTricoteuseModal()
                 }}
                 className="group relative px-3 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600"
-                title="Assigner à un artisan"
-                aria-label="Assigner à un artisan"
+                title="Assigner à une tricoteuse"
+                aria-label="Assigner à une tricoteuse"
               >
                 <div className="w-2 h-2 bg-white rounded-full assigner-dot"></div>
                 <span className="text-xs font-semibold">Assigner</span>

@@ -21,7 +21,7 @@ Application web de gestion des commandes pour Maisoncléo, permettant de gérer 
 
 ### 🧶 Gestion des Tricoteuses
 - **Profils des tricoteuses** avec photos et couleurs
-- **Assignation des articles** aux artisans
+- **Assignation des articles** aux tricoteuses
 - **Gestion des statuts** de production
 - **Suivi des assignations** en temps réel
 
