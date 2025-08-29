@@ -545,7 +545,7 @@ const ArticleCard = forwardRef(({
                   type="button"
                   onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
                   ref={noteBtnRef}
-                  className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-300'}`}
+                                     className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-50 border-amber-200' : 'bg-amber-300'}`}
                   aria-haspopup="dialog"
                   aria-expanded={isNoteOpen}
                   aria-label="Afficher la note"
