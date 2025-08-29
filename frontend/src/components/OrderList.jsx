@@ -35,8 +35,8 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       const scrolled = window.scrollY || document.documentElement.scrollTop
       const viewport = window.innerHeight || document.documentElement.clientHeight
       const full = document.documentElement.scrollHeight
-      // Afficher uniquement quand on est en bas (à ~150px de la fin)
-      setShowBackToTop(scrolled + viewport >= full - 150)
+      // Afficher uniquement quand on a réellement défilé ET qu'on est proche du bas
+      setShowBackToTop(scrolled > 200 && (scrolled + viewport >= full - 150))
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })

@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://localhost:3001/api'
 async function fetchWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
-    console.warn(`⏰ [delaiService] Timeout après ${options.timeoutMs || 15000}ms pour ${url}`)
+    /* log désactivé */
     controller.abort()
   }, options.timeoutMs || 15000) // Augmenté à 15 secondes
   
@@ -12,7 +12,7 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
     const res = await fetch(url, { ...options, signal: controller.signal })
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
-        console.log(`🔄 [delaiService] Retry ${retries} pour ${url} (status: ${res.status})`)
+        /* log désactivé */
         await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
         return fetchWithRetry(url, options, retries - 1)
       }
@@ -20,11 +20,11 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      console.error(`⏰ [delaiService] Requête annulée pour ${url}: timeout`)
+      /* log désactivé */
       throw e
     }
     if (retries > 0) {
-      console.log(`🔄 [delaiService] Retry ${retries} pour ${url} après erreur:`, e.message)
+      /* log désactivé */
       await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
       return fetchWithRetry(url, options, retries - 1)
     }
@@ -58,10 +58,10 @@ class DelaiService {
       return data
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.error('⏰ [delaiService] Timeout lors de la récupération du délai')
+        /* log désactivé */
         return { success: false, error: 'Timeout - serveur trop lent' }
       }
-      console.error('❌ [delaiService] Erreur lors de la récupération du délai:', error)
+      /* log désactivé */
       return { success: false, error: error.message }
     }
   }
@@ -76,7 +76,7 @@ class DelaiService {
       
       // Éviter les appels répétés en cas d'échec récent (5 minutes)
       if (this.lastDateLimiteFailure && (Date.now() - this.lastDateLimiteFailure) < 5 * 60 * 1000) {
-        console.log('Skipping getDateLimiteActuelle - échec récent')
+        /* log désactivé */
         return { success: false, error: 'Échec récent, réessayez plus tard' }
       }
       
@@ -102,11 +102,11 @@ class DelaiService {
       this.lastDateLimiteFailure = Date.now()
       
       if (error.name === 'AbortError') {
-        console.error('⏰ [delaiService] Timeout lors de la récupération de la date limite')
+        /* log désactivé */
         return { success: false, error: 'Timeout - serveur trop lent' }
       }
       
-      console.error('❌ [delaiService] Erreur lors de la récupération de la date limite:', error)
+      /* log désactivé */
       return { success: false, error: error.message }
     }
   }
@@ -134,7 +134,7 @@ class DelaiService {
       // Retourner depuis le cache
       return this.joursFeriesCache[annee] && this.joursFeriesCache[annee][dateStr] !== undefined
     } catch (error) {
-      console.warn('Erreur lors de la vérification des jours fériés:', error)
+      /* log désactivé */
       return false
     }
   }
@@ -157,14 +157,14 @@ class DelaiService {
           this.joursFeriesCache[annee] = result.data
           this.cacheExpiration[annee] = Date.now() + (24 * 60 * 60 * 1000)
         } else {
-          console.warn(`Erreur API jours fériés pour ${annee}:`, result.error)
+          /* log désactivé */
         }
       } else {
-        console.warn(`Erreur HTTP jours fériés pour ${annee}:`, response.status)
+        /* log désactivé */
         this.lastFailureAt[annee] = Date.now()
       }
     } catch (error) {
-      console.warn(`Erreur lors du chargement des jours fériés pour ${annee}:`, error)
+      /* log désactivé */
       this.lastFailureAt[annee] = Date.now()
     } finally {
       this.isLoadingJoursFeries = false
@@ -188,7 +188,7 @@ class DelaiService {
       
       return await response.json()
     } catch (error) {
-      console.error('Erreur DelaiService.saveDelai:', error)
+      /* log désactivé */
       throw error
     }
   }
@@ -214,7 +214,7 @@ class DelaiService {
       
       return { success: true, dateLimite: dateLimite.toISOString().split('T')[0] }
     } catch (error) {
-      console.error('Erreur lors du calcul de la date limite:', error)
+      /* log désactivé */
       return { success: false, error: error.message }
     }
   }
@@ -226,7 +226,7 @@ class DelaiService {
       const data = await response.json()
       return data
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'historique:', error)
+      /* log désactivé */
       return { success: false, error: error.message }
     }
   }
@@ -256,7 +256,7 @@ class DelaiService {
         joursFeries: tousJoursFeries
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des jours fériés:', error)
+      /* log désactivé */
       return {
         success: false,
         error: error.message,
