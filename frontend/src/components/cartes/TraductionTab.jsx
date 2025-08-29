@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import translationService from '../../services/translationService'
 
 // Onglet d'administration pour gérer les traductions personnalisées appliquées en priorité
@@ -6,7 +6,7 @@ const TraductionTab = () => {
   const [entries, setEntries] = useState([])
   const [term, setTerm] = useState('')
   const [value, setValue] = useState('')
-  const [filter, setFilter] = useState('')
+  
 
   useEffect(() => {
     (async () => {
@@ -15,11 +15,7 @@ const TraductionTab = () => {
     })()
   }, [])
 
-  const filtered = useMemo(() => {
-    const f = filter.trim().toLowerCase()
-    if (!f) return entries
-    return entries.filter(e => e.key.toLowerCase().includes(f) || e.value.toLowerCase().includes(f))
-  }, [entries, filter])
+  
 
   const add = () => {
     const k = term.trim()
@@ -49,24 +45,29 @@ const TraductionTab = () => {
       <div className="flex items-end gap-3 mb-6">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Terme (anglais ou source)</label>
-          <input value={term} onChange={(e)=>setTerm(e.target.value)} placeholder="three" className="w-full px-3 py-2 border rounded" />
+          <input value={term} onChange={(e)=>setTerm(e.target.value)} placeholder="three" className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]" />
         </div>
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Traduction (français)</label>
-          <input value={value} onChange={(e)=>setValue(e.target.value)} placeholder="trois" className="w-full px-3 py-2 border rounded" />
+          <input value={value} onChange={(e)=>setValue(e.target.value)} placeholder="trois" className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]" />
         </div>
-        <button onClick={add} className="px-4 py-2 bg-[var(--rose-clair)] text-white rounded hover:opacity-90">Ajouter</button>
+        <button
+          onClick={add}
+          className="px-5 py-2.5 bg-[var(--rose-clair-text)] text-white rounded-md shadow-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] cursor-pointer"
+          title="Ajouter la règle"
+          aria-label="Ajouter la règle"
+        >
+          ➕ Ajouter
+        </button>
       </div>
 
-      <div className="mb-3">
-        <input value={filter} onChange={(e)=>setFilter(e.target.value)} placeholder="Filtrer..." className="w-full px-3 py-2 border rounded" />
-      </div>
+      
 
       <div className="border rounded divide-y">
-        {filtered.length === 0 && (
+        {entries.length === 0 && (
           <div className="p-4 text-sm text-gray-500">Aucune traduction personnalisée</div>
         )}
-        {filtered.map(({ key, value }) => (
+        {entries.map(({ key, value }) => (
           <div key={key} className="flex items-center justify-between p-3">
             <div>
               <div className="text-sm font-medium">{key}</div>

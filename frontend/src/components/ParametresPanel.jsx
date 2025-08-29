@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import CommandeTab from './cartes/CommandeTab'
 import TricoteusesTab from './cartes/TricoteusesTab'
 import StatusTab from './cartes/StatusTab'
@@ -15,6 +15,15 @@ const ParametresPanel = () => {
     { id: 'dateLimite', label: 'Date limite', icon: '⏰' },
     { id: 'traduction', label: 'Traduction', icon: '🌐' }
   ]
+
+  const activeTabMeta = tabs.find(t => t.id === activeTab) || tabs[0]
+
+  useEffect(() => {
+    if (activeTabMeta) {
+      document.title = `${activeTabMeta.icon} ${activeTabMeta.label} – Admin`
+    }
+    return () => {}
+  }, [activeTabMeta])
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -55,6 +64,13 @@ const ParametresPanel = () => {
             ))}
           </nav>
         </div>
+      </div>
+      {/* Titre dynamique de l'onglet actif */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+          <span>{activeTabMeta.icon}</span>
+          <span>{activeTabMeta.label}</span>
+        </h2>
       </div>
 
       {/* Contenu de l'onglet actif */}
