@@ -341,3 +341,33 @@ body {
     border-color: #374151;
   }
 }
+
+/* Classes CSS personnalisées pour les bordures des statuts avec priorité absolue */
+.dark .border-status-en-cours,
+.border-status-en-cours {
+  border: 5px solid #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+.dark .border-status-en-pause,
+.border-status-en-pause {
+  border: 5px solid #ea580c !important;
+  border-color: #ea580c !important;
+}
+
+.dark .border-status-termine,
+.border-status-termine {
+  border: 5px solid #16a34a !important;
+  border-color: #16a34a !important;
+}
+
+.dark .border-status-retard,
+.border-status-retard {
+  border: 2px solid #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+/* Point du bouton assigner qui reste blanc en mode sombre */
+.dark .assigner-dot {
+  background-color: white !important;
+}

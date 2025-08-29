@@ -330,16 +330,16 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${localAssignment ? 'border-[5px]' : ''} ${doitAvoirTraitRouge ? 'border-2 border-red-500' : ''}`}
+      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
+        localAssignment ? 
+          (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
+           localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
+           localAssignment.status === 'termine' ? 'border-status-termine' :
+           'border-status-retard') :
+        doitAvoirTraitRouge ? 'border-status-retard' : ''
+      }`}
              style={{ 
-         backgroundColor: 'var(--bg-secondary)',
-         // Bordures colorées selon le statut de l'assignation
-         borderColor: localAssignment ?
-           (localAssignment.status === 'en_cours' ? 'yellow' : // Jaune
-            localAssignment.status === 'en_pause' ? 'orange' : // Orange
-            localAssignment.status === 'termine' ? 'green' : // Vert
-            'red') : // Rouge par défaut (retard)
-           (doitAvoirTraitRouge ? 'red' : 'transparent')
+         backgroundColor: 'var(--bg-secondary)'
        }}
     >
 
@@ -614,7 +614,7 @@ const ArticleCard = forwardRef(({
                 title="Assigner à un artisan"
                 aria-label="Assigner à un artisan"
               >
-                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <div className="w-2 h-2 bg-white rounded-full assigner-dot"></div>
                 <span className="text-xs font-semibold">Assigner</span>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3 h-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21a8 8 0 0 0-16 0" />
