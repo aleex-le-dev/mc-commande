@@ -339,7 +339,7 @@ const ArticleCard = forwardRef(({
         doitAvoirTraitRouge ? 'border-status-retard' : ''
       }`}
              style={{ 
-         backgroundColor: 'var(--bg-secondary)'
+         backgroundColor: 'white'
        }}
     >
 
@@ -484,7 +484,7 @@ const ArticleCard = forwardRef(({
       </div>
 
       {/* Zone d'informations dynamique en bas */}
-      <div className="h-24 bg-white/95 backdrop-blur-md transition-all duration-300 relative">
+      <div className="h-24 bg-white backdrop-blur-md transition-all duration-300 relative">
         <div className="p-3 pt-2">
           {/* Informations principales pour tricoteuses */}
           <div className="space-y-1">
@@ -532,7 +532,7 @@ const ArticleCard = forwardRef(({
       <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
         <div className="flex items-end justify-between">
           {/* Date et heure à gauche - position fixe */}
-          <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium">
+          <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium ">
             <span className="bg-gray-100 px-2 py-1 rounded-md">
               {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
             </span>
