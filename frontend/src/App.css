@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 :root {
+  /* Thème clair (par défaut) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  
   --rose-clair: #fdf2f8;
   --rose-clair-hover: #fce7f3;
   --rose-clair-border: #fbcfe8;
@@ -23,6 +33,102 @@
   --couture-termine-dark: green;
 }
 
+/* Thème sombre */
+.dark {
+  --bg-primary: #000000;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #f3f4f6;
+  --text-tertiary: #d1d5db;
+  --border-primary: #374151;
+  --border-secondary: #4b5563;
+}
+
+/* Règles ciblées pour le thème sombre */
+.dark .bg-white {
+  background-color: var(--bg-primary) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: var(--text-primary) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-400 {
+  border-color: var(--border-primary) !important;
+}
+
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* Règles spécifiques pour la navigation */
+.dark nav {
+  background-color: var(--bg-primary) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Règles spécifiques pour les cartes en mode sombre */
+.dark .card,
+.dark [class*="bg-white"],
+.dark [class*="bg-gray-50"],
+.dark [class*="bg-gray-100"] {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Forcer les cartes d'articles à être noires avec bordures visibles */
+.dark .group,
+.dark .group\:bg-white,
+.dark [class*="rounded-3xl"],
+.dark [class*="rounded-xl"],
+.dark [class*="rounded-lg"] {
+  background-color: var(--bg-primary) !important;
+  border: 2px solid var(--border-primary) !important;
+  box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Bordures spécifiques pour les cartes principales */
+.dark .card {
+  border: 2px solid var(--border-primary) !important;
+  box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Bordures pour les éléments avec des coins arrondis */
+.dark [class*="rounded-3xl"],
+.dark [class*="rounded-xl"],
+.dark [class*="rounded-lg"] {
+  border: 2px solid var(--border-primary) !important;
+}
+
+/* Règles spécifiques pour les modals en mode sombre */
+.dark .bg-white.rounded-2xl,
+.dark [class*="shadow-2xl"] {
+  background-color: var(--bg-primary) !important;
+  border: 2px solid var(--border-primary) !important;
+  box-shadow: 0 25px 50px -12px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Bordures pour les inputs et boutons dans les modals */
+.dark .border-gray-300 {
+  border-color: var(--border-primary) !important;
+}
+
+.dark .hover\:border-gray-300:hover {
+  border-color: var(--border-secondary) !important;
+}
+
 /* Styles personnalisés pour l'application */
 body {
   margin: 0;
@@ -31,6 +137,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Animation de chargement personnalisée */
@@ -101,15 +210,16 @@ body {
 
 /* Styles pour les cartes */
 .card {
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .card-header {
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .card-body {

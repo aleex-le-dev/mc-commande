@@ -11,14 +11,18 @@ const OrderHeader = ({ selectedType, filteredArticlesCount, searchTerm, onSearch
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div className="flex items-center gap-3">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
           {getTitle()} ({filteredArticlesCount} articles)
         </h2>
         {typeof onGoToEnd === 'function' && (
           <button
             type="button"
             onClick={onGoToEnd}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 cursor-pointer"
+            className="px-3 py-1.5 text-sm border rounded hover:bg-[var(--bg-tertiary)] cursor-pointer transition-colors"
+            style={{ 
+              borderColor: 'var(--border-primary)',
+              color: 'var(--text-secondary)'
+            }}
             title="Aller à la fin"
             aria-label="Aller à la fin"
           >
@@ -33,7 +37,12 @@ const OrderHeader = ({ selectedType, filteredArticlesCount, searchTerm, onSearch
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Rechercher une commande (n°, client, produit)"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)]"
+            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] transition-colors"
+            style={{ 
+              borderColor: 'var(--border-primary)',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)'
+            }}
           />
         </form>
       </div>

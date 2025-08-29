@@ -29,7 +29,11 @@ const ThemeToggle = () => {
         onChange={toggle}
       />
       <div
-        className="relative w-[80px] h-[36px] bg-white peer-checked:bg-zinc-500 rounded-full after:absolute after:content-[''] after:w-[28px] after:h-[28px] after:bg-gradient-to-r from-orange-500 to-yellow-400 peer-checked:after:from-zinc-900 peer-checked:after:to-zinc-900 after:rounded-full after:top-[4px] after:left-[4px] active:after:w-[32px] peer-checked:after:left-[76px] peer-checked:after:translate-x-[-100%] shadow-sm duration-300 after:duration-300 after:shadow-md"
+        className="relative w-[80px] h-[36px] rounded-full after:absolute after:content-[''] after:w-[28px] after:h-[28px] after:bg-gradient-to-r from-orange-500 to-yellow-400 peer-checked:after:from-zinc-900 peer-checked:after:to-zinc-900 after:rounded-full after:top-[4px] after:left-[4px] peer-checked:after:left-[48px] active:after:w-[32px] shadow-sm duration-300 after:duration-300 after:shadow-md"
+        style={{ 
+          backgroundColor: isDark ? 'var(--bg-secondary)' : 'white',
+          border: isDark ? '2px solid var(--border-primary)' : 'none'
+        }}
       ></div>
       <svg
         height="0"

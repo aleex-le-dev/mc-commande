@@ -79,9 +79,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CardStyles />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}
-        <nav className="bg-white shadow-lg border-b border-gray-200">
+        <nav className="shadow-lg border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
           <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               {/* Logo et titre */}
@@ -105,8 +105,12 @@ function App() {
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         activeTab === tab.id
                           ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          : 'hover:bg-[var(--bg-tertiary)]'
                       }`}
+                      style={{ 
+                        color: activeTab === tab.id ? 'var(--rose-clair-text)' : 'var(--text-secondary)',
+                        backgroundColor: activeTab === tab.id ? 'var(--rose-clair)' : 'transparent'
+                      }}
                     >
                       <span className="mr-1">{tab.icon}</span>
                       {tab.label}
@@ -125,8 +129,12 @@ function App() {
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        : 'hover:bg-[var(--bg-tertiary)]'
                     }`}
+                    style={{ 
+                      color: activeTab === tab.id ? 'var(--rose-clair-text)' : 'var(--text-secondary)',
+                      backgroundColor: activeTab === tab.id ? 'var(--rose-clair)' : 'transparent'
+                    }}
                   >
                     <span className="mr-1">{tab.icon}</span>
                     {tab.label}
@@ -138,7 +146,7 @@ function App() {
         </nav>
 
         {/* Contenu principal */}
-        <main className="w-full py-6 px-4 sm:px-6 lg:px-8">
+        <main className="w-full py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
           {renderContent()}
         </main>
       </div>

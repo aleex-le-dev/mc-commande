@@ -330,20 +330,8 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative bg-white rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
-      style={{ 
-        animationName: searchTerm ? 'none' : 'fadeInUp',
-        animationDuration: searchTerm ? '0s' : '0.6s',
-        animationTimingFunction: searchTerm ? 'ease-out' : undefined,
-        animationFillMode: searchTerm ? 'forwards' : undefined,
-        animationDelay: searchTerm ? '0ms' : `${index * 150}ms`,
-        border: localAssignment ? `5px solid ${
-          localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' :
-          localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' :
-          localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'transparent'
-        }` : isEnRetard ? '3px solid #ef4444' : 'none',
-        zIndex: 1
-      }}
+      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
 
       {/* Image de fond avec overlay moderne */}
