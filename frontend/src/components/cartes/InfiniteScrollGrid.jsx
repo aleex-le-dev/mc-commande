@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle, forwardRef } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
 import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
 import delaiService from '../../services/delaiService'
 
 // Composant avec chargement progressif par lots de 30 articles
-const InfiniteScrollGrid = ({ 
+const InfiniteScrollGrid = forwardRef(({ 
   allArticles, 
   getArticleSize, 
   getArticleColor, 
@@ -14,7 +14,7 @@ const InfiniteScrollGrid = ({
   openOverlayCardId, 
   searchTerm,
   productionType = 'unknown'
-}) => {
+}, ref) => {
   const [assignments, setAssignments] = useState({})
   const [assignmentsLoading, setAssignmentsLoading] = useState(true)
   const [tricoteuses, setTricoteuses] = useState([])
@@ -28,6 +28,7 @@ const InfiniteScrollGrid = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const BATCH_SIZE = 30
+  const bottomSentinelRef = useRef(null)
 
   // Filtrer les articles en fonction du terme de recherche
   const filteredArticles = useMemo(() => {
@@ -83,6 +84,24 @@ const InfiniteScrollGrid = ({
       setIsLoadingMore(false)
     }, 300)
   }, [currentBatch, filteredArticles.length, isLoadingMore, hasMore])
+
+  // Exposer une méthode pour charger tout et scroller en bas
+  useImperativeHandle(ref, () => ({
+    goToEnd: () => {
+      // Charger tout d'un coup pour atteindre la fin
+      setVisibleArticles(filteredArticles)
+      setCurrentBatch(Math.ceil(filteredArticles.length / BATCH_SIZE) - 1)
+      setHasMore(false)
+      // Scroller quand le DOM est prêt (frame suivante)
+      requestAnimationFrame(() => {
+        if (bottomSentinelRef.current) {
+          bottomSentinelRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        } else {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+        }
+      })
+    }
+  }), [filteredArticles])
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -356,6 +375,7 @@ const InfiniteScrollGrid = ({
       )}
       
       {/* Message de fin */}
+      <div ref={bottomSentinelRef} />
       {!hasMore && visibleArticles.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">
@@ -366,6 +386,6 @@ const InfiniteScrollGrid = ({
       )}
     </div>
   )
-}
+});
 
 export default InfiniteScrollGrid

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import LoadingSpinner from './LoadingSpinner'
 import ImagePreloader from './ImagePreloader'
 import { 
@@ -27,6 +27,21 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
+  const gridRef = useRef(null)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => {
+      const scrolled = window.scrollY || document.documentElement.scrollTop
+      const viewport = window.innerHeight || document.documentElement.clientHeight
+      const full = document.documentElement.scrollHeight
+      // Afficher uniquement quand on est en bas (à ~150px de la fin)
+      setShowBackToTop(scrolled + viewport >= full - 150)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // Calculer le nombre d'articles filtrés
   const filteredArticlesCount = useMemo(() => {
@@ -160,10 +175,12 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         filteredArticlesCount={filteredArticlesCount}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onGoToEnd={() => gridRef.current && gridRef.current.goToEnd && gridRef.current.goToEnd()}
       />
 
       {/* Grille avec scroll infini - chargement progressif par 30 */}
       <InfiniteScrollGrid 
+        ref={gridRef}
         allArticles={articles}
         getArticleSize={getArticleSize}
         getArticleColor={getArticleColor}
@@ -179,6 +196,18 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
         articles={articles}
         onPreloadComplete={() => console.log('Images préchargées !')}
       />
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 rounded-full bg-[var(--rose-clair-text)] text-white shadow-lg px-4 py-3 hover:opacity-90 cursor-pointer"
+          aria-label="Retour en haut"
+          title="Retour en haut"
+        >
+          ↑ Retour vers le haut
+        </button>
+      )}
     </div>
   )
 }
