@@ -129,6 +129,64 @@
   border-color: var(--border-secondary) !important;
 }
 
+/* Règles spécifiques pour les résultats de test en mode sombre */
+.dark .bg-green-50 {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
+.dark .bg-red-50 {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
+.dark .bg-orange-50 {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: var(--bg-secondary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
+/* Texte des résultats de test en mode sombre */
+.dark .text-green-800,
+.dark .text-red-800,
+.dark .text-blue-800,
+.dark .text-orange-800,
+.dark .text-purple-800 {
+  color: var(--text-primary) !important;
+}
+
+.dark .text-green-700,
+.dark .text-red-700,
+.dark .text-blue-700,
+.dark .text-orange-700,
+.dark .text-purple-700 {
+  color: var(--text-secondary) !important;
+}
+
+/* Bordures des éléments dans les résultats de test */
+.dark .border-green-200,
+.dark .border-red-200,
+.dark .border-blue-200,
+.dark .border-orange-200,
+.dark .border-purple-200 {
+  border-color: var(--border-primary) !important;
+}
+
+/* Fond des cartes de statistiques dans les résultats */
+.dark .bg-white.rounded-lg {
+  background-color: var(--bg-primary) !important;
+  border: 2px solid var(--border-primary) !important;
+}
+
 /* Styles personnalisés pour l'application */
 body {
   margin: 0;
