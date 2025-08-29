@@ -330,17 +330,17 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
+      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''} ${doitAvoirTraitRouge ? 'border-2 border-red-500' : ''}`}
              style={{ 
          backgroundColor: 'var(--bg-secondary)',
          // Bordures colorées selon le statut de l'assignation
-         border: localAssignment ? '3px solid' : 'none',
+         border: localAssignment ? '3px solid' : (doitAvoirTraitRouge ? '2px solid' : 'none'),
          borderColor: localAssignment ?
            (localAssignment.status === 'en_cours' ? '#facc15' : // Jaune
             localAssignment.status === 'en_pause' ? '#fb923c' : // Orange
             localAssignment.status === 'termine' ? '#4ade80' : // Vert
             '#fecaca') : // Rouge par défaut (retard)
-           'transparent'
+           (doitAvoirTraitRouge ? '#ef4444' : 'transparent') // Rouge pour les cartes en retard
        }}
     >
 
