@@ -31,6 +31,11 @@
   --couture-termine-hover: green;
   --couture-termine-border: white;
   --couture-termine-dark: green;
+  
+  /* Bordures spécifiques pour les boutons sélectionnés en mode clair */
+  --couture-en-cours-selected-border: black;
+  --couture-en-pause-selected-border: black;
+  --couture-termine-selected-border: black;
 }
 
 /* Thème sombre */
@@ -59,6 +64,11 @@
   --couture-termine-hover: green;
   --couture-termine-border: white;
   --couture-termine-dark: green;
+  
+  /* Bordures spécifiques pour les boutons sélectionnés en mode sombre */
+  --couture-en-cours-selected-border: white;
+  --couture-en-pause-selected-border: white;
+  --couture-termine-selected-border: white;
 }
 
 /* Règles ciblées pour le thème sombre */
@@ -111,7 +121,7 @@
 .dark [class*="rounded-xl"],
 .dark [class*="rounded-lg"] {
   background-color: var(--bg-primary) !important;
-  border: 2px solid var(--border-primary) !important;
+  border: 2px solid var(--border-primary);
   box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -425,4 +435,17 @@ body {
 /* Point du bouton assigner qui reste blanc en mode sombre */
 .dark .assigner-dot {
   background-color: white !important;
+}
+
+/* Forcer les bordures des boutons de statut sélectionnés en mode sombre */
+.dark button[style*="var(--couture-en-cours-selected-border)"] {
+  border-color: white !important;
+}
+
+.dark button[style*="var(--couture-en-pause-selected-border)"] {
+  border-color: white !important;
+}
+
+.dark button[style*="var(--couture-termine-selected-border)"] {
+  border-color: white !important;
 }

@@ -964,14 +964,14 @@ const ArticleCard = forwardRef(({
                              ? 'text-black shadow-lg'
                              : 'text-black hover:shadow-md'
                          }`}
-                         style={{
-                           backgroundColor: localAssignment.status === 'en_cours' 
-                             ? 'var(--couture-en-cours)' 
-                             : 'var(--couture-en-cours-hover)',
-                           borderColor: localAssignment.status === 'en_cours' 
-                             ? 'black' 
-                             : 'var(--couture-en-cours-border)'
-                         }}
+                                                   style={{
+                            backgroundColor: localAssignment.status === 'en_cours' 
+                              ? 'var(--couture-en-cours)' 
+                              : 'var(--couture-en-cours-hover)',
+                            borderColor: localAssignment.status === 'en_cours' 
+                              ? 'var(--couture-en-cours-selected-border)' 
+                              : 'var(--couture-en-cours-border)'
+                          }}
                        >
                          <div className="text-center">
                            <p className="text-xs font-medium">En cours</p>
@@ -999,14 +999,14 @@ const ArticleCard = forwardRef(({
                              ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
                          }`}
-                         style={{
-                           backgroundColor: localAssignment.status === 'en_pause' 
-                             ? 'var(--couture-en-pause)' 
-                             : 'var(--couture-en-pause-hover)',
-                           borderColor: localAssignment.status === 'en_pause' 
-                             ? 'black' 
-                             : 'var(--couture-en-pause-border)'
-                         }}
+                                                   style={{
+                            backgroundColor: localAssignment.status === 'en_pause' 
+                              ? 'var(--couture-en-pause)' 
+                              : 'var(--couture-en-pause-hover)',
+                            borderColor: localAssignment.status === 'en_pause' 
+                              ? 'var(--couture-en-pause-selected-border)' 
+                              : 'var(--couture-en-pause-border)'
+                          }}
                        >
                          <div className="text-center">
                            <p className="text-xs font-medium">En pause</p>
@@ -1034,14 +1034,14 @@ const ArticleCard = forwardRef(({
                              ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
                          }`}
-                         style={{
-                           backgroundColor: localAssignment.status === 'termine' 
-                             ? 'var(--couture-termine)' 
-                             : 'var(--couture-termine-hover)',
-                           borderColor: localAssignment.status === 'termine' 
-                             ? 'black' 
-                             : 'var(--couture-termine-border)'
-                         }}
+                                                   style={{
+                            backgroundColor: localAssignment.status === 'termine' 
+                              ? 'var(--couture-termine)' 
+                              : 'var(--couture-termine-hover)',
+                            borderColor: localAssignment.status === 'termine' 
+                              ? 'var(--couture-termine-selected-border)' 
+                              : 'var(--couture-termine-border)'
+                          }}
                        >
                          <div className="text-center">
                            <p className="text-xs font-medium">Terminé</p>
