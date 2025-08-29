@@ -105,7 +105,7 @@
   box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Bordures pour les éléments avec des coins arrondis */
+/* Bordures pour les éléments avec des coins arrondis (UNIQUEMENT en mode sombre) */
 .dark [class*="rounded-3xl"],
 .dark [class*="rounded-xl"],
 .dark [class*="rounded-lg"] {

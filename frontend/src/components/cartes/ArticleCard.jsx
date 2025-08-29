@@ -331,7 +331,17 @@ const ArticleCard = forwardRef(({
   return (
     <div 
       className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent${searchTerm ? '' : ' animate-pink-blink'}` : ''}`}
-      style={{ backgroundColor: 'var(--bg-secondary)' }}
+             style={{ 
+         backgroundColor: 'var(--bg-secondary)',
+         // Bordures colorées selon le statut de l'assignation
+         border: localAssignment ? '3px solid' : 'none',
+         borderColor: localAssignment ?
+           (localAssignment.status === 'en_cours' ? '#facc15' : // Jaune
+            localAssignment.status === 'en_pause' ? '#fb923c' : // Orange
+            localAssignment.status === 'termine' ? '#4ade80' : // Vert
+            '#fecaca') : // Rouge par défaut (retard)
+           'transparent'
+       }}
     >
 
       {/* Image de fond avec overlay moderne */}
@@ -950,7 +960,7 @@ const ArticleCard = forwardRef(({
                                console.error('Erreur lors de la mise à jour du statut:', error)
                              })
                          }}
-                         className={`p-2 rounded-lg border-2 transition-all duration-200 ${
+                         className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-yellow-200 ${
                            localAssignment.status === 'en_cours'
                              ? 'text-black shadow-lg'
                              : 'text-black hover:shadow-md'
@@ -985,7 +995,7 @@ const ArticleCard = forwardRef(({
                                console.error('Erreur lors de la mise à jour du statut:', error)
                              })
                          }}
-                         className={`p-2 rounded-lg border-2 transition-all duration-200 ${
+                         className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-orange-200 ${
                            localAssignment.status === 'en_pause'
                              ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
@@ -1020,7 +1030,7 @@ const ArticleCard = forwardRef(({
                                console.error('Erreur lors de la mise à jour du statut:', error)
                              })
                          }}
-                         className={`p-2 rounded-lg border-2 transition-all duration-200 ${
+                         className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-green-200 ${
                            localAssignment.status === 'termine'
                              ? 'text-white shadow-lg'
                              : 'text-white hover:shadow-md'
@@ -1048,7 +1058,7 @@ const ArticleCard = forwardRef(({
             <div className="text-center mt-4">
               <button
                 onClick={closeTricoteuseModal}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-sm"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg border border-gray-300 hover:bg-blue-100 hover:shadow-lg transition-all duration-300 text-sm cursor-pointer"
               >
                 Fermer
               </button>

@@ -168,7 +168,7 @@ const CommandeTab = () => {
         </div>
 
         {/* Section indépendante : Synchroniser les commandes */}
-        <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <div className="mb-8 bg-orange-50 border mc-border-orange-200 rounded-lg p-4">
           <h3 className="text-lg font-medium text-orange-900 mb-2">🔄 Synchroniser les commandes</h3>
           <p className="text-sm text-orange-800 mb-3">Récupère les commandes WooCommerce à partir de la date indiquée (inclus).</p>
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
@@ -179,7 +179,7 @@ const CommandeTab = () => {
                 type="date"
                 value={syncSince}
                 onChange={(e) => setSyncSince(e.target.value)}
-                className="px-3 py-2 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                className="px-3 py-2 border mc-border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
               />
             </div>
             <button
@@ -227,9 +227,9 @@ const CommandeTab = () => {
         {/* Messages */}
         {message.text && (
           <div className={`mb-6 p-4 rounded-md ${
-            message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' :
-            message.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' :
-            'bg-blue-50 border border-blue-200 text-blue-800'
+            message.type === 'success' ? 'bg-green-50 border mc-border-green-200 text-green-800' :
+            message.type === 'error' ? 'bg-red-50 border mc-border-red-200 text-red-800' :
+            'bg-blue-50 border mc-border-blue-200 text-blue-800'
           }`}>
             {message.text}
           </div>
