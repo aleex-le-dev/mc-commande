@@ -4,6 +4,7 @@ import OrderList from './components/OrderList'
 import OrderForm from './components/OrderForm'
 import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
+import ThemeToggle from './components/ThemeToggle'
 import './App.css'
 
 // Configuration du client React Query
@@ -116,6 +117,7 @@ function App() {
 
               {/* Paramètres à droite */}
               <div className="flex items-center">
+                <ThemeToggle />
                 {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
                     key={tab.id}
