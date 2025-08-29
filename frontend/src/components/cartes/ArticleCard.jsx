@@ -45,6 +45,8 @@ const ArticleCard = forwardRef(({
   const [isLoadingAssignment, setIsLoadingAssignment] = useState(true)
   // État pour la date limite
   const [dateLimite, setDateLimite] = useState(null)
+  // État pour les traductions
+  const [translatedData, setTranslatedData] = useState(null)
   // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
   // Supprimé: const [isLoading, setIsLoading] = useState(false)
 
@@ -300,6 +302,17 @@ const ArticleCard = forwardRef(({
 
   // Supprimé: saveTricoteuseSelection function (plus nécessaire)
 
+  // Fonction pour gérer la traduction
+  const handleTranslation = useCallback((translatedData) => {
+    if (translatedData === null) {
+      // Retour au texte original
+      setTranslatedData(null)
+    } else {
+      // Mise à jour avec la traduction
+      setTranslatedData(translatedData)
+    }
+  }, [])
+
   // Fonction pour valider les URLs des photos
   const isValidPhotoUrl = useCallback((url) => {
     if (!url || typeof url !== 'string') return false
@@ -465,7 +478,11 @@ const ArticleCard = forwardRef(({
 
         {/* Icône de traduction sur le bord gauche */}
         <div className="absolute left-4 top-32 z-5 pointer-events-auto">
-          <TranslationIcon article={article} />
+          <TranslationIcon 
+            article={article} 
+            onTranslate={handleTranslation}
+            isTranslated={!!translatedData}
+          />
         </div>
       </div>
 
@@ -475,7 +492,7 @@ const ArticleCard = forwardRef(({
           {/* Informations principales pour tricoteuses */}
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-gray-900 leading-tight">
-              {highlightText(article.product_name, searchTerm)}
+              {highlightText(translatedData?.product_name || article.product_name, searchTerm)}
             </h3>
             <div className="grid gap-3 text-base text-gray-700" style={{ 
               gridTemplateColumns: `repeat(${[
@@ -525,13 +542,13 @@ const ArticleCard = forwardRef(({
             <span className="bg-gray-100 px-2 py-1 rounded-md">
               {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
             </span>
-            {article.customerNote && (
+            {(translatedData?.customerNote || article.customerNote) && (
               <>
                 <button
                   type="button"
                   onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
                   ref={noteBtnRef}
-                  className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-50 border-amber-200'}`}
+                  className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-200 border-amber-300' : 'bg-amber-300'}`}
                   aria-haspopup="dialog"
                   aria-expanded={isNoteOpen}
                   aria-label="Afficher la note"
@@ -740,10 +757,10 @@ const ArticleCard = forwardRef(({
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
 
       {/* Popover global de note, pleine largeur de la carte */}
-      {isNoteOpen && article.customerNote && (
+      {isNoteOpen && (translatedData?.customerNote || article.customerNote) && (
         <>
           <div className="absolute left-0 right-0 bottom-20 px-3 z-5">
-            <div ref={notePopoverRef} className="w-full max-h-80 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
+            <div ref={notePopoverRef} className="w-full max-h-96 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
               <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
               <div className="flex items-start justify-end mb-2 relative">
                 <button
@@ -756,8 +773,14 @@ const ArticleCard = forwardRef(({
                 </button>
               </div>
               <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {article.customerNote}
+                {translatedData?.customerNote || article.customerNote}
               </div>
+              {/* Indicateur de traduction */}
+              {translatedData?.customerNote && (
+                <div className="mt-3 pt-2 border-t border-amber-200 text-xs text-amber-600 text-center">
+                  ✨ Traduit en français
+                </div>
+              )}
             </div>
           </div>
         </>
