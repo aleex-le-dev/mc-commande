@@ -6,17 +6,26 @@ import { prefetchAppData } from './services/mongodbService.js'
 import AuthGate from './components/AuthGate.jsx'
 
 const Root = () => {
-  const handleAuthenticated = () => {
-    prefetchAppData()
-  }
+  // Démarrer le préchargement immédiatement en arrière-plan, avant l'authentification
+  useEffect(() => {
+    const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
+    if (!already) {
+      prefetchAppData()
+    }
+  }, [])
   return (
-    <AuthGate onAuthenticated={handleAuthenticated}>
+    <AuthGate>
       <App />
     </AuthGate>
   )
 }
 
-const root = createRoot(document.getElementById('root'))
+const container = document.getElementById('root')
+let root = container._mcRoot
+if (!root) {
+  root = createRoot(container)
+  container._mcRoot = root
+}
 root.render(
   <StrictMode>
     <Root />

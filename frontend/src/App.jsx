@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
+import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import OrderList from './components/OrderList'
 import OrderForm from './components/OrderForm'
@@ -65,7 +67,7 @@ function App() {
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' },
     { id: 'termine', label: 'Terminé', icon: '✅' },
-    { id: 'parametres', label: 'Admin', icon: '👑' }
+    { id: 'parametres', label: 'Admin', icon: '⚙️' }
   ]
 
   const renderContent = () => {
@@ -133,7 +135,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
                         : 'hover:bg-[var(--bg-tertiary)]'
@@ -143,10 +145,20 @@ function App() {
                       backgroundColor: activeTab === tab.id ? 'var(--rose-clair)' : 'transparent'
                     }}
                   >
-                    <span className="mr-1">{tab.icon}</span>
-                    {tab.label}
+                    <IoSettingsOutline className="w-5 h-5" aria-hidden="true" />
                   </button>
                 ))}
+                {/* Bouton déconnexion (verrouiller) */}
+                <button
+                  type="button"
+                  onClick={async () => { try { await authService.logout() } catch {} try { sessionStorage.removeItem('mc-auth-ok-v2') } catch {} window.location.reload() }}
+                  className="ml-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Se déconnecter"
+                  aria-label="Se déconnecter"
+                >
+                  <IoLockClosedOutline className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
             </div>
           </div>

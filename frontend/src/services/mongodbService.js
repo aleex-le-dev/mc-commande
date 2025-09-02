@@ -50,7 +50,7 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   
   try {
     await acquireSlot()
-    const res = await fetch(url, { ...options, signal: controller.signal })
+    const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
         await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
@@ -548,10 +548,17 @@ export const assignmentsService = {
 // Préchargement des données à l'ouverture de l'app
 export async function prefetchAppData() {
   try {
+    try { sessionStorage.removeItem('mc-prefetch-ok-v1') } catch {}
     await Promise.all([
       tricoteusesService.getAllTricoteuses(),
-      assignmentsService.getAllAssignments()
+      assignmentsService.getAllAssignments(),
+      // Lancer une synchronisation en arrière-plan
+      (async () => { try { await syncOrders([]) } catch (e) {} })(),
+      // Charger un premier lot de commandes pour amorcer le cache
+      (async () => { try { await getOrdersFromDatabase() } catch (e) {} })()
     ])
+    try { sessionStorage.setItem('mc-prefetch-ok-v1', '1') } catch {}
+    try { window.dispatchEvent(new Event('mc-prefetch-done')) } catch {}
   } catch {
     // silencieux
   }

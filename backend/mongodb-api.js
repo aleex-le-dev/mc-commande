@@ -2,14 +2,37 @@ require('dotenv').config()
 const express = require('express')
 const { MongoClient, ObjectId } = require('mongodb')
 const cors = require('cors')
+const cookieParser = require('cookie-parser')
 
 const app = express()
 const bcrypt = require('bcryptjs')
 const PORT = process.env.PORT || 3001
 
 // Middleware
-app.use(cors())
+const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || 'http://localhost:5173'
+const corsOptions = {
+  origin: FRONTEND_ORIGIN,
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
+
+// Forcer les en-têtes CORS explicitement sur toutes les réponses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+  res.header('Vary', 'Origin')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204)
+  }
+  next()
+})
 app.use(express.json())
+app.use(cookieParser(process.env.APP_AUTH_SECRET || 'dev-secret'))
 
 // Configuration MongoDB
 const mongoUrl = process.env.MONGO_URI || 'mongodb://localhost:27017'
@@ -126,6 +149,20 @@ async function ensureInitialPassword() {
   }
 }
 
+// Middleware de protection par cookie signé (httpOnly)
+app.use((req, res, next) => {
+  const openPaths = new Set([
+    '/api/health',
+    '/api/auth/set-password',
+    '/api/auth/verify',
+    '/api/auth/logout',
+  ])
+  if (openPaths.has(req.path)) return next()
+  const ok = req.signedCookies && req.signedCookies.mc_auth === '1'
+  if (!ok) return res.status(401).json({ success: false, error: 'Non autorisé' })
+  next()
+})
+
 // Routes API
 // AUTH: stockage hashé du mot de passe d'accès
 app.post('/api/auth/set-password', async (req, res) => {
@@ -159,10 +196,25 @@ app.post('/api/auth/verify', async (req, res) => {
     }
     const ok = await bcrypt.compare(password, doc.hash)
     if (!ok) return res.status(401).json({ success: false, error: 'Mot de passe incorrect' })
+    res.cookie('mc_auth', '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      signed: true
+    })
     res.json({ success: true })
   } catch (error) {
     console.error('Erreur POST /api/auth/verify:', error)
     res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+app.post('/api/auth/logout', (req, res) => {
+  try {
+    res.clearCookie('mc_auth')
+    res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ success: false })
   }
 })
 // GET /api/translations - Récupérer toutes les traductions personnalisées

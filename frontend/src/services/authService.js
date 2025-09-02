@@ -6,7 +6,8 @@ const authService = {
     const res = await fetch(`${API_BASE}/api/auth/set-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ password }),
+      credentials: 'include'
     })
     const data = await res.json()
     if (!res.ok || !data.success) throw new Error(data.error || 'Erreur set-password')
@@ -17,11 +18,20 @@ const authService = {
     const res = await fetch(`${API_BASE}/api/auth/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ password }),
+      credentials: 'include'
     })
     const data = await res.json()
     if (!res.ok || !data.success) throw new Error(data.error || 'Mot de passe incorrect')
     return true
+  },
+
+  async logout() {
+    const res = await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    })
+    return res.ok
   }
 }
 

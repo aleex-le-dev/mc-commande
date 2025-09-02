@@ -8,7 +8,7 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
     let intervalId
     const fetchLog = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/sync/logs', { method: 'GET' })
+        const res = await fetch('http://localhost:3001/api/sync/logs', { method: 'GET', credentials: 'include' })
         if (!res.ok) return
         const data = await res.json()
         if (data && data.success && data.log) {

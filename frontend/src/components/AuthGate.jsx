@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import authService from '../services/authService'
+import { prefetchAppData } from '../services/mongodbService'
 
 // Composant portail d'authentification minimaliste en plein écran.
 // Bloque totalement l'accès à l'application tant que le mot de passe n'est pas validé.
@@ -7,16 +8,28 @@ import authService from '../services/authService'
 // L'état est stocké en sessionStorage pour ne pas redemander sur chaque rafraîchissement d'onglet.
 const AuthGate = ({ children, onAuthenticated }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const STORAGE_KEY = 'mc-auth-ok-v2'
   const [password, setPassword] = useState('')
   const requiredPassword = useMemo(() => (import.meta.env.VITE_APP_PASSWORD || '').toString(), [])
+  // plus d'affichage de logs, uniquement console
 
+  // Restaurer la session pour les rafraîchissements d'onglet (sessionStorage)
   useEffect(() => {
-    const flag = sessionStorage.getItem('mc-auth-ok')
+    const flag = sessionStorage.getItem(STORAGE_KEY)
     if (flag === '1') {
       setIsAuthenticated(true)
       if (typeof onAuthenticated === 'function') onAuthenticated()
     }
   }, [onAuthenticated])
+
+  // Démarrer le préchargement si pas fait (aucune requête protégée)
+  useEffect(() => {
+    const prefetchDone = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
+    if (!prefetchDone) {
+      try { prefetchAppData() } catch {}
+    }
+    // Ne plus pinger les logs côté non-authentifié pour éviter 401
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -24,7 +37,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
       if (requiredPassword) {
         // Mode mot de passe build-time (fallback)
         if (password === requiredPassword) {
-          sessionStorage.setItem('mc-auth-ok', '1')
+          sessionStorage.setItem(STORAGE_KEY, '1')
           setIsAuthenticated(true)
           if (typeof onAuthenticated === 'function') onAuthenticated()
           return
@@ -33,7 +46,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
       }
       // Sinon, vérifier auprès du backend (mode gestion serveur)
       await authService.verify(password)
-      sessionStorage.setItem('mc-auth-ok', '1')
+      sessionStorage.setItem(STORAGE_KEY, '1')
       setIsAuthenticated(true)
       if (typeof onAuthenticated === 'function') onAuthenticated()
       return
@@ -41,7 +54,8 @@ const AuthGate = ({ children, onAuthenticated }) => {
       // Échec: animer le formulaire
     }
     // Échec: ne pas révéler d'information, secouer légèrement le formulaire
-    const form = e.currentTarget
+    const form = e?.currentTarget
+    if (!form) return
     form.classList.remove('shake')
     // forcer reflow
     // eslint-disable-next-line no-unused-expressions
@@ -58,8 +72,8 @@ const AuthGate = ({ children, onAuthenticated }) => {
           <div className="text-center mb-4">
             <img src="/mclogosite.png" alt="Maisoncléo" className="mx-auto h-6" />
           </div>
-          <h1 className="text-lg font-semibold text-center mb-2" style={{ color: '#111827' }}>Accès protégé</h1>
-          <p className="text-sm text-center mb-4" style={{ color: '#374151' }}>Entrez le mot de passe pour accéder au tableau.</p>
+          <h1 className="text-lg font-semibold text-center mb-2" style={{ color: '#111827' }}>Accès protégé et sécurisé</h1>
+          {/* Message de préchargement retiré : on garde uniquement l'exécution en arrière-plan et le log console */}
           <form onSubmit={handleSubmit} className="transition-transform" style={{ transformOrigin: 'center' }}>
             <input
               type="password"

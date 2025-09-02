@@ -9,7 +9,7 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
   }, options.timeoutMs || 15000) // Augmenté à 15 secondes
   
   try {
-    const res = await fetch(url, { ...options, signal: controller.signal })
+    const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
         /* log désactivé */
@@ -147,7 +147,7 @@ class DelaiService {
     
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
-      const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`)
+      const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { credentials: 'include' })
       
       if (response.ok) {
         const result = await response.json()
@@ -179,7 +179,8 @@ class DelaiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(configuration)
+        body: JSON.stringify(configuration),
+        credentials: 'include'
       })
       
       if (!response.ok) {
@@ -222,7 +223,7 @@ class DelaiService {
   // Récupérer l'historique des configurations
   async getHistorique() {
     try {
-      const response = await fetch(`${API_BASE_URL}/delais/historique`)
+      const response = await fetch(`${API_BASE_URL}/delais/historique`, { credentials: 'include' })
       const data = await response.json()
       return data
     } catch (error) {
