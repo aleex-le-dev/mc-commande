@@ -5,6 +5,7 @@ import OrderForm from './components/OrderForm'
 import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
+import TerminePage from './components/TerminePage'
 import './App.css'
 
 // Configuration du client React Query
@@ -75,7 +76,7 @@ function App() {
       case 'maille':
         return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
       case 'termine':
-        return <OrderList onNavigateToType={setActiveTab} selectedType="termine" />
+        return <TerminePage />
       case 'parametres':
         return <ParametresPanel />
       default:

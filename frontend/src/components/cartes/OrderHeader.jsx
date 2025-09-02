@@ -5,14 +5,18 @@ const OrderHeader = ({ selectedType, filteredArticlesCount, searchTerm, onSearch
   const getTitle = () => {
     if (selectedType === 'couture') return '🧵 Couture'
     if (selectedType === 'maille') return '🪡 Maille'
+    if (selectedType === 'termine') return '✅ Articles terminés'
     return 'Gestion de Production'
   }
+
+  const count = typeof filteredArticlesCount === 'number' ? filteredArticlesCount : 0
+  const countLabel = `${count} article${count > 1 ? 's' : ''}`
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div className="flex items-center gap-3">
         <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          {getTitle()} ({filteredArticlesCount} articles)
+          {getTitle()} ({countLabel})
         </h2>
         {typeof onGoToEnd === 'function' && (
           <button
