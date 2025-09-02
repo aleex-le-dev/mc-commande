@@ -1818,7 +1818,7 @@ app.post('/api/assignments', async (req, res) => {
       return res.status(500).json({ error: 'Base de données non connectée' })
     }
     
-    const { article_id, tricoteuse_id, tricoteuse_name, status } = req.body
+    const { article_id, tricoteuse_id, tricoteuse_name, status, urgent } = req.body
     
     if (!article_id || !tricoteuse_id || !tricoteuse_name) {
       return res.status(400).json({ error: 'article_id, tricoteuse_id et tricoteuse_name sont requis' })
@@ -1834,6 +1834,7 @@ app.post('/api/assignments', async (req, res) => {
           tricoteuse_id: tricoteuse_id,
           tricoteuse_name: tricoteuse_name,
           status: status || 'en_cours',
+          urgent: urgent === true,
           assigned_at: new Date(),
           updated_at: new Date()
         }
@@ -1848,6 +1849,7 @@ app.post('/api/assignments', async (req, res) => {
         tricoteuse_id,
         tricoteuse_name,
         status: status || 'en_cours',
+        urgent: urgent === true,
         assigned_at: new Date()
       }
     })

@@ -428,6 +428,15 @@ const ArticleCard = forwardRef(({
           </div>
         )}
         
+        {/* Badge URGENT si flag dans l'assignation */}
+        {localAssignment?.urgent && (
+          <div className="absolute top-0 left-0 right-0 h-2 bg-amber-500 z-5 flex items-center justify-center" style={{ marginTop: doitAvoirTraitRouge ? '14px' : '0' }}>
+            <span className="text-white text-xs font-bold px-2 py-1 bg-amber-500 rounded-full mt-2">
+              🚨 URGENT
+            </span>
+          </div>
+        )}
+        
 
 
         {/* Lien vers la fiche produit - uniquement sur l'image */}
@@ -559,6 +568,7 @@ const ArticleCard = forwardRef(({
             <span className="bg-gray-100 px-2 py-1 rounded-md align-middle">
               {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
             </span>
+            {/* Bouton URGENT retiré pour l'instant (seule la bannière reste) */}
             {true && (
               <>
                 <button
@@ -1011,6 +1021,7 @@ const ArticleCard = forwardRef(({
               {/* Section changer le statut si déjà assigné */}
               {localAssignment && !isLoadingTricoteuses && (
                 <>
+                  
                   <div className="col-span-3 border-t border-gray-200 pt-3 mt-3">
                     <h4 className="text-xs font-semibold text-gray-700 text-center mb-2">
                       Changer le statut
