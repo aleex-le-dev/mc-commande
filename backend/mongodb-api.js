@@ -150,17 +150,9 @@ async function ensureInitialPassword() {
 }
 
 // Middleware de protection par cookie signé (httpOnly)
+// Auth désactivée (accès ouvert à toutes les routes)
 app.use((req, res, next) => {
-  const openPaths = new Set([
-    '/api/health',
-    '/api/auth/set-password',
-    '/api/auth/verify',
-    '/api/auth/logout',
-  ])
-  if (openPaths.has(req.path)) return next()
-  const ok = req.signedCookies && req.signedCookies.mc_auth === '1'
-  if (!ok) return res.status(401).json({ success: false, error: 'Non autorisé' })
-  next()
+  return next()
 })
 
 // Routes API
