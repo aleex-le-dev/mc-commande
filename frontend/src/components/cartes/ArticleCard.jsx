@@ -300,17 +300,17 @@ const ArticleCard = forwardRef(({
 
   // Fonction pour retirer l'assignation
   const removeAssignment = useCallback(async () => {
-    try {
+      try {
       // L’API attend l’identifiant d’article (article_id), pas _id
       await assignmentsService.deleteAssignment(uniqueAssignmentId)
-      setLocalAssignment(null)
-      if (onAssignmentUpdate) {
-        onAssignmentUpdate()
+        setLocalAssignment(null)
+        if (onAssignmentUpdate) {
+          onAssignmentUpdate()
+        }
+        closeTricoteuseModal()
+      } catch (error) {
+        console.error('Erreur lors de la suppression de l\'assignation:', error)
       }
-      closeTricoteuseModal()
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'assignation:', error)
-    }
   }, [uniqueAssignmentId, onAssignmentUpdate, closeTricoteuseModal])
 
   // Supprimé: saveTricoteuseSelection function (plus nécessaire)
@@ -833,8 +833,8 @@ const ArticleCard = forwardRef(({
               )}
             </div>
 
-            {/* Grille simple 2 par ligne */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Grille 3 par ligne, icônes compactes */}
+            <div className="grid grid-cols-3 gap-3">
               {/* Option de retrait si déjà assigné */}
               {localAssignment && (
                 <button
@@ -842,7 +842,7 @@ const ArticleCard = forwardRef(({
                   className="group p-3 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200"
                 >
                   <div className="flex flex-col items-center space-y-2">
-                    <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-base shadow-md">
                       ✕
                     </div>
                     <p className="font-semibold text-red-700 text-center text-xs">
@@ -900,17 +900,17 @@ const ArticleCard = forwardRef(({
                       setIsAssigning(false)
                     }
                   }}
-                  className={`group p-3 rounded-xl border-2 transition-all duration-200 ${
+                  className={`group p-2 rounded-xl transition-all duration-200 ${
                     isAssigning 
-                      ? 'border-gray-300 bg-gray-100 cursor-not-allowed opacity-50' 
-                      : 'border-gray-200 hover:border-rose-400 hover:bg-rose-50'
+                      ? 'bg-gray-100 cursor-not-allowed opacity-50' 
+                      : 'hover:bg-rose-50'
                   }`}
                   disabled={isAssigning}
                 >
                   <div className="flex flex-col items-center space-y-2">
                     {/* Photo de la tricoteuse */}
                     {isValidPhotoUrl(tricoteuse.photoUrl) ? (
-                      <div className="w-12 h-12 rounded-full overflow-hidden shadow-md">
+                      <div className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
                         <ImageLoader 
                           src={tricoteuse.photoUrl} 
                           alt={`Photo de ${tricoteuse.firstName}`}
@@ -927,7 +927,7 @@ const ArticleCard = forwardRef(({
                     ) : (
                       /* Fallback avec initiale si pas de photo ou URL invalide */
                       <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm"
                         style={{ backgroundColor: tricoteuse.color || '#6b7280' }}
                       >
                         <span>{tricoteuse.firstName.charAt(0).toUpperCase()}</span>
@@ -935,7 +935,7 @@ const ArticleCard = forwardRef(({
                     )}
                     
                     {/* Nom seulement */}
-                    <p className="font-semibold text-gray-900 text-center text-xs">
+                    <p className="font-semibold text-gray-900 text-center text-[11px] leading-none">
                       {isAssigning ? 'Assignation...' : tricoteuse.firstName}
                     </p>
                     
@@ -957,7 +957,7 @@ const ArticleCard = forwardRef(({
               {/* Section changer le statut si déjà assigné */}
               {localAssignment && !isLoadingTricoteuses && (
                 <>
-                  <div className="col-span-2 border-t border-gray-200 pt-3 mt-3">
+                  <div className="col-span-3 border-t border-gray-200 pt-3 mt-3">
                     <h4 className="text-xs font-semibold text-gray-700 text-center mb-2">
                       Changer le statut
                     </h4>
@@ -1032,7 +1032,7 @@ const ArticleCard = forwardRef(({
                          </div>
                        </button>
 
-                                               <button
+                       <button
                           onClick={(e) => {
                             // Obtenir la position du bouton pour les confettis
                             const rect = e.currentTarget.getBoundingClientRect()
@@ -1042,29 +1042,29 @@ const ArticleCard = forwardRef(({
                             })
                             setShowConfetti(true)
                             
-                            const updatedAssignment = { ...localAssignment, status: 'termine' }
+                           const updatedAssignment = { ...localAssignment, status: 'termine' }
                             // 1) Persister le statut côté backend (commande/line_item)
                             updateArticleStatus(article.orderId, article.line_item_id, 'termine')
                               .catch(() => {})
                             // 2) Mettre à jour aussi l'assignation locale (si utilisée)
-                            assignmentsService.createOrUpdateAssignment(updatedAssignment)
-                              .then(() => {
-                                setLocalAssignment(updatedAssignment)
+                           assignmentsService.createOrUpdateAssignment(updatedAssignment)
+                             .then(() => {
+                               setLocalAssignment(updatedAssignment)
                                 // Attendre la fin des confettis avant de mettre à jour la liste et fermer
                                 setTimeout(() => {
-                                  if (onAssignmentUpdate) {
-                                    onAssignmentUpdate()
-                                  }
+                               if (onAssignmentUpdate) {
+                                 onAssignmentUpdate()
+                               }
                                   // Retirer visuellement la carte immédiatement côté client
                                   setIsRemoved(true)
                                   // Fermer la modal après l’animation
-                                  closeTricoteuseModal()
+                               closeTricoteuseModal()
                                 }, 3000)
-                              })
-                              .catch((error) => {
-                                console.error('Erreur lors de la mise à jour du statut:', error)
-                              })
-                          }}
+                             })
+                             .catch((error) => {
+                               console.error('Erreur lors de la mise à jour du statut:', error)
+                             })
+                         }}
                          className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-green-200 ${
                            localAssignment.status === 'termine'
                              ? 'text-white shadow-lg'
