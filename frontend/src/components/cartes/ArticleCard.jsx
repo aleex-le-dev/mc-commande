@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'r
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
+import TopBadges from './TopBadges'
+import NoteEditor from './NoteEditor'
 import imageService from '../../services/imageService'
 import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote } from '../../services/mongodbService'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
@@ -419,23 +421,7 @@ const ArticleCard = forwardRef(({
           </div>
         )}
 
-        {/* Badge rouge pour article en retard */}
-        {doitAvoirTraitRouge && (
-          <div className="absolute top-0 left-0 right-0 h-2 bg-red-500 z-5 flex items-center justify-center">
-            <span className="text-white text-xs font-bold px-2 py-1 bg-red-500 rounded-full clignoter mt-2">
-              ⚠️ EN RETARD
-            </span>
-          </div>
-        )}
-        
-        {/* Badge URGENT si flag dans l'assignation */}
-        {localAssignment?.urgent && (
-          <div className="absolute top-0 left-0 right-0 h-2 bg-amber-500 z-5 flex items-center justify-center" style={{ marginTop: doitAvoirTraitRouge ? '14px' : '0' }}>
-            <span className="text-white text-xs font-bold px-2 py-1 bg-amber-500 rounded-full mt-2">
-              🚨 URGENT
-            </span>
-          </div>
-        )}
+        <TopBadges showRetard={doitAvoirTraitRouge} showUrgent={!!localAssignment?.urgent} />
         
 
 
@@ -801,59 +787,27 @@ const ArticleCard = forwardRef(({
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
 
       {/* Popover global de note, pleine largeur de la carte */}
-      {isNoteOpen && (translatedData?.customerNote || article.customerNote || true) && (
+      {isNoteOpen && (
         <>
           <div className="absolute left-0 right-0 bottom-20 px-3 z-5">
-            <div ref={notePopoverRef} className="w-full max-h-96 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl select-none drop-shadow-sm">📌</div>
-              <div className="flex items-start justify-end mb-2 relative">
-                <button
-                  type="button"
-                  onClick={() => setIsNoteOpen(false)}
-                  className="text-4xl absolute -top-8 -right-2 text-amber-500 hover:text-amber-700"
-                  aria-label="Fermer"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="text-sm leading-relaxed break-words">
-                <textarea
-                  value={editingNote}
-                  onChange={(e) => setEditingNote(e.target.value)}
-                  className="w-full p-3 rounded-lg border border-amber-300 bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  rows={5}
-                  placeholder="Ajouter une note..."
-                />
-                <div className="mt-3 flex justify-end gap-2">
-                  <button
-                    onClick={() => { setIsNoteOpen(false); setEditingNote(article.customerNote || '') }}
-                    className="px-3 py-1.5 text-sm border border-amber-300 rounded-lg hover:bg-amber-100"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    disabled={isSavingNote}
-                    onClick={async () => {
-                      try {
-                        setIsSavingNote(true)
-                        const content = (editingNote || '').trim()
-                        const ok = await updateOrderNote(article.orderId, content)
-                        if (ok) {
-                          // Refléter directement en mémoire locale
-                          article.customerNote = content
-                          setIsNoteOpen(false)
-                        }
-                      } finally {
-                        setIsSavingNote(false)
-                      }
-                    }}
-                    className="px-3 py-1.5 text-sm rounded-lg text-white"
-                    style={{ backgroundColor: '#d97706' }}
-                  >
-                    {isSavingNote ? 'Sauvegarde...' : 'Sauvegarder'}
-                  </button>
-                </div>
-              </div>
+            <div ref={notePopoverRef}>
+              <NoteEditor
+                initialValue={editingNote}
+                saving={isSavingNote}
+                onClose={() => { setIsNoteOpen(false); setEditingNote(article.customerNote || '') }}
+                onSave={async (content) => {
+                  try {
+                    setIsSavingNote(true)
+                    const ok = await updateOrderNote(article.orderId, content)
+                    if (ok) {
+                      article.customerNote = content
+                      setIsNoteOpen(false)
+                    }
+                  } finally {
+                    setIsSavingNote(false)
+                  }
+                }}
+              />
               {/* Indicateur de traduction */}
               {translatedData?.customerNote && (
                 <div className="mt-3 pt-2 border-t border-amber-200 text-xs text-amber-600 text-center">
