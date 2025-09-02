@@ -50,7 +50,14 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   
   try {
     await acquireSlot()
-    const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
+    const res = await fetch(url, { 
+      // Toujours envoyer le cookie d'auth httpOnly
+      credentials: 'include',
+      // Activer CORS explicite
+      mode: 'cors',
+      ...options, 
+      signal: controller.signal 
+    })
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
         await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
@@ -528,14 +535,22 @@ export const assignmentsService = {
   },
 
   // Supprimer une assignation
-  async deleteAssignment(articleId) {
+  async deleteAssignment(idOrArticleId) {
     try {
-      const response = await requestWithRetry(`http://localhost:3001/api/assignments/${articleId}`, {
-        method: 'DELETE'
-      })
+      const isObjectId = typeof idOrArticleId === 'string' && /^[a-fA-F0-9]{24}$/.test(idOrArticleId)
+      let response
+      if (isObjectId) {
+        response = await requestWithRetry(`http://localhost:3001/api/assignments/${idOrArticleId}`, {
+          method: 'DELETE'
+        })
+      } else {
+        // Suppression par article_id directement
+        response = await requestWithRetry(`http://localhost:3001/api/assignments/by-article/${idOrArticleId}`, {
+          method: 'DELETE'
+        })
+      }
       if (!response.ok) throw new Error('Erreur lors de la suppression de l\'assignation')
       const result = await response.json()
-      // Invalider le cache
       cacheSet('assignments', null)
       return result.success
     } catch (error) {

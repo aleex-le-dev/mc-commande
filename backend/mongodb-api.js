@@ -1858,6 +1858,33 @@ app.delete('/api/assignments/:assignmentId', async (req, res) => {
   }
 })
 
+// Nouveau: DELETE par article_id (clé fonctionnelle)
+app.delete('/api/assignments/by-article/:articleId', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    const { articleId } = req.params
+    if (!articleId) {
+      return res.status(400).json({ error: 'article_id requis' })
+    }
+    const assignmentsCollection = db.collection('article_assignments')
+    // Supporter article_id stocké en string OU en nombre
+    const asNumber = Number(articleId)
+    const query = Number.isNaN(asNumber)
+      ? { article_id: articleId }
+      : { $or: [ { article_id: asNumber }, { article_id: articleId } ] }
+    const result = await assignmentsCollection.deleteOne(query)
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
+    }
+    res.json({ success: true, message: 'Assignation supprimée par article_id' })
+  } catch (error) {
+    console.error('Erreur DELETE /api/assignments/by-article/:articleId:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // Routes pour les délais d'expédition
 
 // GET /api/delais - Récupérer tous les délais d'expédition
@@ -2497,9 +2524,10 @@ app.get('/api/debug/articles-couture', async (req, res) => {
 
 // Démarrage du serveur
 async function startServer() {
+  // Attendre la connexion Mongo pour garantir le démarrage correct
   await connectToMongo()
-  
-  app.listen(PORT, () => {
+
+  const server = app.listen(PORT, () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
     console.log(`📊 Endpoints disponibles:`)
     console.log(`   POST /api/sync/orders - Synchroniser les commandes`)
@@ -2528,16 +2556,21 @@ async function startServer() {
     console.log(`   GET  /api/assignments/:articleId - Récupérer une assignation`)
     console.log(`   POST /api/assignments - Créer/mettre à jour une assignation`)
     console.log(`   DELETE /api/assignments/:assignmentId - Supprimer une assignation`)
-    console.log(`   GET  /api/delais - Récupérer tous les délais d'expédition`)
-    console.log(`   POST /api/delais - Créer un nouveau délai d'expédition`)
-    console.log(`   PUT  /api/delais/:id - Modifier un délai d'expédition`)
-    console.log(`   DELETE /api/delais/:id - Supprimer un délai d'expédition`)
-    console.log(`   GET  /api/delais/configuration - Configuration actuelle`)
-    console.log(`   POST /api/delais/configuration - Sauvegarder configuration`)
-    console.log(`   POST /api/delais/calculer - Calculer date limite`)
-    console.log(`   GET  /api/delais/historique - Historique des configurations`)
-    console.log(`   GET  /api/delais/jours-feries/:annee - Jours fériés français`)
+    console.log(`   DELETE /api/assignments/by-article/:articleId - Supprimer par article_id`)
+  })
+  server.on('error', (err) => {
+    console.error('❌ Erreur serveur:', err)
   })
 }
 
-startServer().catch(console.error)
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Rejection non gérée:', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Exception non gérée:', err)
+})
+
+// Démarrer le serveur
+startServer().catch((e) => {
+  console.error('❌ Échec du démarrage du serveur:', e)
+})
