@@ -15,7 +15,6 @@ export { default as Pagination } from './Pagination.jsx'
 export { default as StatusTab } from './StatusTab.jsx'
 export { default as CommandeTab } from './CommandeTab.jsx'
 export { default as TricoteusesTab } from './TricoteusesTab.jsx'
-export { default as TraductionTab } from './TraductionTab.jsx'
 
 // Hooks personnalisés
 export { useOrderData } from './hooks/useOrderData.js'

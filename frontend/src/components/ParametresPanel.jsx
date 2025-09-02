@@ -3,7 +3,6 @@ import CommandeTab from './cartes/CommandeTab'
 import TricoteusesTab from './cartes/TricoteusesTab'
 import StatusTab from './cartes/StatusTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
-import TraductionTab from './cartes/TraductionTab'
 
 const ParametresPanel = () => {
   const [activeTab, setActiveTab] = useState('commande')
@@ -12,8 +11,7 @@ const ParametresPanel = () => {
     { id: 'commande', label: 'Commandes', icon: '🛒' },
     { id: 'tricoteuses', label: 'Tricoteuses', icon: '🧶' },
     { id: 'status', label: 'Statut', icon: '📊' },
-    { id: 'dateLimite', label: 'Date limite', icon: '⏰' },
-    { id: 'traduction', label: 'Traduction', icon: '🌐' }
+    { id: 'dateLimite', label: 'Date limite', icon: '⏰' }
   ]
 
   const activeTabMeta = tabs.find(t => t.id === activeTab) || tabs[0]
@@ -35,8 +33,6 @@ const ParametresPanel = () => {
         return <StatusTab />
       case 'dateLimite':
         return <DateLimiteTab />
-      case 'traduction':
-        return <TraductionTab />
       default:
         return <CommandeTab />
     }

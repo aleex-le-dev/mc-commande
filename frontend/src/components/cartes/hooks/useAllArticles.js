@@ -27,6 +27,12 @@ export const useAllArticles = (selectedType = 'all') => {
     retryOnMount: false,
     // Garder les données même en cas d'erreur
     keepPreviousData: true,
+    onError: (err) => {
+      // Ignorer proprement les annulations pour ne pas afficher d'erreur utilisateur
+      if (err && err.name === 'AbortError') {
+        return
+      }
+    }
   })
 
   // Préparer les articles avec statuts

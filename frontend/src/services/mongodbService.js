@@ -46,7 +46,7 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || 12000) // Réduit à 12 secondes par défaut
+  }, options.timeoutMs || 20000) // 20s pour éviter les faux aborts lors des changements d'onglet
   
   try {
     await acquireSlot()
@@ -67,7 +67,10 @@ async function requestWithRetry(url, options = {}, retries = 2) {
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      throw e
+      // Normaliser le message pour éviter l'alerte utilisateur inutiles
+      const abortError = new Error('RequestAborted')
+      abortError.name = 'AbortError'
+      throw abortError
     }
     if (retries > 0) {
       await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))

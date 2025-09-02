@@ -22,51 +22,54 @@ const DateLimiteTab = () => {
   const [aujourdhui, setAujourdhui] = useState(new Date())
   const calculEffectue = useRef(false)
 
+  // Helpers pour formater/analyser une date locale sans décalage de fuseau
+  const toLocalYMD = (date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  const parseLocalYMD = (ymd) => {
+    const [y, m, d] = ymd.split('-').map((v) => parseInt(v, 10))
+    return new Date(y, m - 1, d)
+  }
+
   // Charger le délai actuel au montage du composant
   useEffect(() => {
     loadDelai()
     loadJoursFeries()
   }, [])
 
-  // Calculer la date limite quand le délai, les jours ouvrables OU les jours fériés changent
+  // Calculer la date limite à chaque changement pertinent (sans bloquer les recalculs)
   useEffect(() => {
-    // Éviter les calculs répétés
-    if (calculEffectue.current) return
-    
-    if (joursDelai && !isNaN(joursDelai) && joursDelai > 0 && !isLoadingJoursFeries && Object.keys(joursFeries).length > 0) {
-      const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
-      setDateLimite(dateLimite.toISOString().split('T')[0])
-      calculEffectue.current = true
-    } else if (!isLoadingJoursFeries && Object.keys(joursFeries).length === 0) {
-      // Si pas de jours fériés disponibles, on peut quand même calculer
-      if (joursDelai && !isNaN(joursDelai) && joursDelai > 0) {
-        const dateLimite = calculerDateLimiteOuvrable(parseInt(joursDelai))
-        setDateLimite(dateLimite.toISOString().split('T')[0])
-        calculEffectue.current = true
-      }
-    }
+    if (!joursDelai || isNaN(joursDelai) || joursDelai <= 0) return
+    // Quand les jours fériés sont en cours de chargement, attendre; sinon calculer quand même
+    if (isLoadingJoursFeries) return
+    const dateRes = calculerDateLimiteOuvrable(parseInt(joursDelai))
+    setDateLimite(toLocalYMD(dateRes))
   }, [joursDelai, joursOuvrables, joursFeries, isLoadingJoursFeries])
 
   // Fonction pour calculer la date limite en arrière depuis aujourd'hui
   const calculerDateLimiteOuvrable = (joursOuvrablesCount) => {
-    let dateLimite = new Date(aujourdhui)
+    // Point de départ: aujourd'hui à minuit pour éviter les décalages d'heure
+    const start = new Date(aujourdhui)
+    start.setHours(0, 0, 0, 0)
+
+    let dateLimite = new Date(start)
     let joursRetires = 0
 
-    // On remonte dans le temps pour trouver la date limite
+    // Remonter en arrière en excluant les jours non ouvrables et fériés
     while (joursRetires < joursOuvrablesCount) {
       dateLimite.setDate(dateLimite.getDate() - 1)
-      
-      // Vérifier si c'est un jour ouvrable selon la configuration personnalisée
+
       const jourSemaine = dateLimite.getDay()
       const nomJour = getNomJour(jourSemaine)
-      
-      // Vérifier si c'est un jour ouvrable ET pas un jour férié
+
+      // Exclure aussi le vendredi si non sélectionné dans la config affichée par l'utilisateur
       if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
         joursRetires++
       }
     }
-
-    console.log('🎯 Date limite finale:', dateLimite.toISOString().split('T')[0])
 
     return dateLimite
   }
@@ -86,7 +89,7 @@ const DateLimiteTab = () => {
 
   // Fonction pour vérifier si une date est un jour férié
   const estJourFerie = (date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = toLocalYMD(date)
     
     // Vérifier d'abord dans les jours fériés chargés depuis l'API
     if (joursFeries && joursFeries[dateStr]) {
@@ -172,7 +175,7 @@ const DateLimiteTab = () => {
   const getJoursFeriesDansPeriode = () => {
     if (!dateLimite) return []
     
-    const dateLimiteObj = new Date(dateLimite)
+    const dateLimiteObj = parseLocalYMD(dateLimite)
     const aujourdhui = new Date()
     const joursFeriesDansPeriode = []
     
@@ -182,11 +185,11 @@ const DateLimiteTab = () => {
     while (dateCourante <= aujourdhui) {
       // Utiliser la fonction estJourFerie qui gère déjà les jours fériés par défaut
       if (estJourFerie(dateCourante)) {
-      const dateStr = dateCourante.toISOString().split('T')[0]
-        const nomJourFerie = joursFeries && joursFeries[dateStr] ? joursFeries[dateStr] : getNomJourFerieDefaut(dateStr)
+        const dateStr = toLocalYMD(dateCourante)
+        const nomJourFerie = (joursFeries && joursFeries[dateStr]) ? joursFeries[dateStr] : getNomJourFerieDefaut(dateStr)
       
         joursFeriesDansPeriode.push({
-          date: new Date(dateCourante),
+          date: parseLocalYMD(dateStr),
           nom: nomJourFerie,
           jourSemaine: dateCourante.toLocaleDateString('fr-FR', { weekday: 'long' })
         })
@@ -231,6 +234,12 @@ const DateLimiteTab = () => {
     try {
       const response = await delaiService.getDelai()
       if (response.success && response.data) {
+        // Log de contrôle: valeurs chargées depuis la BDD
+        try {
+          const todayLocal = toLocalYMD(new Date())
+          const fromDbLocal = response.data.dateLimite ? toLocalYMD(new Date(response.data.dateLimite)) : 'N/A'
+          console.log(`📥 Delais BDD → today=${todayLocal}, dateLimite=${fromDbLocal}`)
+        } catch {}
         setJoursDelai(response.data.joursDelai?.toString() || '21')
         setJoursOuvrables(response.data.joursOuvrables || {
           lundi: true,
@@ -291,10 +300,19 @@ const DateLimiteTab = () => {
         derniereModification: new Date().toISOString()
       }
 
+      // Log de contrôle avant enregistrement
+      try {
+        console.log(`💾 Sauvegarde délais → today=${toLocalYMD(new Date())}, dateLimite=${configuration.dateLimite}`)
+      } catch {}
+
       // Sauvegarder en base de données
       const response = await delaiService.saveDelai(configuration)
       
       if (response.success) {
+        // Log de confirmation après sauvegarde
+        try {
+          console.log(`✅ Sauvegarde OK → today=${toLocalYMD(new Date())}, dateLimite=${configuration.dateLimite}`)
+        } catch {}
         setMessage(`Configuration sauvegardée avec succès ! Délai de ${joursDelai} jours ouvrables.`)
         
         // Effacer le message après 3 secondes
@@ -358,7 +376,7 @@ const DateLimiteTab = () => {
               Date limite de commande
             </h3>
             <div className="text-xl font-bold mb-2 text-blue-100">
-              {formaterDate(new Date(dateLimite))}
+              {formaterDate(parseLocalYMD(dateLimite))}
             </div>
             <div className="text-sm text-blue-100 space-y-1">
               <p><strong>Délai :</strong> {joursDelai} jours ouvrables en arrière</p>
