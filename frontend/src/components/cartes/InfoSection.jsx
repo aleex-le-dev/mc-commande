@@ -1,4 +1,5 @@
 import React from 'react'
+import { highlightText } from '../../utils/textUtils.jsx'
 
 // Section d'informations principales (titre, quantité, taille, couleur)
 const InfoSection = ({
@@ -13,7 +14,7 @@ const InfoSection = ({
       <div className="p-3 pt-2 pb-16">
         <div className="space-y-1">
           <h3 className="text-lg font-bold text-gray-900 leading-tight">
-            {(translatedData?.product_name || article.product_name)}
+            {highlightText(translatedData?.product_name || article.product_name, searchTerm)}
           </h3>
           <div className="grid gap-3 text-base text-gray-700" style={{ 
             gridTemplateColumns: `repeat(${[

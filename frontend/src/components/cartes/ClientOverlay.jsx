@@ -1,4 +1,5 @@
 import React from 'react'
+import { highlightText, renderFormattedAddress } from '../../utils/textUtils.jsx'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 

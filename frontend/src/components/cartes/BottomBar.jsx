@@ -57,7 +57,7 @@ const BottomBar = ({
           ) : localAssignment ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
-              className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 translate-y-[-10px]"
+              className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 translate-y-[-10px] cursor-pointer"
               title={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
               aria-label={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
             >

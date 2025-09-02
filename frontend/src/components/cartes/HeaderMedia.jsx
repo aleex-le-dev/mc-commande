@@ -45,9 +45,7 @@ const HeaderMedia = ({
             }}
           />
 
-          {isFromCache && (
-            <div className="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full shadow-lg z-10">⚡ Cache</div>
-          )}
+          {/* Indicateur cache retiré */}
 
           {imageUrl && imageUrl.startsWith('data:image/') && (
             <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded-full shadow-lg z-10">🎨 Par défaut</div>
