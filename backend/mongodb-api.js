@@ -11,7 +11,12 @@ const PORT = process.env.PORT || 3001
 // Middleware
 const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || 'http://localhost:5173'
 const corsOptions = {
-  origin: FRONTEND_ORIGIN,
+  origin: (origin, cb) => {
+    // Autoriser requêtes locales et outils (origin peut être undefined pour curl)
+    if (!origin) return cb(null, true)
+    if (origin === FRONTEND_ORIGIN) return cb(null, true)
+    return cb(null, false)
+  },
   credentials: true,
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -150,9 +155,17 @@ async function ensureInitialPassword() {
 }
 
 // Middleware de protection par cookie signé (httpOnly)
-// Auth désactivée (accès ouvert à toutes les routes)
+// Protection légère: GET/OPTIONS ouverts, écriture protégée par X-API-KEY si définie
 app.use((req, res, next) => {
-  return next()
+  if (req.method === 'GET' || req.method === 'OPTIONS') return next()
+  const expected = process.env.API_KEY || process.env.APP_API_KEY || process.env.BACKEND_API_KEY
+  // Si aucune clé n'est définie en env, ne pas bloquer (dev)
+  if (!expected) return next()
+  const provided = req.header('x-api-key')
+  if (!provided || provided !== expected) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' })
+  }
+  next()
 })
 
 // Routes API
@@ -2385,6 +2398,9 @@ app.get('/api/test/sync', async (req, res) => {
 // GET /api/debug/status - Route de debug pour vérifier l'état de la base
 app.get('/api/debug/status', async (req, res) => {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' })
+    }
     const ordersCollection = db.collection('orders_sync')
     const itemsCollection = db.collection('order_items')
     const statusCollection = db.collection('production_status')
@@ -2442,6 +2458,9 @@ app.get('/api/debug/status', async (req, res) => {
 // GET /api/debug/articles-couture - Debug spécifique pour les articles couture
 app.get('/api/debug/articles-couture', async (req, res) => {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' })
+    }
     const statusCollection = db.collection('production_status')
     const itemsCollection = db.collection('order_items')
     
