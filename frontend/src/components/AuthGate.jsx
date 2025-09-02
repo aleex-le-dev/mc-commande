@@ -15,6 +15,22 @@ const AuthGate = ({ children, onAuthenticated }) => {
 
   // Restaurer la session pour les rafraîchissements d'onglet (sessionStorage)
   useEffect(() => {
+    // Définir le favicon cadenas pour la page d'auth
+    try {
+      const setFavicon = (emoji) => {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" height="64" width="64"><text y="50%" x="50%" dominant-baseline="middle" text-anchor="middle" font-size="52">${emoji}</text></svg>`
+        const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+        let link = document.querySelector('link[rel="icon"]')
+        if (!link) {
+          link = document.createElement('link')
+          link.rel = 'icon'
+          document.head.appendChild(link)
+        }
+        link.href = url
+      }
+      setFavicon('🔒')
+      document.title = 'Mot de passe – Maisoncléo'
+    } catch {}
     const flag = sessionStorage.getItem(STORAGE_KEY)
     if (flag === '1') {
       setIsAuthenticated(true)
@@ -40,6 +56,11 @@ const AuthGate = ({ children, onAuthenticated }) => {
           sessionStorage.setItem(STORAGE_KEY, '1')
           setIsAuthenticated(true)
           if (typeof onAuthenticated === 'function') onAuthenticated()
+          try {
+            // Nettoyer favicon pour laisser l'app principale le gérer ensuite
+            const link = document.querySelector('link[rel="icon"]')
+            if (link) link.href = '/vite.svg'
+          } catch {}
           return
         }
         throw new Error('Mot de passe incorrect')
