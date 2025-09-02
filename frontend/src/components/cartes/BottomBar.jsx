@@ -54,7 +54,7 @@ const BottomBar = ({
             <div className="w-14 h-14 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
-          ) : localAssignment ? (
+          ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
               className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 translate-y-[-10px] cursor-pointer"
@@ -76,7 +76,6 @@ const BottomBar = ({
               title="Assigner à une tricoteuse"
               aria-label="Assigner à une tricoteuse"
             >
-              <div className="w-2 h-2 bg-white rounded-full assigner-dot"></div>
               <span className="text-xs font-semibold">Assigner</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3 h-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21a8 8 0 0 0-16 0" />
