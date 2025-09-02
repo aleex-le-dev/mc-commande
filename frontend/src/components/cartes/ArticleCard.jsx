@@ -94,7 +94,18 @@ const ArticleCard = forwardRef(({
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
-    return () => window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
+    const handleEditNote = (ev) => {
+      const { uniqueAssignmentId: targetId } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      window.dispatchEvent(new Event('mc-close-notes'))
+      setEditingNote(article.customerNote || '')
+      setIsNoteOpen(true)
+    }
+    window.addEventListener('mc-edit-note', handleEditNote, true)
+    return () => {
+      window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
+      window.removeEventListener('mc-edit-note', handleEditNote, true)
+    }
   }, [localAssignment, uniqueAssignmentId])
 
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
@@ -167,6 +178,7 @@ const ArticleCard = forwardRef(({
           uniqueAssignmentId,
           hasAssignment: Boolean(localAssignment),
           currentUrgent: localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent),
+          hasNote: Boolean(article.customerNote),
         };
         window.dispatchEvent(new CustomEvent('mc-context', { detail }));
       }}

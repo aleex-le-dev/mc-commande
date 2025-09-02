@@ -40,19 +40,14 @@ function App() {
       setCtxVisible(true)
     }
     const handleCardContext = (ev) => {
-      const { x, y, uniqueAssignmentId, currentUrgent } = ev.detail || {}
+      const { x, y, uniqueAssignmentId, currentUrgent, hasNote } = ev.detail || {}
       setCtxPosition({ x, y })
       const items = [
+        { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
+        { id: 'urgent', label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
         { id: 'refresh', label: 'Rafraîchir', onClick: () => window.location.reload() },
         { id: 'copy-url', label: 'Copier l’URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
       ]
-      items.unshift({
-        id: 'urgent',
-        label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT',
-        onClick: () => {
-          window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } }))
-        }
-      })
       setCtxItems(items)
       setCtxVisible(true)
     }
