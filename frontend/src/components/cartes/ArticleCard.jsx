@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
 import imageService from '../../services/imageService'
-import { tricoteusesService, assignmentsService } from '../../services/mongodbService'
+import { tricoteusesService, assignmentsService, updateArticleStatus } from '../../services/mongodbService'
 import delaiService from '../../services/delaiService'
 import TranslationIcon from './TranslationIcon'
 import Confetti from '../Confetti'
@@ -51,6 +51,8 @@ const ArticleCard = forwardRef(({
   // État pour les confettis
   const [showConfetti, setShowConfetti] = useState(false)
   const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 })
+  // Retrait visuel local de la carte après confettis
+  const [isRemoved, setIsRemoved] = useState(false)
   // Supprimé: const [selectedTricoteuse, setSelectedTricoteuse] = useState(null)
   // Supprimé: const [isLoading, setIsLoading] = useState(false)
 
@@ -341,6 +343,10 @@ const ArticleCard = forwardRef(({
     return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')
   }, [])
 
+  // Si retiré localement, ne plus afficher la carte
+  if (isRemoved) {
+    return null
+  }
 
   return (
     <div 
@@ -559,7 +565,8 @@ const ArticleCard = forwardRef(({
                   type="button"
                   onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
                   ref={noteBtnRef}
-                                     className={`inline-flex items-center px-2 py-1 rounded-md border text-amber-800 hover:bg-amber-100 ${isNoteOpen ? 'bg-amber-50 border-amber-200' : 'bg-amber-300'}`}
+                  className={`inline-flex items-center px-2 py-1 rounded-md border note-btn ${isNoteOpen ? '' : ''}`}
+                  style={{ backgroundColor: '#fbbf24', color: '#78350f', border: '1px solid #fcd34d' }}
                   aria-haspopup="dialog"
                   aria-expanded={isNoteOpen}
                   aria-label="Afficher la note"
@@ -1038,14 +1045,23 @@ const ArticleCard = forwardRef(({
                             setShowConfetti(true)
                             
                             const updatedAssignment = { ...localAssignment, status: 'termine' }
+                            // 1) Persister le statut côté backend (commande/line_item)
+                            updateArticleStatus(article.orderId, article.line_item_id, 'termine')
+                              .catch(() => {})
+                            // 2) Mettre à jour aussi l'assignation locale (si utilisée)
                             assignmentsService.createOrUpdateAssignment(updatedAssignment)
                               .then(() => {
                                 setLocalAssignment(updatedAssignment)
-                                if (onAssignmentUpdate) {
-                                  onAssignmentUpdate()
-                                }
-                                // Fermer la modal après la mise à jour
-                                closeTricoteuseModal()
+                                // Attendre la fin des confettis avant de mettre à jour la liste et fermer
+                                setTimeout(() => {
+                                  if (onAssignmentUpdate) {
+                                    onAssignmentUpdate()
+                                  }
+                                  // Retirer visuellement la carte immédiatement côté client
+                                  setIsRemoved(true)
+                                  // Fermer la modal après l’animation
+                                  closeTricoteuseModal()
+                                }, 3000)
                               })
                               .catch((error) => {
                                 console.error('Erreur lors de la mise à jour du statut:', error)

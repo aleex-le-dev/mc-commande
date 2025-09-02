@@ -4,6 +4,7 @@ const { MongoClient, ObjectId } = require('mongodb')
 const cors = require('cors')
 
 const app = express()
+const bcrypt = require('bcryptjs')
 const PORT = process.env.PORT || 3001
 
 // Middleware
@@ -39,6 +40,7 @@ async function connectToMongo() {
     
     // Créer les collections et index nécessaires
     await createCollectionsAndIndexes()
+    await ensureInitialPassword()
     
     console.log('✅ Connecté à MongoDB Atlas')
   } catch (error) {
@@ -90,13 +92,79 @@ async function createCollectionsAndIndexes() {
     const customTranslations = db.collection('custom_translations')
     await customTranslations.createIndex({ key: 1 }, { unique: true })
     
+    // Collection de configuration applicative (mot de passe, etc.)
+    const settings = db.collection('app_settings')
+    await settings.createIndex({ key: 1 }, { unique: true })
+    
     console.log('✅ Collections et index créés')
   } catch (error) {
     console.error('❌ Erreur création collections:', error)
   }
 }
 
+// Crée un mot de passe initial si absent et si INIT_APP_PASSWORD est défini
+async function ensureInitialPassword() {
+  try {
+    const settings = db.collection('app_settings')
+    const existing = await settings.findOne({ key: 'access_password' })
+    if (!existing) {
+      const initial = process.env.INIT_APP_PASSWORD
+      if (initial && typeof initial === 'string' && initial.length >= 3) {
+        const hash = await bcrypt.hash(initial, 10)
+        await settings.updateOne(
+          { key: 'access_password' },
+          { $set: { key: 'access_password', hash, updatedAt: new Date(), createdAt: new Date() } },
+          { upsert: true }
+        )
+        console.log('🔐 Mot de passe initial créé via INIT_APP_PASSWORD')
+      } else {
+        console.log('ℹ️ Aucun mot de passe initial défini (INIT_APP_PASSWORD manquant)')
+      }
+    }
+  } catch (e) {
+    console.warn('Erreur ensureInitialPassword:', e.message)
+  }
+}
+
 // Routes API
+// AUTH: stockage hashé du mot de passe d'accès
+app.post('/api/auth/set-password', async (req, res) => {
+  try {
+    const { password } = req.body || {}
+    if (!password || typeof password !== 'string' || password.length < 3) {
+      return res.status(400).json({ success: false, error: 'Mot de passe invalide (min 3 caractères)' })
+    }
+    const hash = await bcrypt.hash(password, 10)
+    await db.collection('app_settings').updateOne(
+      { key: 'access_password' },
+      { $set: { key: 'access_password', hash, updatedAt: new Date() } },
+      { upsert: true }
+    )
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Erreur POST /api/auth/set-password:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+app.post('/api/auth/verify', async (req, res) => {
+  try {
+    const { password } = req.body || {}
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ success: false, error: 'Mot de passe requis' })
+    }
+    const doc = await db.collection('app_settings').findOne({ key: 'access_password' })
+    if (!doc || !doc.hash) {
+      return res.status(404).json({ success: false, error: 'Aucun mot de passe configuré' })
+    }
+    const ok = await bcrypt.compare(password, doc.hash)
+    if (!ok) return res.status(401).json({ success: false, error: 'Mot de passe incorrect' })
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Erreur POST /api/auth/verify:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
 // GET /api/translations - Récupérer toutes les traductions personnalisées
 app.get('/api/translations', async (req, res) => {
   try {

@@ -449,3 +449,55 @@ body {
 .dark button[style*="var(--couture-termine-selected-border)"] {
   border-color: white !important;
 }
+
+/* Styles uniformes pour les "notes" (clair et sombre identiques) */
+
+.note-btn {
+  background-color: #fbbf24 !important; /* amber-400 */
+  color: #78350f !important; /* amber-900 */
+  border: 1px solid #fcd34d !important; /* amber-300 */
+}
+
+.note-btn:hover {
+  background-color: #fde68a !important; /* amber-200 */
+}
+
+.note-panel {
+  background-color: #fffbeb !important; /* amber-50 */
+  border: 1px solid #fde68a !important; /* amber-200 */
+}
+
+.note-text {
+  color: #92400e !important; /* amber-800 */
+}
+
+/* Spécificité renforcée pour neutraliser tout override dark */
+#mc-note-toggle,
+#mc-note-panel {
+  background-color: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+}
+
+#mc-note-panel .note-text {
+  color: #92400e !important;
+}
+
+/* Mode sombre: garder le fond clair pour les notes */
+.dark .note-panel,
+.dark #mc-note-panel {
+  background-color: #fffbeb !important; /* amber-50 */
+  border: 1px solid #fde68a !important; /* amber-200 */
+  box-shadow: none !important;
+}
+
+.dark .note-btn,
+.dark #mc-note-toggle {
+  background-color: #fbbf24 !important; /* amber-400 */
+  color: #78350f !important; /* amber-900 */
+  border: 1px solid #fcd34d !important; /* amber-300 */
+}
+
+.dark .note-text,
+.dark #mc-note-panel .note-text {
+  color: #92400e !important; /* amber-800 */
+}
