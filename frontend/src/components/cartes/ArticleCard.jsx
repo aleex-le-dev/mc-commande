@@ -88,9 +88,27 @@ const ArticleCard = forwardRef(({
           setLocalAssignment(localAssignment)
         }
       } else {
-        setLocalUrgent(urgent)
-        const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
-        try { localStorage.setItem(key, urgent ? '1' : '0') } catch {}
+        // Créer/mettre à jour une assignation minimale côté serveur pour persister URGENT
+        // Le backend requiert tricoteuse_id et tricoteuse_name
+        const minimalAssignment = { 
+          article_id: uniqueAssignmentId, 
+          tricoteuse_id: 'unassigned', 
+          tricoteuse_name: 'Non assigné', 
+          status: 'en_cours',
+          urgent 
+        }
+        try {
+          await assignmentsService.createOrUpdateAssignment(minimalAssignment)
+          setLocalAssignment(minimalAssignment)
+          if (onAssignmentUpdate) {
+            onAssignmentUpdate(uniqueAssignmentId, minimalAssignment)
+          }
+        } catch (e) {
+          // Fallback local si le backend échoue
+          setLocalUrgent(urgent)
+          const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
+          try { localStorage.setItem(key, urgent ? '1' : '0') } catch {}
+        }
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
