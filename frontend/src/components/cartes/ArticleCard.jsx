@@ -827,7 +827,6 @@ const ArticleCard = forwardRef(({
                       try {
                         setIsSavingNote(true)
                         const content = (editingNote || '').trim()
-                        if (content === '') { setIsSavingNote(false); return }
                         const ok = await updateOrderNote(article.orderId, content)
                         if (ok) {
                           // Refléter directement en mémoire locale
