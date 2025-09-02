@@ -552,7 +552,7 @@ const ArticleCard = forwardRef(({
       <div className={`absolute bottom-1 left-0 right-0 h-16 z-10 px-3 pt-3 ${localAssignment ? 'pb-5' : 'pb-3'}`}>
         <div className="flex items-center justify-between">
           {/* Date et heure à gauche - position fixe */}
-          <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium ">
+          <div className={`flex items-center space-x-2 text-xs text-gray-500 font-medium ${localAssignment ? 'translate-y-[-6px]' : ''}`}>
             <span className="bg-gray-100 px-2 py-1 rounded-md align-middle">
               {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
             </span>
