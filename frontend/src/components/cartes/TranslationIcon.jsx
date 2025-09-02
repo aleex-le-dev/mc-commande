@@ -53,7 +53,7 @@ const TranslationIcon = ({ article, className = "", onTranslate, isTranslated = 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       disabled={isTranslating}
-      className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 ${isTranslating ? 'opacity-50 cursor-not-allowed' : ''} ${isTranslated ? 'bg-white/20 border-white/50' : ''} ${className}`}
+      className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 ${isTranslating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${isTranslated ? 'bg-white/20 border-white/50' : ''} ${className}`}
       title={isTranslating ? "Traduction en cours..." : isTranslated ? "Remettre le texte original" : "Traduire en français"}
       aria-label={isTranslating ? "Traduction en cours" : isTranslated ? "Remettre le texte original" : "Traduire en français"}
     >

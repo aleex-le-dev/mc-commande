@@ -3,7 +3,8 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
 import imageService from '../../services/imageService'
-import { tricoteusesService, assignmentsService, updateArticleStatus } from '../../services/mongodbService'
+import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote } from '../../services/mongodbService'
+import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import delaiService from '../../services/delaiService'
 import TranslationIcon from './TranslationIcon'
 import Confetti from '../Confetti'
@@ -31,6 +32,8 @@ const ArticleCard = forwardRef(({
 }, ref) => {
   const [copiedText, setCopiedText] = useState('')
   const [isNoteOpen, setIsNoteOpen] = useState(false)
+  const [editingNote, setEditingNote] = useState('')
+  const [isSavingNote, setIsSavingNote] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
   const [isImageLoading, setIsImageLoading] = useState(false)
   const [isFromCache, setIsFromCache] = useState(false)
@@ -556,20 +559,36 @@ const ArticleCard = forwardRef(({
             <span className="bg-gray-100 px-2 py-1 rounded-md">
               {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
             </span>
-            {(translatedData?.customerNote || article.customerNote) && (
+            {true && (
               <>
                 <button
                   type="button"
-                  onClick={() => { window.dispatchEvent(new Event('mc-close-notes')); setIsNoteOpen(v => !v) }}
+                  onClick={() => { 
+                    window.dispatchEvent(new Event('mc-close-notes'));
+                    setEditingNote(translatedData?.customerNote || article.customerNote || '');
+                    setIsNoteOpen(v => !v);
+                  }}
                   ref={noteBtnRef}
-                  className={`inline-flex items-center px-2 py-1 rounded-md border note-btn ${isNoteOpen ? '' : ''}`}
-                  style={{ backgroundColor: '#fbbf24', color: '#78350f', border: '1px solid #fcd34d' }}
+                  className={`inline-flex items-center cursor-pointer ${ (translatedData?.customerNote || article.customerNote) ? 'px-2 py-1 rounded-md border note-btn' : '' }`}
+                  style={{ 
+                    backgroundColor: (translatedData?.customerNote || article.customerNote) ? '#fbbf24' : 'transparent',
+                    color: (translatedData?.customerNote || article.customerNote) ? '#78350f' : '#374151',
+                    border: (translatedData?.customerNote || article.customerNote) ? '1px solid #fcd34d' : 'none',
+                    padding: (translatedData?.customerNote || article.customerNote) ? undefined : 0
+                  }}
                   aria-haspopup="dialog"
                   aria-expanded={isNoteOpen}
-                  aria-label="Afficher la note"
+                  aria-label={(translatedData?.customerNote || article.customerNote) ? 'Lire la note' : 'Ajouter une note'}
+                  title={(translatedData?.customerNote || article.customerNote) ? 'Lire la note' : 'Ajouter une note'}
                 >
-                  <span className="mr-1">📝</span>
-                  Note
+                  { (translatedData?.customerNote || article.customerNote) ? (
+                    <>
+                      <RiStickyNoteFill size={16} className="mr-1" />
+                      <span>Note</span>
+                    </>
+                  ) : (
+                    <RiStickyNoteAddLine size={18} className="cursor-pointer" />
+                  ) }
                 </button>
               </>
             )}
@@ -772,7 +791,7 @@ const ArticleCard = forwardRef(({
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full group-hover:translate-x-full pointer-events-none"></div>
 
       {/* Popover global de note, pleine largeur de la carte */}
-      {isNoteOpen && (translatedData?.customerNote || article.customerNote) && (
+      {isNoteOpen && (translatedData?.customerNote || article.customerNote || true) && (
         <>
           <div className="absolute left-0 right-0 bottom-20 px-3 z-5">
             <div ref={notePopoverRef} className="w-full max-h-96 overflow-auto bg-amber-50 border border-amber-200 rounded-xl shadow-xl p-4 pt-9 text-amber-900 transform -rotate-1">
@@ -787,8 +806,44 @@ const ArticleCard = forwardRef(({
                   ×
                 </button>
               </div>
-              <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {translatedData?.customerNote || article.customerNote}
+              <div className="text-sm leading-relaxed break-words">
+                <textarea
+                  value={editingNote}
+                  onChange={(e) => setEditingNote(e.target.value)}
+                  className="w-full p-3 rounded-lg border border-amber-300 bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  rows={5}
+                  placeholder="Ajouter une note..."
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => { setIsNoteOpen(false); setEditingNote(article.customerNote || '') }}
+                    className="px-3 py-1.5 text-sm border border-amber-300 rounded-lg hover:bg-amber-100"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    disabled={isSavingNote}
+                    onClick={async () => {
+                      try {
+                        setIsSavingNote(true)
+                        const content = (editingNote || '').trim()
+                        if (content === '') { setIsSavingNote(false); return }
+                        const ok = await updateOrderNote(article.orderId, content)
+                        if (ok) {
+                          // Refléter directement en mémoire locale
+                          article.customerNote = content
+                          setIsNoteOpen(false)
+                        }
+                      } finally {
+                        setIsSavingNote(false)
+                      }
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg text-white"
+                    style={{ backgroundColor: '#d97706' }}
+                  >
+                    {isSavingNote ? 'Sauvegarde...' : 'Sauvegarder'}
+                  </button>
+                </div>
               </div>
               {/* Indicateur de traduction */}
               {translatedData?.customerNote && (

@@ -379,6 +379,24 @@ export const getOrderByNumber = async (orderNumber) => {
   }
 }
 
+// Mettre à jour la note client d'une commande
+export const updateOrderNote = async (orderId, note) => {
+  try {
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/${orderId}/note`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note })
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return data.success === true
+  } catch (error) {
+    return false
+  }
+}
+
 // Mettre à jour le statut d'une commande
 export const updateOrderStatus = async (orderId, newStatus) => {
   try {

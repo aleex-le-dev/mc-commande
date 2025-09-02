@@ -733,6 +733,29 @@ app.put('/api/orders/:orderId/status', async (req, res) => {
   }
 })
 
+// PUT /api/orders/:orderId/note - Mettre à jour la note client d'une commande
+app.put('/api/orders/:orderId/note', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const { note } = req.body || {}
+    if (!orderId) return res.status(400).json({ success: false, error: 'orderId manquant' })
+    const numericOrderId = parseInt(orderId, 10)
+    if (Number.isNaN(numericOrderId)) return res.status(400).json({ success: false, error: 'orderId invalide' })
+    const ordersCollection = db.collection('orders_sync')
+    const result = await ordersCollection.updateOne(
+      { order_id: numericOrderId },
+      { $set: { customer_note: note || '', updated_at: new Date() } }
+    )
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Commande introuvable' })
+    }
+    return res.json({ success: true })
+  } catch (error) {
+    console.error('Erreur PUT /api/orders/:orderId/note:', error)
+    return res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
 // GET /api/orders - Récupérer toutes les commandes avec articles et statuts
 app.get('/api/orders', async (req, res) => {
   try {
