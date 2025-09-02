@@ -81,7 +81,7 @@ const HeaderMedia = ({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="absolute top-3 right-3 z-5 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/40 bg-black/30 text-white/90 hover:bg-black/50 hover:border-white/60 backdrop-blur-sm"
+        className={`absolute top-3 right-3 z-5 inline-flex items-center justify-center w-9 h-9 rounded-full border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 backdrop-blur-sm dark:hover:bg-white/20 dark:hover:text-white`}
         title="Voir la commande complète"
         aria-label="Voir la commande complète"
       >
@@ -100,7 +100,7 @@ const HeaderMedia = ({
       <div className="absolute left-4 top-20 z-5 pointer-events-auto">
         <button
           onClick={handleOverlayToggle}
-          className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center border border-white/30 bg-transparent text-white/90 hover:bg-white/90 hover:text-black hover:border-white focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 dark:hover:bg-white/20 dark:hover:text-white cursor-pointer ${
             isOverlayOpen ? 'bg-white/90 text-black border-white ring-2 ring-white/60' : ''
           }`}
           aria-label="Informations client"
