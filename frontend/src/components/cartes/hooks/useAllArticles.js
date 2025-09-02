@@ -66,7 +66,8 @@ export const useAllArticles = (selectedType = 'all') => {
       })
     })
     
-    return articles
+    // Trier les articles par date de commande (plus ancien en premier)
+    return articles.sort((a, b) => new Date(a.orderDate) - new Date(b.orderDate))
   }, [dbOrders, selectedType])
 
   return {

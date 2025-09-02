@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import ImageLoader from './ImageLoader'
@@ -39,6 +40,7 @@ const ArticleCard = forwardRef(({
   showRetardIndicator = true, // Nouvelle prop pour contrôler l'affichage de l'indicateur de retard
   isEnRetard = false // Nouvelle prop pour indiquer si l'article est en retard
 }, ref) => {
+  const queryClient = useQueryClient()
   const {
     copiedText, setCopiedText,
     isNoteOpen, setIsNoteOpen,
@@ -84,6 +86,11 @@ const ArticleCard = forwardRef(({
         setLocalAssignment(updated)
         try {
           await assignmentsService.createOrUpdateAssignment(updated)
+          if (onAssignmentUpdate) {
+            onAssignmentUpdate(uniqueAssignmentId, updated)
+          }
+          // Notifier pour déclencher le re-tri immédiat
+          window.dispatchEvent(new Event('mc-mark-urgent'))
         } catch (e) {
           setLocalAssignment(localAssignment)
         }
@@ -94,7 +101,7 @@ const ArticleCard = forwardRef(({
           article_id: uniqueAssignmentId, 
           tricoteuse_id: 'unassigned', 
           tricoteuse_name: 'Non assigné', 
-          status: 'en_cours',
+          status: 'non_assigné',
           urgent 
         }
         try {
@@ -103,11 +110,13 @@ const ArticleCard = forwardRef(({
           if (onAssignmentUpdate) {
             onAssignmentUpdate(uniqueAssignmentId, minimalAssignment)
           }
+          // Notifier pour déclencher le re-tri immédiat
+          window.dispatchEvent(new Event('mc-mark-urgent'))
         } catch (e) {
           // Fallback local si le backend échoue
           setLocalUrgent(urgent)
-          const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
-          try { localStorage.setItem(key, urgent ? '1' : '0') } catch {}
+          // Notifier pour déclencher le re-tri immédiat même en cas d'erreur
+          window.dispatchEvent(new Event('mc-mark-urgent'))
         }
       }
     }
@@ -294,7 +303,15 @@ const ArticleCard = forwardRef(({
         onPick={async (tricoteuse) => {
           if (isAssigning) return
                     setIsAssigning(true)
-          const assignmentData = { article_id: uniqueAssignmentId, tricoteuse_id: tricoteuse._id, tricoteuse_name: tricoteuse.firstName, status: 'en_cours' }
+          // Préserver le statut urgent existant lors du changement d'assignation
+          const currentUrgent = localAssignment ? localAssignment.urgent : localUrgent
+          const assignmentData = { 
+            article_id: uniqueAssignmentId, 
+            tricoteuse_id: tricoteuse._id, 
+            tricoteuse_name: tricoteuse.firstName, 
+            status: 'en_cours',
+            urgent: currentUrgent
+          }
           try {
             await assignmentsService.createOrUpdateAssignment(assignmentData)
             const enrichedAssignment = { ...assignmentData, tricoteuse_photo: tricoteuse.photoUrl, tricoteuse_color: tricoteuse.color, tricoteuse_name: tricoteuse.firstName }
@@ -321,9 +338,6 @@ const ArticleCard = forwardRef(({
                                setLocalAssignment(updatedAssignment)
             if (onAssignmentUpdate) { onAssignmentUpdate() }
                                closeTricoteuseModal()
-            if (status === 'termine') {
-              setTimeout(() => { setIsRemoved(true) }, 3000)
-            }
           } catch (error) {
                                console.error('Erreur lors de la mise à jour du statut:', error)
           }

@@ -1833,7 +1833,7 @@ app.post('/api/assignments', async (req, res) => {
         $set: {
           tricoteuse_id: tricoteuse_id,
           tricoteuse_name: tricoteuse_name,
-          status: status || 'en_cours',
+          status: status || 'non_assigné',
           urgent: urgent === true,
           assigned_at: new Date(),
           updated_at: new Date()
@@ -1848,7 +1848,7 @@ app.post('/api/assignments', async (req, res) => {
         article_id,
         tricoteuse_id,
         tricoteuse_name,
-        status: status || 'en_cours',
+        status: status || 'non_assigné',
         urgent: urgent === true,
         assigned_at: new Date()
       }

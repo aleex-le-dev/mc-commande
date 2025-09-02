@@ -93,14 +93,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     }
   }, [memoizedImageUrl, memoizedProductId, productionType])
 
-  // Charger l'état URGENT local si non assigné
-  useEffect(() => {
-    const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
-    try {
-      const stored = localStorage.getItem(key)
-      if (stored === '1') setLocalUrgent(true)
-    } catch {}
-  }, [article.line_item_id, article.product_id, article.orderNumber])
+  // Plus de localStorage - tout est en BDD maintenant
 
   useEffect(() => {
     const loadDateLimite = async () => {

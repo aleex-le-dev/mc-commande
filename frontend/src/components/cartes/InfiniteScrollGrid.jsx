@@ -53,23 +53,26 @@ const InfiniteScrollGrid = forwardRef(({
   }, [])
 
   const isArticleUrgent = useCallback((article) => {
+    // Utiliser urgentTick pour forcer le re-calcul
+    urgentTick // référence pour déclencher le re-calcul
     const assignedUrgent = Boolean(assignments[article.line_item_id]?.urgent)
-    if (assignedUrgent) return true
-    const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
-    try { return localStorage.getItem(key) === '1' } catch { return false }
-  }, [assignments])
+    
+    // Un article est urgent uniquement si l'assignation en BDD le dit
+    return assignedUrgent
+  }, [assignments, urgentTick])
 
-  // Ordonner: urgents d'abord
+  // Ordonner: urgents d'abord, puis par ordre chronologique
   const sortedArticles = useMemo(() => {
     const withIndex = filteredArticles.map((a, i) => ({ a, i }))
     withIndex.sort((x, y) => {
       const ux = isArticleUrgent(x.a) ? 1 : 0
       const uy = isArticleUrgent(y.a) ? 1 : 0
       if (ux !== uy) return uy - ux // urgents en premier
-      return x.i - y.i // ordre initial stable
+      // Pour les non-urgents, conserver l'ordre chronologique original
+      return x.i - y.i // ordre initial stable (chronologique)
     })
     return withIndex.map(w => w.a)
-  }, [filteredArticles, isArticleUrgent, urgentTick])
+  }, [filteredArticles, isArticleUrgent, urgentTick, assignments])
   
   // Observer pour détecter quand on approche du bas
   const observerRef = useRef()
