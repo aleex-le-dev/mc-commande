@@ -808,7 +808,8 @@ const ArticleCard = forwardRef(({
           onClick={closeTricoteuseModal}
         >
           <div 
-            className="bg-white rounded-2xl p-4 w-11/12 max-w-md max-h-96 overflow-y-auto shadow-2xl"
+            className="bg-white rounded-2xl p-4 w-full max-w-full mx-3 shadow-2xl"
+            style={{ maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* En-tête simple */}
@@ -833,7 +834,7 @@ const ArticleCard = forwardRef(({
             </div>
 
             {/* Grille simple 2 par ligne */}
-            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3">
               {/* Option de retrait si déjà assigné */}
               {localAssignment && (
                 <button
