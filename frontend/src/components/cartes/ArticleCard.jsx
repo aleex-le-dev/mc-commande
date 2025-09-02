@@ -549,14 +549,14 @@ const ArticleCard = forwardRef(({
       </div>
 
             {/* Date / heure / note */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 p-3 z-10">
-        <div className="flex items-end justify-between">
+      <div className={`absolute bottom-1 left-0 right-0 h-16 z-10 px-3 pt-3 ${localAssignment ? 'pb-5' : 'pb-3'}`}>
+        <div className="flex items-center justify-between">
           {/* Date et heure à gauche - position fixe */}
           <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium ">
-            <span className="bg-gray-100 px-2 py-1 rounded-md">
+            <span className="bg-gray-100 px-2 py-1 rounded-md align-middle">
               {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
             </span>
-            <span className="bg-gray-100 px-2 py-1 rounded-md">
+            <span className="bg-gray-100 px-2 py-1 rounded-md align-middle">
               {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
             </span>
             {true && (
@@ -595,7 +595,7 @@ const ArticleCard = forwardRef(({
           </div>
           
           {/* Avatar de la tricoteuse ou bouton d'assignation - aligné en bas */}
-          <div className="flex items-end">
+          <div className="flex items-center gap-2">
             {isLoadingAssignment ? (
               /* Indicateur de chargement */
               <div className="w-14 h-14 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
@@ -608,7 +608,7 @@ const ArticleCard = forwardRef(({
                   e.stopPropagation()
                   openTricoteuseModal()
                 }}
-                className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110"
+                className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 translate-y-[-10px]"
                 title={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
                 aria-label={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
               >
@@ -647,7 +647,7 @@ const ArticleCard = forwardRef(({
                   e.stopPropagation()
                   openTricoteuseModal()
                 }}
-                className="group relative px-3 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600"
+                className="group relative px-3 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600 mb-1"
                 title="Assigner à une tricoteuse"
                 aria-label="Assigner à une tricoteuse"
               >
