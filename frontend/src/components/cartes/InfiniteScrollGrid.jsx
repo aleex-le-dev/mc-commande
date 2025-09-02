@@ -219,6 +219,13 @@ const InfiniteScrollGrid = forwardRef(({
     loadDateLimite()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
+  // Rafraîchir les tricoteuses en temps réel après modifications dans l'onglet Admin
+  useEffect(() => {
+    const handler = () => loadTricoteuses()
+    window.addEventListener('mc-tricoteuses-updated', handler)
+    return () => window.removeEventListener('mc-tricoteuses-updated', handler)
+  }, [loadTricoteuses])
+
   // Réinitialiser le chargement progressif quand la recherche change
   useEffect(() => {
     if (filteredArticles.length > 0) {

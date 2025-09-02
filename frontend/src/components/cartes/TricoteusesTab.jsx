@@ -165,6 +165,8 @@ const TricoteusesTab = () => {
       
       // Recharger la liste
       await loadTricoteuses()
+      // Notifier le reste de l'application qu'une mise à jour a eu lieu
+      window.dispatchEvent(new Event('mc-tricoteuses-updated'))
       closeModal()
     } catch (error) {
       console.error('Erreur sauvegarde tricoteuse:', error)
@@ -183,6 +185,8 @@ const TricoteusesTab = () => {
       setLoading(true)
       await tricoteusesService.deleteTricoteuse(id)
       await loadTricoteuses()
+      // Notifier les autres vues de la mise à jour
+      window.dispatchEvent(new Event('mc-tricoteuses-updated'))
     } catch (error) {
       console.error('Erreur suppression tricoteuse:', error)
       alert('Erreur lors de la suppression. Veuillez réessayer.')

@@ -174,6 +174,13 @@ const SimpleFlexGrid = ({
     loadDateLimite()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType]) // Recharger quand on change d'onglet
 
+  // Écouter les mises à jour globales des tricoteuses pour recharger la liste sans refresh
+  useEffect(() => {
+    const handler = () => loadTricoteuses()
+    window.addEventListener('mc-tricoteuses-updated', handler)
+    return () => window.removeEventListener('mc-tricoteuses-updated', handler)
+  }, [loadTricoteuses])
+
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
   useEffect(() => {
     setVisibleCount(280) // Afficher tous les articles par défaut

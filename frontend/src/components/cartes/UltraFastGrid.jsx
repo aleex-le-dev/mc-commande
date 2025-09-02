@@ -141,6 +141,13 @@ const UltraFastGrid = ({
     loadDateLimite()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
+  // Écouter les mises à jour pour recharger la liste des tricoteuses sans rechargement
+  useEffect(() => {
+    const handler = () => loadTricoteuses()
+    window.addEventListener('mc-tricoteuses-updated', handler)
+    return () => window.removeEventListener('mc-tricoteuses-updated', handler)
+  }, [loadTricoteuses])
+
   // Calculer la grille optimisée
   const gridConfig = useMemo(() => {
     if (articles.length === 0) return null

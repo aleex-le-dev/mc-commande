@@ -429,6 +429,9 @@ export const tricoteusesService = {
       })
       if (!response.ok) throw new Error('Erreur lors de la création de la tricoteuse')
       const result = await response.json()
+      // Invalider le cache pour rendre visible immédiatement la nouvelle tricoteuse
+      cacheSet('tricoteuses', null)
+      try { window.dispatchEvent(new Event('mc-tricoteuses-updated')) } catch {}
       return result.data
     } catch (error) {
       console.error('Erreur création tricoteuse:', error)
@@ -448,6 +451,9 @@ export const tricoteusesService = {
       })
       if (!response.ok) throw new Error('Erreur lors de la modification de la tricoteuse')
       const result = await response.json()
+      // Invalider le cache et notifier
+      cacheSet('tricoteuses', null)
+      try { window.dispatchEvent(new Event('mc-tricoteuses-updated')) } catch {}
       return result.data
     } catch (error) {
       console.error('Erreur modification tricoteuse:', error)
@@ -463,6 +469,9 @@ export const tricoteusesService = {
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression de la tricoteuse')
       const result = await response.json()
+      // Invalider le cache et notifier
+      cacheSet('tricoteuses', null)
+      try { window.dispatchEvent(new Event('mc-tricoteuses-updated')) } catch {}
       return result.success
     } catch (error) {
       console.error('Erreur suppression tricoteuse:', error)
