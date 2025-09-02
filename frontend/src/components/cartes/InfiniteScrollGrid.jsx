@@ -43,6 +43,33 @@ const InfiniteScrollGrid = forwardRef(({
       (article.product_name || '').toLowerCase().includes(term)
     )
   }, [allArticles, searchTerm])
+
+  // Urgent: assignment.urgent ou localStorage (pour non assignés)
+  const [urgentTick, setUrgentTick] = useState(0)
+  useEffect(() => {
+    const handleUrgent = () => setUrgentTick(Date.now())
+    window.addEventListener('mc-mark-urgent', handleUrgent, true)
+    return () => window.removeEventListener('mc-mark-urgent', handleUrgent, true)
+  }, [])
+
+  const isArticleUrgent = useCallback((article) => {
+    const assignedUrgent = Boolean(assignments[article.line_item_id]?.urgent)
+    if (assignedUrgent) return true
+    const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
+    try { return localStorage.getItem(key) === '1' } catch { return false }
+  }, [assignments])
+
+  // Ordonner: urgents d'abord
+  const sortedArticles = useMemo(() => {
+    const withIndex = filteredArticles.map((a, i) => ({ a, i }))
+    withIndex.sort((x, y) => {
+      const ux = isArticleUrgent(x.a) ? 1 : 0
+      const uy = isArticleUrgent(y.a) ? 1 : 0
+      if (ux !== uy) return uy - ux // urgents en premier
+      return x.i - y.i // ordre initial stable
+    })
+    return withIndex.map(w => w.a)
+  }, [filteredArticles, isArticleUrgent, urgentTick])
   
   // Observer pour détecter quand on approche du bas
   const observerRef = useRef()
@@ -71,26 +98,26 @@ const InfiniteScrollGrid = forwardRef(({
       const nextBatch = currentBatch + 1
       const startIndex = nextBatch * BATCH_SIZE
       const endIndex = startIndex + BATCH_SIZE
-      const newArticles = filteredArticles.slice(startIndex, endIndex)
+      const newArticles = sortedArticles.slice(startIndex, endIndex)
       
       if (newArticles.length > 0) {
         setVisibleArticles(prev => [...prev, ...newArticles])
         setCurrentBatch(nextBatch)
-        setHasMore(endIndex < filteredArticles.length)
+        setHasMore(endIndex < sortedArticles.length)
       } else {
         setHasMore(false)
       }
       
       setIsLoadingMore(false)
     }, 300)
-  }, [currentBatch, filteredArticles.length, isLoadingMore, hasMore])
+  }, [currentBatch, sortedArticles.length, isLoadingMore, hasMore])
 
   // Exposer une méthode pour charger tout et scroller en bas
   useImperativeHandle(ref, () => ({
     goToEnd: () => {
       // Charger tout d'un coup pour atteindre la fin
-      setVisibleArticles(filteredArticles)
-      setCurrentBatch(Math.ceil(filteredArticles.length / BATCH_SIZE) - 1)
+      setVisibleArticles(sortedArticles)
+      setCurrentBatch(Math.ceil(sortedArticles.length / BATCH_SIZE) - 1)
       setHasMore(false)
       // Scroller quand le DOM est prêt (frame suivante)
       requestAnimationFrame(() => {
@@ -101,7 +128,7 @@ const InfiniteScrollGrid = forwardRef(({
         }
       })
     }
-  }), [filteredArticles])
+  }), [sortedArticles])
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -228,17 +255,17 @@ const InfiniteScrollGrid = forwardRef(({
 
   // Réinitialiser le chargement progressif quand la recherche change
   useEffect(() => {
-    if (filteredArticles.length > 0) {
-      const firstBatch = filteredArticles.slice(0, BATCH_SIZE)
+    if (sortedArticles.length > 0) {
+      const firstBatch = sortedArticles.slice(0, BATCH_SIZE)
       setVisibleArticles(firstBatch)
       setCurrentBatch(0)
-      setHasMore(filteredArticles.length > BATCH_SIZE)
+      setHasMore(sortedArticles.length > BATCH_SIZE)
     } else {
       setVisibleArticles([])
       setCurrentBatch(0)
       setHasMore(false)
     }
-  }, [filteredArticles])
+  }, [sortedArticles])
 
   // Charger le premier lot d'articles (seulement si pas de recherche)
   useEffect(() => {
@@ -288,8 +315,8 @@ const InfiniteScrollGrid = forwardRef(({
   const getLastRetardIndex = () => {
     if (!dateLimite) return -1
     
-    for (let i = filteredArticles.length - 1; i >= 0; i--) {
-      if (isArticleEnRetard(filteredArticles[i])) {
+    for (let i = sortedArticles.length - 1; i >= 0; i--) {
+      if (isArticleEnRetard(sortedArticles[i])) {
         return i
       }
     }
@@ -334,7 +361,7 @@ const InfiniteScrollGrid = forwardRef(({
           
           // Vérifier si c'est le dernier article en retard (en utilisant l'index global)
           const isDernierEnRetard = lastRetardIndex !== -1 && 
-            filteredArticles.indexOf(article) === lastRetardIndex
+            sortedArticles.indexOf(article) === lastRetardIndex
           
           return (
             <div 
