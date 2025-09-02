@@ -344,7 +344,7 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[420px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
+      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[450px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
         localAssignment ? 
           (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
            localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
@@ -497,9 +497,9 @@ const ArticleCard = forwardRef(({
         </div>
       </div>
 
-      {/* Zone d'informations dynamique en bas */}
+      {/* Zone d'informations dynamique en bas (réserve l'espace de la barre inférieure) */}
       <div className="h-24 bg-white backdrop-blur-md transition-all duration-300 relative">
-        <div className="p-3 pt-2">
+        <div className="p-3 pt-2 pb-16">
           {/* Informations principales pour tricoteuses */}
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-gray-900 leading-tight">
@@ -518,7 +518,7 @@ const ArticleCard = forwardRef(({
               </div>
               
               {((getArticleSize && getArticleSize(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_taille')?.value)) && (
-                <div className="text-center">
+                <div className="text-center mb-6">
                   <div className="text-sm text-gray-500">Taille</div>
                   <div className="text-lg font-semibold">
                     {(getArticleSize && getArticleSize(article.meta_data)) || (article.meta_data?.find(item => item.key === 'pa_taille')?.value) || 'N/A'}
@@ -543,7 +543,7 @@ const ArticleCard = forwardRef(({
       </div>
 
             {/* Date / heure / note */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+      <div className="absolute bottom-0 left-0 right-0 h-16 p-3 z-10">
         <div className="flex items-end justify-between">
           {/* Date et heure à gauche - position fixe */}
           <div className="flex items-center space-x-2 text-xs text-gray-500 font-medium ">
