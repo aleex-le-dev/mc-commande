@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import ContextMenu from './components/ContextMenu'
 import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -21,6 +22,59 @@ const queryClient = new QueryClient({
 
 function App() {
   const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
+  const [ctxVisible, setCtxVisible] = useState(false)
+  const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
+  const [ctxItems, setCtxItems] = useState([])
+  const [urgentMap, setUrgentMap] = useState({})
+
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault()
+      const x = e.clientX
+      const y = e.clientY
+      setCtxPosition({ x, y })
+      setCtxItems([
+        { id: 'refresh', label: 'Rafraîchir', onClick: () => window.location.reload() },
+        { id: 'copy-url', label: 'Copier l’URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
+      ])
+      setCtxVisible(true)
+    }
+    const handleCardContext = (ev) => {
+      const { x, y, uniqueAssignmentId, currentUrgent } = ev.detail || {}
+      setCtxPosition({ x, y })
+      const items = [
+        { id: 'refresh', label: 'Rafraîchir', onClick: () => window.location.reload() },
+        { id: 'copy-url', label: 'Copier l’URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
+      ]
+      items.unshift({
+        id: 'urgent',
+        label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT',
+        onClick: () => {
+          window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } }))
+        }
+      })
+      setCtxItems(items)
+      setCtxVisible(true)
+    }
+    const handleClose = () => setCtxVisible(false)
+    const handleMarkUrgent = (ev) => {
+      const { uniqueAssignmentId, urgent } = ev.detail || {}
+      setUrgentMap((prev) => ({ ...prev, [uniqueAssignmentId]: urgent }))
+      setCtxVisible(false)
+    }
+    window.addEventListener('contextmenu', handleContextMenu, true)
+    window.addEventListener('mc-context', handleCardContext, true)
+    window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
+    window.addEventListener('scroll', handleClose, true)
+    window.addEventListener('resize', handleClose, true)
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu, true)
+      window.removeEventListener('mc-context', handleCardContext, true)
+      window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
+      window.removeEventListener('scroll', handleClose, true)
+      window.removeEventListener('resize', handleClose, true)
+    }
+  }, [])
 
   // Changer le titre de la page et le favicon selon l'onglet actif
   useEffect(() => {
@@ -168,6 +222,12 @@ function App() {
         <main className="w-full py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
           {renderContent()}
         </main>
+        <ContextMenu
+          visible={ctxVisible}
+          position={ctxPosition}
+          items={ctxItems}
+          onClose={() => setCtxVisible(false)}
+        />
       </div>
     </QueryClientProvider>
   )

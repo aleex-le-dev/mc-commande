@@ -25,6 +25,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const [showConfetti, setShowConfetti] = useState(false)
   const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 })
   const [isRemoved, setIsRemoved] = useState(false)
+  const [localUrgent, setLocalUrgent] = useState(false)
 
   const noteBtnRef = useRef(null)
   const notePopoverRef = useRef(null)
@@ -91,6 +92,15 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
       setIsImageLoading(false)
     }
   }, [memoizedImageUrl, memoizedProductId, productionType])
+
+  // Charger l'état URGENT local si non assigné
+  useEffect(() => {
+    const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
+    try {
+      const stored = localStorage.getItem(key)
+      if (stored === '1') setLocalUrgent(true)
+    } catch {}
+  }, [article.line_item_id, article.product_id, article.orderNumber])
 
   useEffect(() => {
     const loadDateLimite = async () => {
@@ -232,6 +242,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     showConfetti, setShowConfetti,
     confettiPosition, setConfettiPosition,
     isRemoved, setIsRemoved,
+    localUrgent, setLocalUrgent,
     noteBtnRef, notePopoverRef,
     memoizedImageUrl, memoizedProductId, uniqueAssignmentId,
     displayImageUrl,

@@ -67,12 +67,35 @@ const ArticleCard = forwardRef(({
     isValidPhotoUrl,
     doitAvoirTraitRouge,
     estApresDateLimite,
+    localUrgent, setLocalUrgent,
   } = useArticleCard({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite })
 
   const handleOverlayToggle = useCallback((e) => {
     e.stopPropagation()
     onOverlayOpen && onOverlayOpen()
   }, [onOverlayOpen])
+
+  useEffect(() => {
+    const handleMarkUrgent = async (ev) => {
+      const { uniqueAssignmentId: targetId, urgent } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      if (localAssignment) {
+        const updated = { ...localAssignment, urgent }
+        setLocalAssignment(updated)
+        try {
+          await assignmentsService.createOrUpdateAssignment(updated)
+        } catch (e) {
+          setLocalAssignment(localAssignment)
+        }
+      } else {
+        setLocalUrgent(urgent)
+        const key = `urgent_${article.line_item_id || article.product_id}_${article.orderNumber}`
+        try { localStorage.setItem(key, urgent ? '1' : '0') } catch {}
+      }
+    }
+    window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
+    return () => window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
+  }, [localAssignment, uniqueAssignmentId])
 
   // Formatte proprement l'adresse en mettant le code postal + ville à la ligne
   const renderFormattedAddress = (address) => {
@@ -135,6 +158,18 @@ const ArticleCard = forwardRef(({
              style={{ 
          backgroundColor: 'white'
        }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const detail = {
+          x: e.clientX,
+          y: e.clientY,
+          uniqueAssignmentId,
+          hasAssignment: Boolean(localAssignment),
+          currentUrgent: localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent),
+        };
+        window.dispatchEvent(new CustomEvent('mc-context', { detail }));
+      }}
     >
 
       <HeaderMedia
@@ -148,7 +183,7 @@ const ArticleCard = forwardRef(({
         setImageUrl={setImageUrl}
         imageService={imageService}
         doitAvoirTraitRouge={doitAvoirTraitRouge}
-        localAssignment={localAssignment}
+        isUrgent={localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent)}
         handleOverlayToggle={handleOverlayToggle}
         isOverlayOpen={isOverlayOpen}
         handleTranslation={handleTranslation}

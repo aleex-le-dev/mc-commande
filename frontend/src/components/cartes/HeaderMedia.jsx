@@ -15,7 +15,7 @@ const HeaderMedia = ({
   setImageUrl,
   imageService,
   doitAvoirTraitRouge,
-  localAssignment,
+  isUrgent,
   handleOverlayToggle,
   isOverlayOpen,
   handleTranslation,
@@ -64,7 +64,7 @@ const HeaderMedia = ({
         </div>
       )}
 
-      <TopBadges showRetard={doitAvoirTraitRouge} showUrgent={!!localAssignment?.urgent} />
+      <TopBadges showRetard={doitAvoirTraitRouge} showUrgent={Boolean(isUrgent)} />
 
       <a
         href={article.permalink || '#'}
