@@ -9,7 +9,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
   const queryClient = useQueryClient()
 
   // Récupérer TOUTES les commandes depuis la BDD (avec synchronisation automatique)
-  const { data: allOrders, isLoading, error } = useQuery({
+  const { data: allOrders, isLoading, error, refetch } = useQuery({
     queryKey: ['unified-orders'],
     queryFn: getOrdersFromDatabase,
     staleTime: 30000,
@@ -17,6 +17,12 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     refetchOnMount: false,
     retry: 2
   })
+
+  // Exposer la fonction de rafraîchissement
+  const refreshData = useCallback(() => {
+    console.log('🔄 Rafraîchissement des données...')
+    refetch()
+  }, [refetch])
 
   // Transformer en articles
   const articles = useMemo(() => {
@@ -134,6 +140,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     ordersByNumber,
     isLoading,
     error: error && !(error.name === 'AbortError' || error.message === 'RequestAborted') ? error : null,
-    totalArticles: filteredArticles.length
+    totalArticles: filteredArticles.length,
+    refreshData
   }
 }

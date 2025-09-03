@@ -9,7 +9,7 @@ import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 const ProductionPage = ({ productionType, title }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  const { articles, isLoading, error } = useUnifiedArticles(productionType)
+  const { articles, isLoading, error, refreshData } = useUnifiedArticles(productionType)
   
   // Filtrage local par recherche et statut
   const filteredArticles = useMemo(() => {
@@ -105,8 +105,19 @@ const ProductionPage = ({ productionType, title }) => {
         
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => {
+              console.log('🔄 Bouton Actualiser cliqué')
+              refreshData()
+            }}
+            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+            title="Rafraîchir les données"
+          >
+            🔄 Actualiser
+          </button>
+          
+          <button
             onClick={() => setSelectedStatus('all')}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'all' 
                 ? 'bg-blue-100 border-blue-300 text-blue-800' 
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -117,7 +128,7 @@ const ProductionPage = ({ productionType, title }) => {
           
           <button
             onClick={() => setSelectedStatus('a_faire')}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'a_faire' 
                 ? 'bg-gray-100 border-gray-400 text-gray-800' 
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -128,7 +139,7 @@ const ProductionPage = ({ productionType, title }) => {
           
           <button
             onClick={() => setSelectedStatus('en_cours')}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'en_cours' 
                 ? 'bg-blue-100 border-blue-400 text-blue-800' 
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -139,7 +150,7 @@ const ProductionPage = ({ productionType, title }) => {
           
           <button
             onClick={() => setSelectedStatus('en_pause')}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'en_pause' 
                 ? 'bg-yellow-100 border-yellow-400 text-yellow-800' 
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -150,7 +161,7 @@ const ProductionPage = ({ productionType, title }) => {
           
           <button
             onClick={() => setSelectedStatus('termine')}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'termine' 
                 ? 'bg-green-100 border-green-400 text-green-800' 
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
