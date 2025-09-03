@@ -24,7 +24,8 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     
     const articlesList = []
     allOrders.forEach(order => {
-      order.items?.forEach(item => {
+      const orderItems = order.items || []
+      orderItems.forEach((item, index) => {
         articlesList.push({
           ...item,
           orderId: order.order_id,
@@ -41,7 +42,10 @@ export const useUnifiedArticles = (selectedType = 'all') => {
           permalink: item.permalink,
           productionType: item.production_status?.production_type || 'couture',
           status: item.production_status?.status || 'a_faire',
-          isDispatched: item.production_status?.status !== 'a_faire'
+          isDispatched: item.production_status?.status !== 'a_faire',
+          // Ajouter les informations de position dans la commande
+          itemIndex: index + 1,
+          totalItems: orderItems.length
         })
       })
     })

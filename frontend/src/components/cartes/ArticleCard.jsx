@@ -310,8 +310,6 @@ const ArticleCard = forwardRef(({
         article={article}
         translatedData={translatedData}
         searchTerm={searchTerm}
-        getArticleSize={getArticleSize}
-        getArticleColor={getArticleColor}
       />
 
             {/* Date / heure / note / assignation */}
