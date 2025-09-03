@@ -95,7 +95,7 @@ const HeaderMedia = ({
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
 
-      <div className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-5">
+      <div className="absolute top-4 left-4 px-2 py-1 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-5">
         #{article.orderNumber}
                     <span className="ml-2 text-sm font-normal opacity-90">
               {article.itemIndex}/{article.totalItems}
