@@ -73,8 +73,8 @@ const BottomBar = ({
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
               className="group relative px-3 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600 mb-1"
-              title="Assigner à une tricoteuse"
-              aria-label="Assigner à une tricoteuse"
+              title="Assigner à une couturière"
+              aria-label="Assigner à une couturière"
             >
               <span className="text-xs font-semibold">Assigner</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3 h-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -26,7 +26,7 @@ const AssignModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Choisir une tricoteuse</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Choisir une couturière</h3>
           <p className="text-sm text-gray-600">
             {localAssignment 
               ? `Article assigné à ${localAssignment.tricoteuse_name}`

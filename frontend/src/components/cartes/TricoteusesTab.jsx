@@ -31,7 +31,7 @@ const TricoteusesTab = () => {
       const data = await tricoteusesService.getAllTricoteuses()
       setKnitters(data)
     } catch (error) {
-      console.error('Erreur chargement tricoteuses:', error)
+      console.error('Erreur chargement couturières:', error)
     } finally {
       setLoading(false)
     }
@@ -199,28 +199,28 @@ const TricoteusesTab = () => {
     <div className="max-w-6xl mx-auto">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Tricoteuses</h2>
-          <p className="text-gray-600">Gérez votre équipe de tricoteuses</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Couturières</h2>
+          <p className="text-gray-600">Gérez votre équipe de couturières</p>
         </div>
 
-        {/* Grille des tricoteuses */}
+        {/* Grille des couturières */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {loading ? (
             <div className="col-span-full p-12 border-2 border-dashed border-gray-300 rounded-xl text-center">
               <div className="text-gray-400 text-6xl mb-4">⚙️</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Chargement des tricoteuses...</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Chargement des couturières...</h3>
               <p className="text-gray-500 mb-4">Veuillez patienter pendant le chargement des données.</p>
             </div>
           ) : knitters.length === 0 ? (
             <div className="col-span-full p-12 border-2 border-dashed border-gray-300 rounded-xl text-center">
               <div className="text-gray-400 text-6xl mb-4">🧶</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune tricoteuse</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune couturière</h3>
               <p className="text-gray-500 mb-4">Commencez par ajouter votre première tricoteuse</p>
               <button
                 onClick={openAddModal}
                 className="px-4 py-2 bg-[var(--rose-clair-text)] text-white rounded-lg hover:opacity-90 transition-all duration-200"
               >
-                Ajouter une tricoteuse
+                Ajouter une couturière
               </button>
             </div>
           ) : (
@@ -229,7 +229,7 @@ const TricoteusesTab = () => {
               <div className="group bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-[var(--rose-clair-text)] hover:bg-[var(--rose-clair)] hover:bg-opacity-5 transition-all duration-200 cursor-pointer" onClick={openAddModal}>
                 <div className="flex flex-col items-center justify-center text-center space-y-3 h-full min-h-[120px]">
                   <div className="text-4xl text-gray-400 group-hover:text-[var(--rose-clair-text)] transition-colors">+</div>
-                  <div className="text-sm font-medium text-gray-600 group-hover:text-[var(--rose-clair-text)] transition-colors">Ajouter une tricoteuse</div>
+                  <div className="text-sm font-medium text-gray-600 group-hover:text-[var(--rose-clair-text)] transition-colors">Ajouter une couturière</div>
                 </div>
               </div>
               
@@ -254,7 +254,7 @@ const TricoteusesTab = () => {
                     <div>
                       <div className="font-semibold text-gray-900 text-sm">{k.firstName}</div>
                       <div className="text-xs text-gray-500">
-                        {k.gender === 'masculin' ? 'Tricoteur' : 'Tricoteuse'}
+                        {k.gender === 'masculin' ? 'Couturier' : 'Couturière'}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -288,7 +288,7 @@ const TricoteusesTab = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">
-                  {editingKnitter ? `Modifier le/la ${formData.gender === 'masculin' ? 'tricoteur' : 'tricoteuse'}` : 'Ajouter une tricoteuse'}
+                  {editingKnitter ? `Modifier le/la ${formData.gender === 'masculin' ? 'couturier' : 'couturière'}` : 'Ajouter une couturière'}
                 </h3>
                 <button
                   onClick={closeModal}
