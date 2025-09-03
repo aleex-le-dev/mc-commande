@@ -35,8 +35,9 @@ function App() {
       const y = e.clientY
       setCtxPosition({ x, y })
       setCtxItems([
-        { id: 'refresh', label: 'Rafraîchir', onClick: () => window.location.reload() },
-        { id: 'copy-url', label: 'Copier l’URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
+        { id: 'refresh-data', label: 'Recharger les données', onClick: () => { console.log('📡 Déclenchement de l\'événement mc-refresh-data'); window.dispatchEvent(new Event('mc-refresh-data')) } },
+        { id: 'refresh', label: 'Rafraîchir la page', onClick: () => window.location.reload() },
+        { id: 'copy-url', label: 'Copier l\'URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
       ])
       setCtxVisible(true)
     }
@@ -46,8 +47,9 @@ function App() {
       const items = [
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
         { id: 'urgent', label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
-        { id: 'refresh', label: 'Rafraîchir', onClick: () => window.location.reload() },
-        { id: 'copy-url', label: 'Copier l’URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
+        { id: 'refresh-data', label: 'Recharger les données', onClick: () => { console.log('📡 Déclenchement de l\'événement mc-refresh-data'); window.dispatchEvent(new Event('mc-refresh-data')) } },
+        { id: 'refresh', label: 'Rafraîchir la page', onClick: () => window.location.reload() },
+        { id: 'copy-url', label: 'Copier l\'URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
       ]
       setCtxItems(items)
       setCtxVisible(true)

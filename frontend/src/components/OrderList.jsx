@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import LoadingSpinner from './LoadingSpinner'
 import ImagePreloader from './ImagePreloader'
 import { 
@@ -11,12 +12,15 @@ import {
 } from './cartes'
 
 const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
+  const queryClient = useQueryClient()
+  
   // Utiliser le hook simple pour récupérer tous les articles
   const {
     articles,
     isLoading,
     error,
-    totalArticles
+    totalArticles,
+    refetch
   } = useAllArticles(propSelectedType)
 
   // Utiliser le hook pour les données des articles et la synchronisation
@@ -42,6 +46,31 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Écouter l'événement de rechargement des données
+  useEffect(() => {
+    const handleRefreshData = async () => {
+      console.log('🔄 Rechargement des données demandé')
+      console.log('📊 Articles avant rechargement:', articles.length)
+      
+      // Invalider les queries pour forcer le rechargement
+      await queryClient.invalidateQueries(['all-orders'])
+      await queryClient.invalidateQueries(['db-orders'])
+      await queryClient.invalidateQueries(['production-statuses'])
+      
+      console.log('✅ Queries invalidées')
+      
+      // Aussi appeler refetch pour être sûr
+      try {
+        const result = await refetch()
+        console.log('📈 Refetch terminé:', result)
+      } catch (error) {
+        console.error('❌ Erreur lors du refetch:', error)
+      }
+    }
+    window.addEventListener('mc-refresh-data', handleRefreshData)
+    return () => window.removeEventListener('mc-refresh-data', handleRefreshData)
+  }, [refetch, queryClient, articles.length])
 
   // Calculer le nombre d'articles filtrés
   const filteredArticlesCount = useMemo(() => {
