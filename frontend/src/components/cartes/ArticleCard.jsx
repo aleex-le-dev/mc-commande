@@ -127,7 +127,7 @@ const ArticleCard = forwardRef(({
       if (targetId !== uniqueAssignmentId) return
       
       try {
-        // Appeler l'API pour changer le type de production (même méthode que dans CommandeTab)
+        // Appeler l'API pour changer le type de production
         const response = await fetch(`http://localhost:3001/api/production-status/${article.line_item_id}/type`, {
           method: 'PUT',
           headers: {

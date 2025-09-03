@@ -68,8 +68,28 @@ function App() {
         console.log('⚠️ Type de production non reconnu:', currentProductionType)
       }
       
-      // Ajouter l'option de suppression de commande
+      // Ajouter les options de suppression
       if (orderNumber && orderId && articles) {
+        // Supprimer un article spécifique
+        items.push({ 
+          id: 'delete-article', 
+          label: 'Supprimer cet article', 
+          onClick: () => {
+            // Trouver l'article actuel en utilisant uniqueAssignmentId
+            const currentArticle = articles.find(a => {
+              // uniqueAssignmentId peut être au format "orderId_lineItemId" ou juste le line_item_id
+              const articleId = `${a.orderId}_${a.line_item_id}`
+              return articleId === uniqueAssignmentId || a.line_item_id == uniqueAssignmentId
+            })
+            
+            if (currentArticle && confirm(`Supprimer l'article "${currentArticle.product_name}" ?`)) {
+              handleDeleteArticle(orderId, currentArticle.line_item_id)
+            }
+            setCtxVisible(false)
+          }
+        })
+        
+        // Supprimer la commande entière
         items.push({ 
           id: 'delete-order', 
           label: 'Supprimer la commande', 
@@ -108,6 +128,26 @@ function App() {
       window.removeEventListener('resize', handleClose, true)
     }
   }, [])
+
+  // Fonction pour gérer la suppression d'un article spécifique
+  const handleDeleteArticle = async (orderId, lineItemId) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/items/${lineItemId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Rafraîchir les données
+        window.dispatchEvent(new Event('mc-refresh-data'))
+      } else {
+        console.error('Erreur lors de la suppression de l\'article:', response.statusText)
+        alert('Erreur lors de la suppression de l\'article')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'article:', error)
+      alert('Erreur lors de la suppression de l\'article')
+    }
+  }
 
   // Fonction pour gérer la suppression de commande
   const handleDeleteOrder = async () => {
