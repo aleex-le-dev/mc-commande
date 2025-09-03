@@ -86,7 +86,10 @@ export const useAllArticles = (selectedType = 'all') => {
     // Trier les articles par date de commande (plus ancien en premier)
     const sortedArticles = articles.sort((a, b) => new Date(a.orderDate) - new Date(b.orderDate))
     
-
+    // Exposer les articles globalement pour le menu contextuel
+    if (typeof window !== 'undefined') {
+      window.mcAllArticles = sortedArticles
+    }
     
     return sortedArticles
   }, [dbOrders, selectedType])

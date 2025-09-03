@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { assignmentsService } from './components/../services/mongodbService'
 import ContextMenu from './components/ContextMenu'
+import ConfirmationToast from './components/ConfirmationToast'
 import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -27,6 +28,11 @@ function App() {
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
   const [ctxItems, setCtxItems] = useState([])
   const [urgentMap, setUrgentMap] = useState({})
+  
+  // État pour le toast de confirmation de suppression
+  const [showDeleteToast, setShowDeleteToast] = useState(false)
+  const [deleteOrderInfo, setDeleteOrderInfo] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const handleContextMenu = (e) => {
@@ -42,8 +48,8 @@ function App() {
       setCtxVisible(true)
     }
     const handleCardContext = (ev) => {
-      const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType } = ev.detail || {}
-      console.log('🔍 Menu contextuel - Données reçues:', { currentProductionType, uniqueAssignmentId })
+      const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType, orderNumber, orderId, articles } = ev.detail || {}
+      console.log('🔍 Menu contextuel - Données reçues:', { currentProductionType, uniqueAssignmentId, orderNumber })
       setCtxPosition({ x, y })
       const items = [
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
@@ -60,6 +66,19 @@ function App() {
         items.push({ id: 'move-to-couture', label: 'Déplacer vers couture', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'couture' } })) })
       } else {
         console.log('⚠️ Type de production non reconnu:', currentProductionType)
+      }
+      
+      // Ajouter l'option de suppression de commande
+      if (orderNumber && orderId && articles) {
+        items.push({ 
+          id: 'delete-order', 
+          label: 'Supprimer la commande', 
+          onClick: () => {
+            setDeleteOrderInfo({ orderNumber, orderId, articles })
+            setShowDeleteToast(true)
+            setCtxVisible(false)
+          }
+        })
       }
       
       items.push(
@@ -89,6 +108,33 @@ function App() {
       window.removeEventListener('resize', handleClose, true)
     }
   }, [])
+
+  // Fonction pour gérer la suppression de commande
+  const handleDeleteOrder = async () => {
+    if (!deleteOrderInfo) return
+    
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`http://localhost:3001/api/orders/${deleteOrderInfo.orderId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Fermer le toast et rafraîchir les données
+        setShowDeleteToast(false)
+        setDeleteOrderInfo(null)
+        window.dispatchEvent(new Event('mc-refresh-data'))
+      } else {
+        console.error('Erreur lors de la suppression:', response.statusText)
+        alert('Erreur lors de la suppression de la commande')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error)
+      alert('Erreur lors de la suppression de la commande')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   // Changer le titre de la page et le favicon selon l'onglet actif
   useEffect(() => {
@@ -241,6 +287,19 @@ function App() {
           position={ctxPosition}
           items={ctxItems}
           onClose={() => setCtxVisible(false)}
+        />
+        
+        {/* Toast de confirmation de suppression */}
+        <ConfirmationToast
+          isVisible={showDeleteToast}
+          onClose={() => {
+            setShowDeleteToast(false)
+            setDeleteOrderInfo(null)
+          }}
+          onConfirm={handleDeleteOrder}
+          orderNumber={deleteOrderInfo?.orderNumber}
+          articles={deleteOrderInfo?.articles || []}
+          isDeleting={isDeleting}
         />
       </div>
     </QueryClientProvider>

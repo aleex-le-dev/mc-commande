@@ -232,6 +232,9 @@ const ArticleCard = forwardRef(({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Récupérer tous les articles de la même commande
+        const allArticlesOfOrder = window.mcAllArticles?.filter(a => a.orderNumber === article.orderNumber) || [article]
+        
         const detail = {
           x: e.clientX,
           y: e.clientY,
@@ -240,6 +243,9 @@ const ArticleCard = forwardRef(({
           currentUrgent: localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent),
           hasNote: Boolean(article.customerNote),
           currentProductionType: article.productionType,
+          orderNumber: article.orderNumber,
+          orderId: article.orderId,
+          articles: allArticlesOfOrder, // Tous les articles de la commande
         };
         window.dispatchEvent(new CustomEvent('mc-context', { detail }));
       }}
