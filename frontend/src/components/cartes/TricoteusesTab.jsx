@@ -20,7 +20,7 @@ const TricoteusesTab = () => {
     '#f43f5e', '#6b7280', '#111827'
   ]
 
-  // Charger les tricoteuses au montage du composant
+  // Charger les couturières au montage du composant
   useEffect(() => {
     loadTricoteuses()
   }, [])
@@ -169,7 +169,7 @@ const TricoteusesTab = () => {
       window.dispatchEvent(new Event('mc-tricoteuses-updated'))
       closeModal()
     } catch (error) {
-      console.error('Erreur sauvegarde tricoteuse:', error)
+      console.error('Erreur sauvegarde couturière:', error)
       alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
     } finally {
       setLoading(false)
@@ -177,7 +177,7 @@ const TricoteusesTab = () => {
   }
 
   const removeKnitter = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tricoteuse ?')) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette couturière ?')) {
       return
     }
 
@@ -188,7 +188,7 @@ const TricoteusesTab = () => {
       // Notifier les autres vues de la mise à jour
       window.dispatchEvent(new Event('mc-tricoteuses-updated'))
     } catch (error) {
-      console.error('Erreur suppression tricoteuse:', error)
+      console.error('Erreur suppression couturière:', error)
       alert('Erreur lors de la suppression. Veuillez réessayer.')
     } finally {
       setLoading(false)
@@ -215,7 +215,7 @@ const TricoteusesTab = () => {
             <div className="col-span-full p-12 border-2 border-dashed border-gray-300 rounded-xl text-center">
               <div className="text-gray-400 text-6xl mb-4">🧶</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune couturière</h3>
-              <p className="text-gray-500 mb-4">Commencez par ajouter votre première tricoteuse</p>
+              <p className="text-gray-500 mb-4">Commencez par ajouter votre première couturière</p>
               <button
                 onClick={openAddModal}
                 className="px-4 py-2 bg-[var(--rose-clair-text)] text-white rounded-lg hover:opacity-90 transition-all duration-200"
@@ -233,7 +233,7 @@ const TricoteusesTab = () => {
                 </div>
               </div>
               
-              {/* Tricoteuses existantes */}
+              {/* Couturières existantes */}
               {knitters.map(k => (
                 <div key={k._id} className="group bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="flex flex-col items-center text-center space-y-3">

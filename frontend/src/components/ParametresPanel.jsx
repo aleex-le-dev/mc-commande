@@ -8,8 +8,8 @@ const ParametresPanel = () => {
   const [activeTab, setActiveTab] = useState('tricoteuses')
 
   const tabs = [
-    { id: 'tricoteuses', label: 'Tricoteuses', icon: '🧶' },
-    { id: 'status', label: 'Statut', icon: '📊' },
+    { id: 'tricoteuses', label: 'Couturières', icon: '🧶' },
+    { id: 'status', label: 'Statut et tests', icon: '📊' },
     { id: 'dateLimite', label: 'Date limite', icon: '⏰' }
   ]
 
