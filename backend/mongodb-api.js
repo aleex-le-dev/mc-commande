@@ -1666,10 +1666,11 @@ app.post('/api/production-status', async (req, res) => {
 // POST /api/reset-production-status - Remettre tous les articles en "à faire"
 app.post('/api/reset-production-status', async (req, res) => {
   try {
-    const collection = db.collection('production_status')
+    const productionCollection = db.collection('production_status')
+    const assignmentsCollection = db.collection('article_assignments')
     
     // Remettre tous les articles en 'a_faire'
-    const result = await collection.updateMany(
+    const productionResult = await productionCollection.updateMany(
       {},
       { 
         $set: { 
@@ -1681,20 +1682,45 @@ app.post('/api/reset-production-status', async (req, res) => {
       }
     )
     
+    // Supprimer toutes les assignations
+    const assignmentsResult = await assignmentsCollection.deleteMany({})
+    
     // Vérifier le résultat
-    const counts = await collection.aggregate([
+    const statusCounts = await productionCollection.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]).toArray()
     
-    console.log('✅ Reset production status:', result.modifiedCount, 'articles remis en a_faire')
+    const assignmentCount = await assignmentsCollection.countDocuments()
+    
+    console.log('✅ Reset complet:', productionResult.modifiedCount, 'articles remis en a_faire,', assignmentsResult.deletedCount, 'assignations supprimées')
     
     res.json({ 
       success: true, 
-      modifiedCount: result.modifiedCount,
-      statusCounts: counts
+      productionModifiedCount: productionResult.modifiedCount,
+      assignmentsDeletedCount: assignmentsResult.deletedCount,
+      statusCounts: statusCounts,
+      remainingAssignments: assignmentCount
     })
   } catch (error) {
     console.error('Erreur reset-production-status:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// DELETE /api/assignments - Supprimer toutes les assignations
+app.delete('/api/assignments', async (req, res) => {
+  try {
+    const assignmentsCollection = db.collection('article_assignments')
+    const result = await assignmentsCollection.deleteMany({})
+    
+    console.log('✅ Suppression des assignations:', result.deletedCount, 'assignations supprimées')
+    
+    res.json({ 
+      success: true, 
+      deletedCount: result.deletedCount
+    })
+  } catch (error) {
+    console.error('Erreur suppression assignations:', error)
     res.status(500).json({ error: error.message })
   }
 })
