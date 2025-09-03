@@ -1663,6 +1663,42 @@ app.post('/api/production-status', async (req, res) => {
   }
 })
 
+// POST /api/reset-production-status - Remettre tous les articles en "à faire"
+app.post('/api/reset-production-status', async (req, res) => {
+  try {
+    const collection = db.collection('production_status')
+    
+    // Remettre tous les articles en 'a_faire'
+    const result = await collection.updateMany(
+      {},
+      { 
+        $set: { 
+          status: 'a_faire', 
+          assigned_to: null, 
+          notes: null, 
+          updated_at: new Date() 
+        }
+      }
+    )
+    
+    // Vérifier le résultat
+    const counts = await collection.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]).toArray()
+    
+    console.log('✅ Reset production status:', result.modifiedCount, 'articles remis en a_faire')
+    
+    res.json({ 
+      success: true, 
+      modifiedCount: result.modifiedCount,
+      statusCounts: counts
+    })
+  } catch (error) {
+    console.error('Erreur reset-production-status:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // PUT /api/production-status/:lineItemId/type - Mettre à jour le type de production d'un article
 app.put('/api/production-status/:lineItemId/type', async (req, res) => {
   try {

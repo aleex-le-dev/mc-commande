@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
+import { cacheClear } from '../services/mongodbService'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 
 /**
@@ -107,6 +108,9 @@ const ProductionPage = ({ productionType, title }) => {
           <button
             onClick={() => {
               console.log('🔄 Bouton Actualiser cliqué')
+              // Vider tout le cache frontend
+              cacheClear()
+              // Rafraîchir les données
               refreshData()
             }}
             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"

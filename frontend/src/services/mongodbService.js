@@ -47,6 +47,13 @@ function cacheDelete(key) {
   globalCache[key] = { data: null, at: 0 }
 }
 
+// Vider tout le cache
+function cacheClear() {
+  Object.keys(globalCache).forEach(key => {
+    globalCache[key] = { data: null, at: 0 }
+  })
+}
+
 async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
@@ -640,3 +647,6 @@ export async function prefetchAppData() {
     // silencieux
   }
 }
+
+// Exporter cacheClear pour vider le cache
+export { cacheClear }
