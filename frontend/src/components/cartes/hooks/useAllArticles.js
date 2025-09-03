@@ -54,7 +54,6 @@ export const useAllArticles = (selectedType = 'all') => {
     const articles = []
     Object.entries(ordersByNumber).forEach(([orderNumber, orders]) => {
       const totalItems = orders.length // Nombre total d'articles pour cette commande
-      console.log(`📦 Commande ${orderNumber}: ${totalItems} articles`)
       
       orders.forEach((order, index) => {
         const item = order.items?.[0] // Chaque commande n'a qu'un seul article
@@ -87,43 +86,7 @@ export const useAllArticles = (selectedType = 'all') => {
     // Trier les articles par date de commande (plus ancien en premier)
     const sortedArticles = articles.sort((a, b) => new Date(a.orderDate) - new Date(b.orderDate))
     
-    // Log pour vérifier que les données de comptage sont présentes
-    if (sortedArticles.length > 0) {
-      // Chercher des commandes avec plusieurs articles
-      const multiItemOrders = sortedArticles.filter(article => article.totalItems > 1)
-      if (multiItemOrders.length > 0) {
-        console.log('🎯 Commandes avec plusieurs articles trouvées:', multiItemOrders.length)
-        multiItemOrders.slice(0, 3).forEach(article => {
-          console.log(`  - Commande ${article.orderNumber}: ${article.itemIndex}/${article.totalItems}`)
-        })
-      } else {
-        console.log('⚠️ Aucune commande avec plusieurs articles trouvée')
-        console.log('📊 Exemple de commande simple:', sortedArticles[0].orderNumber, `${sortedArticles[0].itemIndex}/${sortedArticles[0].totalItems}`)
-      }
-      
-          // Debug spécifique pour la commande 388608
-    const commande388608 = sortedArticles.filter(article => article.orderNumber === '388608')
-    if (commande388608.length > 0) {
-      console.log('🔍 Debug commande 388608:')
-      commande388608.forEach((article, index) => {
-        console.log(`  - Article ${index + 1}: ${article.itemIndex}/${article.totalItems} (line_item_id: ${article.line_item_id})`)
-      })
-    }
-    
-    // Debug pour voir la structure des données brutes
-    const commande388608Raw = dbOrders.find(order => order.order_number === '388608')
-    if (commande388608Raw) {
-      console.log('🔍 Structure brute commande 388608:', {
-        order_id: commande388608Raw.order_id,
-        order_number: commande388608Raw.order_number,
-        items_count: commande388608Raw.items?.length || 0,
-        items: commande388608Raw.items?.map(item => ({
-          line_item_id: item.line_item_id,
-          product_name: item.product_name
-        })) || []
-      })
-    }
-    }
+
     
     return sortedArticles
   }, [dbOrders, selectedType])

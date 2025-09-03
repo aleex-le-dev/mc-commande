@@ -121,6 +121,37 @@ const ArticleCard = forwardRef(({
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
+    
+    const handleMoveProduction = async (ev) => {
+      const { uniqueAssignmentId: targetId, newType } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      
+      try {
+        // Appeler l'API pour changer le type de production (même méthode que dans CommandeTab)
+        const response = await fetch(`http://localhost:3001/api/production-status/${article.line_item_id}/type`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ production_type: newType })
+        })
+        
+        if (response.ok) {
+          // Attendre un peu pour que la base de données se mette à jour
+          setTimeout(() => {
+            // Rafraîchir les données
+            window.dispatchEvent(new Event('mc-refresh-data'))
+            // Déclencher le re-tri pour les articles urgents
+            window.dispatchEvent(new Event('mc-mark-urgent'))
+          }, 500)
+        } else {
+          console.error('Erreur lors du déplacement:', response.statusText)
+        }
+      } catch (error) {
+        console.error('Erreur lors du déplacement:', error)
+      }
+    }
+    
     const handleEditNote = (ev) => {
       const { uniqueAssignmentId: targetId } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
@@ -129,9 +160,11 @@ const ArticleCard = forwardRef(({
       setIsNoteOpen(true)
     }
     window.addEventListener('mc-edit-note', handleEditNote, true)
+    window.addEventListener('mc-move-production', handleMoveProduction, true)
     return () => {
       window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
       window.removeEventListener('mc-edit-note', handleEditNote, true)
+      window.removeEventListener('mc-move-production', handleMoveProduction, true)
     }
   }, [localAssignment, uniqueAssignmentId])
 
@@ -206,6 +239,7 @@ const ArticleCard = forwardRef(({
           hasAssignment: Boolean(localAssignment),
           currentUrgent: localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent),
           hasNote: Boolean(article.customerNote),
+          currentProductionType: article.productionType,
         };
         window.dispatchEvent(new CustomEvent('mc-context', { detail }));
       }}

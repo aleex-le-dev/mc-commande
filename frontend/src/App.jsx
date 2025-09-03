@@ -42,15 +42,31 @@ function App() {
       setCtxVisible(true)
     }
     const handleCardContext = (ev) => {
-      const { x, y, uniqueAssignmentId, currentUrgent, hasNote } = ev.detail || {}
+      const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType } = ev.detail || {}
+      console.log('🔍 Menu contextuel - Données reçues:', { currentProductionType, uniqueAssignmentId })
       setCtxPosition({ x, y })
       const items = [
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
         { id: 'urgent', label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
+      ]
+      
+      // Ajouter les options de déplacement selon le type de production actuel
+      console.log('🔍 Type de production actuel:', currentProductionType)
+      if (currentProductionType === 'couture') {
+        console.log('✅ Ajout option: Déplacer vers maille')
+        items.push({ id: 'move-to-maille', label: 'Déplacer vers maille', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'maille' } })) })
+      } else if (currentProductionType === 'maille') {
+        console.log('✅ Ajout option: Déplacer vers couture')
+        items.push({ id: 'move-to-couture', label: 'Déplacer vers couture', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'couture' } })) })
+      } else {
+        console.log('⚠️ Type de production non reconnu:', currentProductionType)
+      }
+      
+      items.push(
         { id: 'refresh-data', label: 'Recharger les données', onClick: () => { console.log('📡 Déclenchement de l\'événement mc-refresh-data'); window.dispatchEvent(new Event('mc-refresh-data')) } },
         { id: 'refresh', label: 'Rafraîchir la page', onClick: () => window.location.reload() },
         { id: 'copy-url', label: 'Copier l\'URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
-      ]
+      )
       setCtxItems(items)
       setCtxVisible(true)
     }
