@@ -125,6 +125,7 @@ const HeaderMedia = ({
           isTranslated={!!translatedData}
         />
       </div>
+
     </div>
   )
 }

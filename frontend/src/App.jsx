@@ -6,6 +6,7 @@ import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import OrderList from './components/OrderList'
+import TerminePage from './components/TerminePage'
 import OrderForm from './components/OrderForm'
 import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
@@ -115,14 +116,17 @@ function App() {
       setUrgentMap((prev) => ({ ...prev, [uniqueAssignmentId]: urgent }))
       setCtxVisible(false)
     }
+    const handleOpenTermine = () => setActiveTab('termine')
     window.addEventListener('contextmenu', handleContextMenu, true)
     window.addEventListener('mc-context', handleCardContext, true)
+    window.addEventListener('mc-open-termine-for-order', handleOpenTermine, true)
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
     window.addEventListener('scroll', handleClose, true)
     window.addEventListener('resize', handleClose, true)
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu, true)
       window.removeEventListener('mc-context', handleCardContext, true)
+      window.removeEventListener('mc-open-termine-for-order', handleOpenTermine, true)
       window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
       window.removeEventListener('scroll', handleClose, true)
       window.removeEventListener('resize', handleClose, true)
@@ -231,7 +235,7 @@ function App() {
       case 'maille':
         return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
       case 'termine':
-        return <OrderList onNavigateToType={setActiveTab} selectedType="termine" />
+        return <TerminePage />
       case 'parametres':
         return <ParametresPanel />
       default:
