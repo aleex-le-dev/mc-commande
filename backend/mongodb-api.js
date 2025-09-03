@@ -1087,7 +1087,7 @@ app.put('/api/production/redispatch', async (req, res) => {
   }
 })
 
-// PUT /api/production/status - Mettre à jour le statut de production
+// PUT /api/production/status - Mettre à jour le statut de production (temps réel)
 app.put('/api/production/status', async (req, res) => {
   try {
     const { order_id, line_item_id, status, notes } = req.body
@@ -1116,9 +1116,11 @@ app.put('/api/production/status', async (req, res) => {
       return res.status(404).json({ error: 'Article non trouvé' })
     }
     
+    console.log(`✅ Statut mis à jour: Commande ${order_id}, Article ${line_item_id} -> ${status}`)
+    
     res.json({ 
       success: true, 
-      message: 'Statut mis à jour',
+      message: 'Statut mis à jour en temps réel',
       result 
     })
   } catch (error) {
@@ -1128,6 +1130,82 @@ app.put('/api/production/status', async (req, res) => {
 })
 
 // Fonctions utilitaires
+
+// Fonction pour récupérer les commandes depuis WooCommerce
+async function fetchOrdersFromWooCommerce(sinceDate = null) {
+  let woocommerceOrders = []
+  let afterIso = null
+  
+  if (sinceDate) {
+    const since = new Date(sinceDate)
+    if (!isNaN(since)) {
+      since.setHours(0,0,0,0)
+      afterIso = since.toISOString()
+    }
+  } else {
+    // Mode incrémental par défaut: récupérer uniquement après la dernière commande connue
+    try {
+      const latest = await db.collection('orders_sync').find({}).sort({ order_date: -1 }).limit(1).toArray()
+      if (latest && latest.length > 0 && latest[0].order_date) {
+        const lastDate = new Date(latest[0].order_date)
+        if (!isNaN(lastDate)) {
+          afterIso = lastDate.toISOString()
+        }
+      } else {
+        // Si aucune commande en base, récupérer les 30 derniers jours
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        afterIso = thirtyDaysAgo.toISOString()
+      }
+    } catch (e) {
+      console.warn(`Impossible de déterminer la dernière commande: ${e.message}`)
+    }
+  }
+  
+  if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
+    try {
+      const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
+      
+      // Récupération paginée
+      const perPage = 100
+      let page = 1
+      let fetched = []
+      
+      while (true) {
+        const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
+        const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(30000) // 30 secondes timeout
+        })
+        
+        if (!response.ok) {
+          console.warn(`Erreur HTTP ${response.status} lors de la récupération des commandes (page ${page})`)
+          break
+        }
+        
+        const data = await response.json()
+        fetched = fetched.concat(data)
+        
+        if (data.length < perPage) break
+        page += 1
+      }
+      
+      woocommerceOrders = fetched
+      console.log(`📦 ${woocommerceOrders.length} commandes récupérées depuis WooCommerce`)
+      
+    } catch (error) {
+      console.error(`Erreur lors de la récupération des commandes WooCommerce: ${error.message}`)
+      throw error
+    }
+  } else {
+    throw new Error('Configuration WooCommerce manquante')
+  }
+  
+  return woocommerceOrders
+}
 
 // Fonction pour synchroniser toutes les commandes vers la base de données
 async function syncOrdersToDatabase(woocommerceOrders) {
@@ -1310,8 +1388,27 @@ async function syncOrderToDatabase(order) {
   // Vérifier si la commande existe déjà
   const existing = await ordersCollection.findOne({ order_id: order.id })
   if (existing) {
+    // Si la commande existe mais n'a pas d'articles, la mettre à jour
+    if (!existing.items || existing.items.length === 0) {
+      const orderItems = await db.collection('order_items').find({ order_id: order.id }).toArray()
+      if (orderItems.length > 0) {
+        await ordersCollection.updateOne(
+          { order_id: order.id },
+          { 
+            $set: { 
+              items: orderItems,
+              updated_at: now
+            }
+          }
+        )
+        return { created: false, updated: true }
+      }
+    }
     return { created: false, updated: false }
   }
+  // Récupérer les articles de cette commande depuis order_items
+  const orderItems = await db.collection('order_items').find({ order_id: order.id }).toArray()
+  
   await ordersCollection.insertOne({
     order_id: order.id,
     order_number: order.number,
@@ -1329,6 +1426,8 @@ async function syncOrderToDatabase(order) {
     shipping_title: resolvedShippingTitle,
     shipping_method_title: shippingMethodTitle,
     shipping_carrier: shippingCarrier,
+    // Inclure les articles de la commande
+    items: orderItems,
     created_at: now,
     updated_at: now
   })
@@ -1616,6 +1715,123 @@ app.put('/api/production-status/:lineItemId/type', async (req, res) => {
   } catch (error) {
     console.error('Erreur PUT /production-status/:lineItemId/type:', error)
     res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// POST /api/sync-orders - Synchroniser les commandes depuis WordPress
+app.post('/api/sync-orders', async (req, res) => {
+  try {
+    console.log('🔄 Début de la synchronisation des commandes...')
+    
+    // Récupérer les commandes depuis WordPress
+    const woocommerceOrders = await fetchOrdersFromWooCommerce()
+    console.log(`📦 ${woocommerceOrders.length} commandes récupérées depuis WordPress`)
+    
+    // Synchroniser vers la base de données
+    const syncResults = await syncOrdersToDatabase(woocommerceOrders)
+    console.log(`✅ Synchronisation terminée:`, syncResults)
+    
+    res.json({
+      success: true,
+      message: 'Synchronisation terminée',
+      results: syncResults
+    })
+  } catch (error) {
+    console.error('❌ Erreur lors de la synchronisation:', error)
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    })
+  }
+})
+
+// Route pour forcer la synchronisation d'une commande spécifique
+app.post('/api/sync/order/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    
+    // Récupérer la commande depuis WooCommerce
+    if (!WOOCOMMERCE_CONSUMER_KEY || !WOOCOMMERCE_CONSUMER_SECRET) {
+      return res.status(500).json({ error: 'Configuration WooCommerce manquante' })
+    }
+    
+    const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
+    const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders/${orderId}?${authParams}`
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(30000)
+    })
+    
+    if (!response.ok) {
+      return res.status(404).json({ error: 'Commande non trouvée dans WooCommerce' })
+    }
+    
+    const order = await response.json()
+    
+    // Synchroniser la commande
+    const orderResult = await syncOrderToDatabase(order)
+    
+    // Synchroniser les articles
+    let itemsCreated = 0
+    let itemsUpdated = 0
+    for (const item of order.line_items || []) {
+      const itemResult = await syncOrderItem(order.id, item)
+      if (itemResult.created) {
+        itemsCreated++
+        await dispatchItemToProduction(order.id, item.id, item.name)
+      } else if (itemResult.updated) {
+        itemsUpdated++
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Commande synchronisée',
+      results: {
+        orderCreated: orderResult.created,
+        orderUpdated: orderResult.updated,
+        itemsCreated,
+        itemsUpdated
+      }
+    })
+  } catch (error) {
+    console.error('Erreur sync order:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Route temporaire pour debug
+app.get('/api/debug/order/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const order = await db.collection('orders_sync').findOne({ order_id: parseInt(orderId) })
+    const orderItems = await db.collection('order_items').find({ order_id: parseInt(orderId) }).toArray()
+    const statuses = await db.collection('production_status').find({ order_id: parseInt(orderId) }).toArray()
+    
+    res.json({
+      order: order ? {
+        order_id: order.order_id,
+        order_number: order.order_number,
+        items_count: order.items ? order.items.length : 0,
+        items: order.items ? order.items.map(item => ({
+          line_item_id: item.line_item_id,
+          product_name: item.product_name
+        })) : []
+      } : null,
+      order_items: orderItems.map(item => ({
+        line_item_id: item.line_item_id,
+        product_name: item.product_name
+      })),
+      statuses: statuses.map(s => ({
+        line_item_id: s.line_item_id,
+        status: s.status,
+        production_type: s.production_type
+      }))
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 })
 

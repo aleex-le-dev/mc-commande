@@ -43,6 +43,10 @@ function cacheSet(key, data) {
   globalCache[key] = { data, at: Date.now() }
 }
 
+function cacheDelete(key) {
+  globalCache[key] = { data: null, at: 0 }
+}
+
 async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
@@ -101,7 +105,7 @@ export const getProductionStatuses = async () => {
   }
 }
 
-// Mettre à jour le statut d'un article
+// Mettre à jour le statut d'un article (mise à jour immédiate en BDD)
 export const updateArticleStatus = async (orderId, lineItemId, status, notes = null) => {
   try {
     const response = await requestWithRetry(`${API_BASE_URL}/production/status`, {
@@ -122,9 +126,13 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
       }
 
       const data = await response.json()
+    
+    // Invalider le cache pour forcer le rechargement
+    cacheDelete('orders')
+    
     return data
     } catch (error) {
-    // Erreur silencieuse lors de la mise à jour du statut
+    console.error('Erreur lors de la mise à jour du statut:', error)
     throw error
   }
 }
@@ -203,7 +211,7 @@ export const getOrdersPaginated = async (page = 1, limit = 50, type = 'all', sea
   }
 }
 
-// Récupérer toutes les commandes depuis la base de données
+// Récupérer toutes les commandes depuis la base de données avec synchronisation automatique
 export const getOrdersFromDatabase = async () => {
   try {
     // Vérifier le cache d'abord
@@ -212,6 +220,17 @@ export const getOrdersFromDatabase = async () => {
       return cached
     }
 
+    // D'abord synchroniser depuis WordPress
+    const syncResponse = await requestWithRetry(`${API_BASE_URL}/sync-orders`, {
+      method: 'POST',
+      timeoutMs: 30000 // 30 secondes pour la synchronisation
+    })
+    
+    if (!syncResponse.ok) {
+      console.warn('Erreur lors de la synchronisation:', syncResponse.status)
+    }
+
+    // Puis récupérer toutes les commandes depuis la BDD
     const response = await requestWithRetry(`${API_BASE_URL}/orders`, {
       timeoutMs: 15000 // 15 secondes optimisé
     })

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getOrdersFromDatabase } from '../../../services/mongodbService'
+import { getOrdersFromDatabase, getOrdersByProductionType } from '../../../services/mongodbService'
 import { useMemo, useCallback, useEffect } from 'react'
 
 /**
@@ -8,7 +8,7 @@ import { useMemo, useCallback, useEffect } from 'react'
 export const useUnifiedArticles = (selectedType = 'all') => {
   const queryClient = useQueryClient()
 
-  // Récupérer tous les articles
+  // Récupérer TOUTES les commandes depuis la BDD (avec synchronisation automatique)
   const { data: allOrders, isLoading, error } = useQuery({
     queryKey: ['unified-orders'],
     queryFn: getOrdersFromDatabase,
@@ -26,6 +26,9 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     allOrders.forEach(order => {
       const orderItems = order.items || []
       orderItems.forEach((item, index) => {
+        const productionType = item.production_status?.production_type || 'couture'
+        const status = item.production_status?.status || 'a_faire'
+        
         articlesList.push({
           ...item,
           orderId: order.order_id,
@@ -40,15 +43,16 @@ export const useUnifiedArticles = (selectedType = 'all') => {
           shippingCarrier: order.shipping_carrier || null,
           customerCountry: order.customer_country || null,
           permalink: item.permalink,
-          productionType: item.production_status?.production_type || 'couture',
-          status: item.production_status?.status || 'a_faire',
-          isDispatched: item.production_status?.status !== 'a_faire',
+          productionType: productionType,
+          status: status,
+          isDispatched: status !== 'a_faire',
           // Ajouter les informations de position dans la commande
           itemIndex: index + 1,
           totalItems: orderItems.length
         })
       })
     })
+    
     return articlesList
   }, [allOrders])
 
@@ -57,9 +61,11 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     return selectedType === 'all' ? articles : articles.filter(article => article.productionType === selectedType)
   }, [articles, selectedType])
 
-  // Regrouper par commande pour Terminé
+  // Regrouper par commande pour Terminé (utilise TOUS les articles)
   const ordersByNumber = useMemo(() => {
     const grouped = {}
+    
+    // Toujours utiliser TOUS les articles pour calculer les bons ratios
     articles.forEach(article => {
       const key = article.orderNumber
       if (!grouped[key]) {

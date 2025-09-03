@@ -315,7 +315,10 @@ const TerminePage = () => {
                             </div>
                             <span className="text-xs text-green-700">✅</span>
                           </div>
-                        ))}
+
+
+
+))}
                       </div>
                     </div>
                   </div>
