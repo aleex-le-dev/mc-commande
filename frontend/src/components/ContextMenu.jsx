@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react'
+import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 
 // Menu contextuel global personnalisé
 // Props:
 // - visible: bool d'affichage
 // - position: { x, y } en px
-// - items: [{ id, label, onClick }]
+// - items: [{ id, label, onClick, category?, icon? }]
 // - onClose: fermeture
 const ContextMenu = ({ visible, position, items = [], onClose }) => {
   const menuRef = useRef(null)
@@ -32,20 +33,66 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
     zIndex: 10000
   }
 
+  // Grouper par catégorie si fournie
+  const groups = items.reduce((acc, item) => {
+    const key = item.category || '__default__'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(item)
+    return acc
+  }, {})
+
+  const orderedKeys = Object.keys(groups).sort((a, b) => {
+    // Garder non catégorisés en premier
+    if (a === '__default__') return -1
+    if (b === '__default__') return 1
+    return a.localeCompare(b)
+  })
+
+  const withEmoji = (cat) => {
+    if (cat === 'Couturière') return '🧵 Couturière'
+    if (cat === 'Admin') return '👑 Admin'
+    return cat
+  }
+
   return (
-    <div ref={menuRef} style={style} className="min-w-[180px] max-w-[260px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden">
-      <ul className="py-1">
-        {items.map(item => (
-          <li key={item.id}>
-            <button
-              onClick={() => { item.onClick?.(); onClose(); }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-            >
-              {item.label}
-            </button>
-          </li>
+    <div ref={menuRef} style={style} className="min-w-[220px] max-w-[300px] bg-[#182235] text-white border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+      <div className="py-1">
+        {orderedKeys.map((key, idx) => (
+          <div key={key} className="py-1">
+            {key !== '__default__' && (
+              <div className="px-3 py-1 text-xs uppercase tracking-wide text-slate-300 opacity-80">
+                {withEmoji(key)}
+              </div>
+            )}
+            <ul>
+              {groups[key].map(item => {
+                // Couleurs spécifiques pour les statuts
+                let statusClass = "hover:bg-slate-700/60"
+                if (item.id === 'change-status-en-cours') {
+                  statusClass = "hover:bg-yellow-600/30 text-yellow-300"
+                } else if (item.id === 'change-status-en-pause') {
+                  statusClass = "hover:bg-orange-600/30 text-orange-300"
+                } else if (item.id === 'change-status-termine') {
+                  statusClass = "hover:bg-green-600/30 text-green-300"
+                }
+                
+                return (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => { item.onClick?.(); onClose(); }}
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${statusClass}`}
+                    >
+                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                      <span>{item.label}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            {idx < orderedKeys.length - 1 && <div className="my-1 h-px bg-slate-600/40" />}
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }

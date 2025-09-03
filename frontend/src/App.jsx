@@ -3,6 +3,7 @@ import { assignmentsService } from './components/../services/mongodbService'
 import ContextMenu from './components/ContextMenu'
 import ConfirmationToast from './components/ConfirmationToast'
 import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
+import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import OrderList from './components/OrderList'
@@ -38,35 +39,35 @@ function App() {
   useEffect(() => {
     const handleContextMenu = (e) => {
       e.preventDefault()
-      const x = e.clientX
-      const y = e.clientY
-      setCtxPosition({ x, y })
-      setCtxItems([
-        { id: 'refresh-data', label: 'Recharger les données', onClick: () => { console.log('📡 Déclenchement de l\'événement mc-refresh-data'); window.dispatchEvent(new Event('mc-refresh-data')) } },
-        { id: 'refresh', label: 'Rafraîchir la page', onClick: () => window.location.reload() },
-        { id: 'copy-url', label: 'Copier l\'URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
-      ])
-      setCtxVisible(true)
+      // Ne pas ouvrir de menu contextuel global
+      setCtxVisible(false)
     }
     const handleCardContext = (ev) => {
-      const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType, orderNumber, orderId, articles } = ev.detail || {}
+      const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType, orderNumber, orderId, articles, hasAssignment } = ev.detail || {}
       console.log('🔍 Menu contextuel - Données reçues:', { currentProductionType, uniqueAssignmentId, orderNumber })
       setCtxPosition({ x, y })
       const items = [
-        { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
-        { id: 'urgent', label: currentUrgent ? 'Retirer URGENT' : 'Mettre en URGENT', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
+        { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', category: 'Couturière', icon: hasNote ? <RiStickyNoteFill size={16} /> : <RiStickyNoteAddLine size={16} />, onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
+        { id: 'urgent', label: currentUrgent ? '🚨 Retirer URGENT' : '🚨 Mettre en URGENT', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
       ]
       
       // Ajouter les options de déplacement selon le type de production actuel
       console.log('🔍 Type de production actuel:', currentProductionType)
       if (currentProductionType === 'couture') {
         console.log('✅ Ajout option: Déplacer vers maille')
-        items.push({ id: 'move-to-maille', label: 'Déplacer vers maille', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'maille' } })) })
+        items.push({ id: 'move-to-maille', label: '🪡 Déplacer vers maille', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'maille' } })) })
       } else if (currentProductionType === 'maille') {
         console.log('✅ Ajout option: Déplacer vers couture')
-        items.push({ id: 'move-to-couture', label: 'Déplacer vers couture', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'couture' } })) })
+        items.push({ id: 'move-to-couture', label: '🧵 Déplacer vers couture', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'couture' } })) })
       } else {
         console.log('⚠️ Type de production non reconnu:', currentProductionType)
+      }
+      
+      // Changer le statut (si assignée)
+      if (hasAssignment) {
+        items.push({ id: 'change-status-en-cours', label: '🟡 Statut: En cours', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'en_cours' } })) })
+        items.push({ id: 'change-status-en-pause', label: '🟠 Statut: En pause', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'en_pause' } })) })
+        items.push({ id: 'change-status-termine', label: '✅ Statut: Terminé', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'termine' } })) })
       }
       
       // Ajouter les options de suppression
@@ -74,7 +75,7 @@ function App() {
         // Supprimer un article spécifique
         items.push({ 
           id: 'delete-article', 
-          label: 'Supprimer cet article', 
+          label: '🗑️ Supprimer cet article', category: 'Admin', 
           onClick: () => {
             // Trouver l'article actuel en utilisant uniqueAssignmentId
             const currentArticle = articles.find(a => {
@@ -93,7 +94,7 @@ function App() {
         // Supprimer la commande entière
         items.push({ 
           id: 'delete-order', 
-          label: 'Supprimer la commande', 
+          label: '🗑️ Supprimer la commande', category: 'Admin', 
           onClick: () => {
             setDeleteOrderInfo({ orderNumber, orderId, articles })
             setShowDeleteToast(true)
@@ -102,11 +103,7 @@ function App() {
         })
       }
       
-      items.push(
-        { id: 'refresh-data', label: 'Recharger les données', onClick: () => { console.log('📡 Déclenchement de l\'événement mc-refresh-data'); window.dispatchEvent(new Event('mc-refresh-data')) } },
-        { id: 'refresh', label: 'Rafraîchir la page', onClick: () => window.location.reload() },
-        { id: 'copy-url', label: 'Copier l\'URL', onClick: () => navigator.clipboard.writeText(window.location.href) },
-      )
+      // Retirer les actions globales (recharger/rafraîchir/copier URL)
       setCtxItems(items)
       setCtxVisible(true)
     }

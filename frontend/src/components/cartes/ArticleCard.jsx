@@ -152,6 +152,27 @@ const ArticleCard = forwardRef(({
       }
     }
     
+    const handleChangeStatus = async (ev) => {
+      const { uniqueAssignmentId: targetId, newStatus } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      try {
+        if (localAssignment) {
+          const updated = { ...localAssignment, status: newStatus }
+          await assignmentsService.createOrUpdateAssignment(updated)
+          setLocalAssignment(updated)
+          if (onAssignmentUpdate) { onAssignmentUpdate(uniqueAssignmentId, updated) }
+          if (newStatus === 'termine') {
+            try { await updateArticleStatus(article.orderId, article.line_item_id, 'termine') } catch {}
+            const rect = document.body.getBoundingClientRect()
+            setConfettiPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+            setShowConfetti(true)
+          }
+        }
+      } catch (e) {
+        console.error('Erreur changement statut:', e)
+      }
+    }
+
     const handleEditNote = (ev) => {
       const { uniqueAssignmentId: targetId } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
@@ -161,10 +182,12 @@ const ArticleCard = forwardRef(({
     }
     window.addEventListener('mc-edit-note', handleEditNote, true)
     window.addEventListener('mc-move-production', handleMoveProduction, true)
+    window.addEventListener('mc-change-status', handleChangeStatus, true)
     return () => {
       window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
       window.removeEventListener('mc-edit-note', handleEditNote, true)
       window.removeEventListener('mc-move-production', handleMoveProduction, true)
+      window.removeEventListener('mc-change-status', handleChangeStatus, true)
     }
   }, [localAssignment, uniqueAssignmentId])
 
