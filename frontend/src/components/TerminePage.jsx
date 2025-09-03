@@ -295,20 +295,39 @@ const TerminePage = () => {
             {ready.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {ready.map(order => (
-                  <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold">#{order.orderNumber}</div>
-                      <div className="flex items-center gap-2">
-                        {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgente</span>}
-                        {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>}
-                        <span className="text-green-700 text-sm font-semibold">✅ Prête à expédier</span>
+                  <div key={order.orderNumber} className="bg-white border rounded-xl p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-bold text-lg">#{order.orderNumber}</div>
+                      <div className="flex items-center gap-1">
+                        {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨</span>}
+                        {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️</span>}
+                        <span className="text-green-700 text-sm font-semibold">✅</span>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
-                    <div className="mt-2 text-sm">
-                      <span className="font-medium">Articles:</span> {order.finished}/{order.total}
+                    <div className="text-sm text-gray-600 mb-2">{order.customer || 'Client inconnu'}</div>
+                    <div className="text-sm mb-3">
+                      <span className="font-medium">Articles terminés:</span> {order.finished}/{order.total}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Date commande: {new Date(order.orderDate).toLocaleDateString('fr-FR')}
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-xs font-medium mb-1">Articles terminés:</div>
+                      <div className="space-y-1">
+                        {order.items.filter(item => item.status === 'termine').map(item => (
+                          <div key={item.line_item_id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded px-2 py-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs px-1 py-0.5 rounded border bg-white">
+                                {item.productionType === 'maille' ? '🧶' : '🧵'}
+                              </span>
+                              <span className="text-xs font-medium truncate">{item.name}</span>
+                            </div>
+                            <span className="text-xs text-green-700">✅</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}

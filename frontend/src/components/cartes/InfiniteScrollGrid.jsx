@@ -150,6 +150,32 @@ const InfiniteScrollGrid = forwardRef(({
     }
   }, [])
 
+  // Écouter l'événement de rechargement pour recharger les assignations
+  useEffect(() => {
+    let refreshTimeout = null
+    
+    const handleRefreshData = () => {
+      // Éviter les rechargements multiples en cours
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout)
+      }
+      
+      refreshTimeout = setTimeout(() => {
+        console.log('🔄 Rechargement des assignations demandé')
+        loadAssignments()
+        refreshTimeout = null
+      }, 150) // Délai légèrement différent pour éviter les conflits
+    }
+    
+    window.addEventListener('mc-refresh-data', handleRefreshData)
+    return () => {
+      window.removeEventListener('mc-refresh-data', handleRefreshData)
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout)
+      }
+    }
+  }, [loadAssignments])
+
   // Charger toutes les tricoteuses une seule fois
   const loadTricoteuses = useCallback(async () => {
     try {

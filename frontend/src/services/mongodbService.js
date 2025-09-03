@@ -1,9 +1,9 @@
 // Service pour l'API MongoDB
 const API_BASE_URL = 'http://localhost:3001/api'
 
-// Limiteur simple + retry/backoff pour réduire les erreurs réseau au démarrage
+// Limiteur optimisé + retry/backoff pour réduire les erreurs réseau
 let concurrentRequests = 0
-const MAX_CONCURRENT = 24  // Augmenté pour absorber les charges lors des changements d'onglet
+const MAX_CONCURRENT = 8  // Optimisé pour éviter la surcharge
 const waitQueue = []
 
 const acquireSlot = () => new Promise((resolve) => {
@@ -25,10 +25,11 @@ const releaseSlot = () => {
 }
 
 // Cache mémoire global avec TTL pour données partagées
-const GLOBAL_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+const GLOBAL_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes (augmenté)
 const globalCache = {
   tricoteuses: { data: null, at: 0 },
-  assignments: { data: null, at: 0 }
+  assignments: { data: null, at: 0 },
+  orders: { data: null, at: 0 }
 }
 
 function cacheGet(key) {
@@ -46,7 +47,7 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || 20000) // 20s pour éviter les faux aborts lors des changements d'onglet
+  }, options.timeoutMs || 15000) // 15s optimisé
   
   try {
     await acquireSlot()
@@ -59,21 +60,23 @@ async function requestWithRetry(url, options = {}, retries = 2) {
       signal: controller.signal 
     })
     if (!res.ok) {
-      if (retries > 0 && res.status >= 500) {
-        await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+      if (retries > 0 && (res.status >= 500 || res.status === 429)) {
+        // Backoff exponentiel avec jitter
+        const delay = Math.min(1000 * Math.pow(2, 2 - retries) + Math.random() * 1000, 5000)
+        await new Promise(r => setTimeout(r, delay))
         return requestWithRetry(url, options, retries - 1)
       }
     }
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      // Normaliser le message pour éviter l'alerte utilisateur inutiles
-      const abortError = new Error('RequestAborted')
-      abortError.name = 'AbortError'
-      throw abortError
+      // Ne pas relancer les requêtes annulées
+      return
     }
     if (retries > 0) {
-      await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+      // Backoff exponentiel avec jitter pour les erreurs réseau
+      const delay = Math.min(1000 * Math.pow(2, 2 - retries) + Math.random() * 1000, 5000)
+      await new Promise(r => setTimeout(r, delay))
       return requestWithRetry(url, options, retries - 1)
     }
     throw e
@@ -203,6 +206,12 @@ export const getOrdersPaginated = async (page = 1, limit = 50, type = 'all', sea
 // Récupérer toutes les commandes depuis la base de données
 export const getOrdersFromDatabase = async () => {
   try {
+    // Vérifier le cache d'abord
+    const cached = cacheGet('orders')
+    if (cached) {
+      return cached
+    }
+
     const response = await requestWithRetry(`${API_BASE_URL}/orders`, {
       timeoutMs: 15000 // 15 secondes optimisé
     })
@@ -212,7 +221,11 @@ export const getOrdersFromDatabase = async () => {
     }
     
     const data = await response.json()
-    return data.orders || []
+    const orders = data.orders || []
+    
+    // Mettre en cache
+    cacheSet('orders', orders)
+    return orders
   } catch (error) {
     if (error.name === 'AbortError') {
       // Ne pas retourner de tableau vide, laisser React Query gérer

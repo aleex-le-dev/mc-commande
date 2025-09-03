@@ -12,83 +12,150 @@ export const useAllArticles = (selectedType = 'all') => {
     refetch 
   } = useQuery({
     queryKey: ['all-orders', selectedType],
-    queryFn: () => {
-      if (selectedType && selectedType !== 'all') {
-        return getOrdersByProductionType(selectedType)
+    queryFn: async () => {
+      try {
+        if (selectedType && selectedType !== 'all') {
+          return await getOrdersByProductionType(selectedType)
+        }
+        return await getOrdersFromDatabase()
+      } catch (error) {
+        // Gérer les erreurs d'annulation silencieusement
+        if (error?.name === 'AbortError' || error?.message === 'RequestAborted') {
+          throw new Error('RequestAborted')
+        }
+        throw error
       }
-      return getOrdersFromDatabase()
     },
-    staleTime: 300000, // 5 minutes (augmenté)
-    gcTime: 600000, // 10 minutes (anciennement cacheTime)
+    staleTime: 900000, // 15 minutes
+    gcTime: 1800000, // 30 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Ne pas refetch au montage
-    retry: 3,
-    retryDelay: 1000,
-    // Empêcher l'annulation des requêtes
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 2, // Réduit de 3 à 2
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Backoff exponentiel
     retryOnMount: false,
-    // Garder les données même en cas d'erreur
     keepPreviousData: true,
+    // Éviter les requêtes simultanées
+    networkMode: 'online',
     onError: (err) => {
-      // Ignorer proprement les annulations pour ne pas afficher d'erreur utilisateur
-      if (err && err.name === 'AbortError') {
-        return
+      if (err?.message === 'RequestAborted' || err?.name === 'AbortError') {
+        return // Ignorer silencieusement
       }
+      console.error('Erreur useAllArticles:', err)
     }
   })
 
   // Toujours précharger les données pour les comptages cross-type
   const { data: allOrdersUnfiltered } = useQuery({
     queryKey: ['all-orders-unfiltered'],
-    queryFn: () => getOrdersFromDatabase(),
-    staleTime: 300000,
-    gcTime: 600000,
+    queryFn: async () => {
+      try {
+        return await getOrdersFromDatabase()
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.message === 'RequestAborted') {
+          throw new Error('RequestAborted')
+        }
+        throw error
+      }
+    },
+    staleTime: 900000, // 15 minutes
+    gcTime: 1800000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 3,
-    retryDelay: 1000,
+    refetchOnReconnect: false,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     retryOnMount: false,
     keepPreviousData: true,
-    enabled: true, // Toujours activer pour le cache
+    networkMode: 'online',
+    enabled: true,
+    onError: (err) => {
+      if (err?.message === 'RequestAborted' || err?.name === 'AbortError') {
+        return
+      }
+      console.error('Erreur allOrdersUnfiltered:', err)
+    }
   })
 
   // Charger explicitement les commandes par types principaux pour un comptage global cross-type fiable
   const { data: coutureOrders } = useQuery({
     queryKey: ['orders-by-type', 'couture'],
-    queryFn: () => getOrdersByProductionType('couture'),
-    staleTime: 300000,
-    gcTime: 600000,
+    queryFn: async () => {
+      try {
+        return await getOrdersByProductionType('couture')
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.message === 'RequestAborted') {
+          throw new Error('RequestAborted')
+        }
+        throw error
+      }
+    },
+    staleTime: 900000, // 15 minutes
+    gcTime: 1800000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 3,
-    retryDelay: 1000,
+    refetchOnReconnect: false,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     retryOnMount: false,
     keepPreviousData: true,
-    enabled: true, // Toujours activer pour le cache
+    networkMode: 'online',
+    enabled: true,
+    onError: (err) => {
+      if (err?.message === 'RequestAborted' || err?.name === 'AbortError') {
+        return
+      }
+      console.error('Erreur coutureOrders:', err)
+    }
   })
 
   const { data: mailleOrders } = useQuery({
     queryKey: ['orders-by-type', 'maille'],
-    queryFn: () => getOrdersByProductionType('maille'),
-    staleTime: 300000,
-    gcTime: 600000,
+    queryFn: async () => {
+      try {
+        return await getOrdersByProductionType('maille')
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.message === 'RequestAborted') {
+          throw new Error('RequestAborted')
+        }
+        throw error
+      }
+    },
+    staleTime: 900000, // 15 minutes
+    gcTime: 1800000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 3,
-    retryDelay: 1000,
+    refetchOnReconnect: false,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     retryOnMount: false,
     keepPreviousData: true,
-    enabled: true, // Toujours activer pour le cache
+    networkMode: 'online',
+    enabled: true,
+    onError: (err) => {
+      if (err?.message === 'RequestAborted' || err?.name === 'AbortError') {
+        return
+      }
+      console.error('Erreur mailleOrders:', err)
+    }
   })
 
   // Préparer les articles avec statuts
   const articles = useMemo(() => {
-    // Si pas de données, retourner un tableau vide
+    // Si pas de données principales, retourner un tableau vide
     if (!dbOrders || dbOrders.length === 0) {
       return []
     }
     
-    // Attendre au moins que les données principales soient disponibles
-    // Les autres données peuvent arriver plus tard pour améliorer les comptages
+    // Attendre que les données de comptage soient disponibles
+    const hasCountingData = allOrdersUnfiltered || coutureOrders || mailleOrders
+    if (!hasCountingData) {
+      return []
+    }
+    
+
+    
+
     
 
 
@@ -96,22 +163,28 @@ export const useAllArticles = (selectedType = 'all') => {
     const allByNumber = {}
     let unionOrders = []
     
-    if (selectedType === 'all') {
-      // Pour 'all', utiliser l'union de tous les datasets pour avoir TOUS les articles
-      unionOrders = [
-        ...(Array.isArray(dbOrders) ? dbOrders : []),
-        ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
-        ...(Array.isArray(coutureOrders) ? coutureOrders : []),
-        ...(Array.isArray(mailleOrders) ? mailleOrders : []),
-      ]
-    } else {
-      // Pour les types spécifiques, utiliser les données déjà chargées
-      unionOrders = [
-        ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
-        ...(Array.isArray(coutureOrders) ? coutureOrders : []),
-        ...(Array.isArray(mailleOrders) ? mailleOrders : []),
-      ]
-    }
+    // Toujours utiliser l'union de tous les datasets pour avoir TOUS les articles
+    // Cela permet de voir tous les articles d'une commande même quand on filtre par type
+    unionOrders = [
+      ...(Array.isArray(dbOrders) ? dbOrders : []),
+      ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
+      ...(Array.isArray(coutureOrders) ? coutureOrders : []),
+      ...(Array.isArray(mailleOrders) ? mailleOrders : []),
+    ]
+    
+    // Dédupliquer par line_item_id pour éviter les doublons
+    const uniqueOrders = []
+    const seenLineItems = new Set()
+    
+    unionOrders.forEach(order => {
+      const lineItemId = order.items?.[0]?.line_item_id
+      if (lineItemId && !seenLineItems.has(lineItemId)) {
+        seenLineItems.add(lineItemId)
+        uniqueOrders.push(order)
+      }
+    })
+    
+    unionOrders = uniqueOrders
 
     unionOrders.forEach((order) => {
       if (!order) return
@@ -119,19 +192,23 @@ export const useAllArticles = (selectedType = 'all') => {
       if (!allByNumber[key]) {
         allByNumber[key] = []
       }
-      // Éviter les doublons par line_item_id
-      const incomingLineItemId = order?.items?.[0]?.line_item_id
-      const exists = allByNumber[key].some(o => o?.items?.[0]?.line_item_id === incomingLineItemId)
-      if (!exists) {
-        allByNumber[key].push(order)
-      }
+      allByNumber[key].push(order)
     })
+    
 
-    // Fallback: si pas de dataset complet disponible, utiliser uniquement les données actuelles
+    
+
+
+    // Construire les groupes pour l'affichage selon le filtre sélectionné
     const ordersByNumber = {}
     // Toujours utiliser allByNumber pour les comptages car il contient TOUS les articles
     const sourceForCounts = allByNumber
-    dbOrders.forEach((order) => {
+    
+    // Filtrer les articles selon le type sélectionné pour l'affichage
+    const filteredOrders = selectedType === 'all' ? dbOrders : 
+      dbOrders.filter(order => order.items?.[0]?.production_status?.production_type === selectedType)
+    
+    filteredOrders.forEach((order) => {
       if (!ordersByNumber[order.order_number]) {
         ordersByNumber[order.order_number] = []
       }
@@ -144,6 +221,31 @@ export const useAllArticles = (selectedType = 'all') => {
     Object.entries(ordersByNumber).forEach(([orderNumber, orders]) => {
       const fullOrders = sourceForCounts[orderNumber] || orders
       const totalItems = fullOrders.length
+      
+      // Log pour la commande 391045 en maille
+      if (orderNumber === '391045') {
+        const mailleItems = fullOrders.filter(order => 
+          order.items?.[0]?.production_status?.production_type === 'maille'
+        )
+        const coutureItems = fullOrders.filter(order => 
+          order.items?.[0]?.production_status?.production_type === 'couture'
+        )
+        
+        console.log(`📊 COMMANDE 391045: ${totalItems} articles total`)
+        console.log(`📦 MAILLE: ${mailleItems.length} articles`)
+        console.log(`🧵 COUTURE: ${coutureItems.length} articles`)
+        console.log('')
+        
+        mailleItems.forEach((order, index) => {
+          const status = order.items?.[0]?.production_status?.status || 'a_faire'
+          console.log(`📦 Maille ${index + 1}: ${status}`)
+        })
+        
+        coutureItems.forEach((order, index) => {
+          const status = order.items?.[0]?.production_status?.status || 'a_faire'
+          console.log(`🧵 Couture ${index + 1}: ${status}`)
+        })
+      }
       
 
 
@@ -201,7 +303,7 @@ export const useAllArticles = (selectedType = 'all') => {
   return {
     articles,
     isLoading,
-    error,
+    error: error && !(error.name === 'AbortError' || error.message === 'RequestAborted' || error.message?.includes('AbortError')) ? error : null,
     refetch,
     totalArticles: articles.length
   }

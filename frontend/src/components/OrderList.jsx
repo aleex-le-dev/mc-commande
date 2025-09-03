@@ -49,27 +49,46 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
 
   // Écouter l'événement de rechargement des données
   useEffect(() => {
+    let refreshTimeout = null
+    
     const handleRefreshData = async () => {
-      console.log('🔄 Rechargement des données demandé')
-      console.log('📊 Articles avant rechargement:', articles.length)
+      // Éviter les rechargements multiples en cours
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout)
+      }
       
-      // Invalider les queries pour forcer le rechargement
-      await queryClient.invalidateQueries(['all-orders'])
-      await queryClient.invalidateQueries(['db-orders'])
-      await queryClient.invalidateQueries(['production-statuses'])
-      
-      console.log('✅ Queries invalidées')
-      
-      // Aussi appeler refetch pour être sûr
-      try {
-        const result = await refetch()
-        console.log('📈 Refetch terminé:', result)
-      } catch (error) {
-        console.error('❌ Erreur lors du refetch:', error)
+      refreshTimeout = setTimeout(async () => {
+        console.log('🔄 Rechargement des données demandé')
+        console.log('📊 Articles avant rechargement:', articles.length)
+        
+        // Invalider les queries pour forcer le rechargement
+        await queryClient.invalidateQueries(['all-orders'])
+        await queryClient.invalidateQueries(['all-orders-unfiltered'])
+        await queryClient.invalidateQueries(['orders-by-type'])
+        await queryClient.invalidateQueries(['db-orders'])
+        await queryClient.invalidateQueries(['production-statuses'])
+        
+        console.log('✅ Queries invalidées')
+        
+        // Aussi appeler refetch pour être sûr
+        try {
+          const result = await refetch()
+          console.log('📈 Refetch terminé:', result)
+        } catch (error) {
+          console.error('❌ Erreur lors du refetch:', error)
+        }
+        
+        refreshTimeout = null
+      }, 100) // Délai de 100ms pour éviter les rechargements multiples
+    }
+    
+    window.addEventListener('mc-refresh-data', handleRefreshData)
+    return () => {
+      window.removeEventListener('mc-refresh-data', handleRefreshData)
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout)
       }
     }
-    window.addEventListener('mc-refresh-data', handleRefreshData)
-    return () => window.removeEventListener('mc-refresh-data', handleRefreshData)
   }, [refetch, queryClient, articles.length])
 
 
