@@ -22,7 +22,7 @@ export { useSyncProgress } from './hooks/useSyncProgress.js'
 export { useOrderFilters } from './hooks/useOrderFilters.js'
 export { usePagination } from './hooks/usePagination.js'
 export { useServerPagination } from './hooks/useServerPagination.js'
-export { useAllArticles } from './hooks/useAllArticles.js'
+export { useUnifiedArticles } from './hooks/useUnifiedArticles.js'
 
 // Documentation disponible :
 // - README.md : Structure et organisation du dossier cartes

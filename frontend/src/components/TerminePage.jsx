@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
-import { useAllArticles } from './cartes'
+import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import { assignmentsService } from '../services/mongodbService'
 import delaiService from '../services/delaiService'
 
@@ -16,7 +16,7 @@ const TerminePage = () => {
   const [showNoneSection, setShowNoneSection] = useState(false)
 
   // Récupérer tous les articles (tous types) pour calculer correctement les statuts par commande
-  const { articles, isLoading, error, totalArticles } = useAllArticles('all')
+  const { ordersByNumber, isLoading, error, totalArticles } = useUnifiedArticles('all')
   const [urgentByArticleId, setUrgentByArticleId] = useState({})
   const [delaiConfig, setDelaiConfig] = useState(null)
   const [holidays, setHolidays] = useState({})
@@ -128,44 +128,19 @@ const TerminePage = () => {
   }, [delaiConfig, dateLimiteStr, isHoliday])
 
   const grouped = useMemo(() => {
-    const byOrder = {}
-    for (const a of articles) {
-      const key = a.orderNumber
-      if (!byOrder[key]) {
-        byOrder[key] = {
-          orderNumber: key,
-          orderId: a.orderId,
-          customer: a.customer,
-          orderDate: a.orderDate,
-          items: [],
-        }
-      }
+    // Utiliser directement ordersByNumber du hook unifié
+    const enriched = ordersByNumber.map((order) => {
       // Construire des clés d'articles compatibles avec les deux formats d'assignation
-      const composedId = `${a.orderId}_${a.line_item_id}`
-      const simpleId = `${a.line_item_id}`
-      byOrder[key].items.push({
-        line_item_id: a.line_item_id,
-        name: a.product_name,
-        status: a.status,
-        productionType: a.productionType,
-        itemIndex: a.itemIndex,
-        totalItems: a.totalItems,
-        urgent: urgentByArticleId[composedId] === true || urgentByArticleId[simpleId] === true,
+      const itemsWithUrgent = order.items.map(item => {
+        const composedId = `${order.orderId}_${item.line_item_id}`
+        const simpleId = `${item.line_item_id}`
+        return {
+          ...item,
+          urgent: urgentByArticleId[composedId] === true || urgentByArticleId[simpleId] === true,
+        }
       })
-      
 
-    }
-
-    // Calcul des agrégats par commande
-    const enriched = Object.values(byOrder).map((order) => {
-      const total = order.items.length
-      const finished = order.items.filter(i => i.status === 'termine').length
-      const remainingAll = order.items.filter(i => i.status !== 'termine')
-      
-
-      
-      const isReadyToShip = total > 0 && finished === total
-      const hasUrgent = order.items.some(i => i.urgent)
+      const hasUrgent = itemsWithUrgent.some(i => i.urgent)
       let isLate = false
       if (dateLimiteStr && order.orderDate) {
         const orderDate = new Date(order.orderDate)
@@ -173,10 +148,11 @@ const TerminePage = () => {
         const oN = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate())
         const dN = new Date(dl.getFullYear(), dl.getMonth(), dl.getDate())
         // En retard si date de commande <= date limite et commande pas entièrement terminée
-        isLate = oN <= dN && !isReadyToShip
+        isLate = oN <= dN && !order.isReadyToShip
       }
+      
       // Marquer le retard par article avec la même règle (basée sur la date de commande)
-      const remaining = remainingAll.map(it => ({
+      const remaining = order.remaining.map(it => ({
         ...it,
         isLate: (() => {
           if (!dateLimiteStr || !order.orderDate) return false
@@ -187,7 +163,14 @@ const TerminePage = () => {
           return oN <= dN
         })()
       }))
-      return { ...order, total, finished, remaining, isReadyToShip, hasUrgent, isLate }
+
+      return { 
+        ...order, 
+        items: itemsWithUrgent,
+        remaining,
+        hasUrgent, 
+        isLate 
+      }
     })
 
     // Filtrer par recherche (numéro, client)
@@ -208,10 +191,16 @@ const TerminePage = () => {
     })
 
     return filtered
-  }, [articles, searchTerm, urgentByArticleId, dateLimiteStr])
+  }, [ordersByNumber, searchTerm, urgentByArticleId, dateLimiteStr])
 
   // Calculer les sections avec priorité d'affichage
-  const ready = useMemo(() => grouped.filter(g => g.isReadyToShip), [grouped])
+  const ready = useMemo(() => {
+    const readyOrders = grouped.filter(g => g.isReadyToShip)
+    
+
+    
+    return readyOrders
+  }, [grouped])
   const partial = useMemo(() => grouped.filter(g => {
     // Articles en pause : commandes qui ont au moins un article avec statut "en_pause"
     return g.items.some(item => item.status === 'en_pause')
@@ -257,7 +246,7 @@ const TerminePage = () => {
   }, [])
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full px-4">
       <div className="mb-6">
         <OrderHeader
           selectedType="termine"
@@ -295,7 +284,7 @@ const TerminePage = () => {
             {ready.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 {ready.map(order => (
                   <div key={order.orderNumber} className="bg-white border rounded-xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-2">
@@ -402,7 +391,7 @@ const TerminePage = () => {
                 <span className="text-sm text-gray-600">{none.length}</span>
               </div>
               {showNoneSection && none.length > 0 && (
-                <div id="none-orders-panel" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="none-orders-panel" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                   {none.map(order => (
                     <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
                       <div className="flex items-center justify-between">

@@ -14,6 +14,7 @@ import useArticleCard from './card/useArticleCard'
 import { highlightText, renderFormattedAddress } from '../../utils/textUtils.jsx'
 import imageService from '../../services/imageService'
 import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote } from '../../services/mongodbService'
+import statusService from '../../services/statusService'
 // Icônes utilisées dans BottomBar uniquement; ArticleCard n'en a plus besoin
 import delaiService from '../../services/delaiService'
 import TranslationIcon from './TranslationIcon'
@@ -253,7 +254,7 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[450px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
+      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[480px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
         localAssignment ? 
           (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
            localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
@@ -417,11 +418,11 @@ const ArticleCard = forwardRef(({
         onChangeStatus={async (status) => {
           const updatedAssignment = { ...localAssignment, status }
           
-          // Synchroniser le status avec production_status en BDD
-          try { 
-            await updateArticleStatus(article.orderId, article.line_item_id, status) 
+          // Utiliser le service de statut pour une mise à jour temps réel
+          try {
+            await statusService.updateStatus(article.orderId, article.line_item_id, status)
           } catch (error) {
-            console.error('❌ Erreur synchronisation status en BDD:', error)
+            console.error('❌ Erreur synchronisation status:', error)
           }
           
           if (status === 'termine') {
@@ -435,11 +436,6 @@ const ArticleCard = forwardRef(({
             setLocalAssignment(updatedAssignment)
             if (onAssignmentUpdate) { onAssignmentUpdate() }
             closeTricoteuseModal()
-            
-            // Déclencher le rechargement des données
-            setTimeout(() => {
-              window.dispatchEvent(new Event('mc-refresh-data'))
-            }, 500)
           } catch (error) {
             console.error('Erreur lors de la mise à jour du statut:', error)
           }

@@ -308,7 +308,7 @@ const SimpleFlexGrid = ({
 
   return (
     <div className="w-full overflow-x-hidden">
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full max-w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
         {memoizedCards}
         {/* Sentinelle pour charger plus d'éléments au scroll */}
         <div ref={sentinelRef} style={{ width: 1, height: 1 }} />

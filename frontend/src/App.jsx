@@ -6,9 +6,11 @@ import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import OrderList from './components/OrderList'
+
 import TerminePage from './components/TerminePage'
-import OrderForm from './components/OrderForm'
+import MaillePage from './components/MaillePage'
+import CouturePage from './components/CouturePage'
+
 import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
@@ -228,15 +230,15 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'couture':
-        return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
+        return <CouturePage />
       case 'maille':
-        return <OrderList onNavigateToType={setActiveTab} selectedType="maille" />
+        return <MaillePage />
       case 'termine':
         return <TerminePage />
       case 'parametres':
         return <ParametresPanel />
       default:
-        return <OrderList onNavigateToType={setActiveTab} selectedType="couture" />
+        return <CouturePage />
     }
   }
 
