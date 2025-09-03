@@ -19,16 +19,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Séparer les images dans un chunk dédié
-          images: ['imageService']
+          // Séparer les dépendances externes
+          vendor: ['react', 'react-dom'],
+          icons: ['react-icons']
         }
       }
     }
   },
   // Configuration pour les assets
-  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.webp'],
-  // Optimisation des images
-  optimizeDeps: {
-    include: ['imageService']
-  }
+  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.webp']
 })

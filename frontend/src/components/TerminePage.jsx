@@ -22,11 +22,18 @@ const TerminePage = () => {
   const [holidays, setHolidays] = useState({})
   const [dateLimiteStr, setDateLimiteStr] = useState(null)
 
-  // Charger les assignations pour récupérer les flags urgent
+  // Charger les assignations pour récupérer les flags urgent (avec cache)
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
+        // Utiliser le cache global si disponible
+        const cached = window.mcAssignmentsCache
+        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes
+          setUrgentByArticleId(cached.urgentMap)
+          return
+        }
+        
         const all = await assignmentsService.getAllAssignments()
         if (cancelled) return
         const map = {}
@@ -37,29 +44,57 @@ const TerminePage = () => {
           map[id] = !!a.urgent
         }
         setUrgentByArticleId(map)
+        
+        // Mettre en cache
+        window.mcAssignmentsCache = {
+          urgentMap: map,
+          timestamp: Date.now()
+        }
       } catch {}
     })()
     return () => { cancelled = true }
   }, [])
 
-  // Charger config délais + jours fériés pour calcul retard
+  // Charger config délais + jours fériés pour calcul retard (avec cache)
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
+        // Utiliser le cache global si disponible
+        const cached = window.mcDelaiCache
+        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes
+          setDelaiConfig(cached.delaiConfig)
+          setHolidays(cached.holidays)
+          if (cached.dateLimiteStr) {
+            setDateLimiteStr(cached.dateLimiteStr)
+          }
+          return
+        }
+        
         const conf = await delaiService.getDelai()
         if (!cancelled && conf && conf.data) {
           setDelaiConfig(conf.data)
+          let dateLimiteStr = null
           if (conf.data.dateLimite) {
-            const s = String(conf.data.dateLimite).split('T')[0]
-            setDateLimiteStr(s)
+            dateLimiteStr = String(conf.data.dateLimite).split('T')[0]
+            setDateLimiteStr(dateLimiteStr)
           }
-        }
-      } catch {}
-      try {
-        const jf = await delaiService.getJoursFeries()
-        if (!cancelled && jf && jf.success) {
-          setHolidays(jf.joursFeries || {})
+          
+          try {
+            const jf = await delaiService.getJoursFeries()
+            if (!cancelled && jf && jf.success) {
+              const holidays = jf.joursFeries || {}
+              setHolidays(holidays)
+              
+              // Mettre en cache
+              window.mcDelaiCache = {
+                delaiConfig: conf.data,
+                holidays,
+                dateLimiteStr,
+                timestamp: Date.now()
+              }
+            }
+          } catch {}
         }
       } catch {}
     })()
@@ -117,6 +152,8 @@ const TerminePage = () => {
         totalItems: a.totalItems,
         urgent: urgentByArticleId[composedId] === true || urgentByArticleId[simpleId] === true,
       })
+      
+
     }
 
     // Calcul des agrégats par commande
@@ -124,6 +161,9 @@ const TerminePage = () => {
       const total = order.items.length
       const finished = order.items.filter(i => i.status === 'termine').length
       const remainingAll = order.items.filter(i => i.status !== 'termine')
+      
+
+      
       const isReadyToShip = total > 0 && finished === total
       const hasUrgent = order.items.some(i => i.urgent)
       let isLate = false
@@ -168,15 +208,43 @@ const TerminePage = () => {
     })
 
     return filtered
-  }, [articles, searchTerm])
+  }, [articles, searchTerm, urgentByArticleId, dateLimiteStr])
 
+  // Calculer les sections avec priorité d'affichage
   const ready = useMemo(() => grouped.filter(g => g.isReadyToShip), [grouped])
-  const partial = useMemo(() => grouped.filter(g => !g.isReadyToShip && g.finished > 0), [grouped])
+  const partial = useMemo(() => grouped.filter(g => {
+    // Articles en pause : commandes qui ont au moins un article avec statut "en_pause"
+    return g.items.some(item => item.status === 'en_pause')
+  }), [grouped])
   const none = useMemo(() => grouped.filter(g => g.finished === 0), [grouped])
   const urgentCount = useMemo(() => grouped.filter(g => g.hasUrgent).length, [grouped])
   const lateCount = useMemo(() => grouped.filter(g => g.isLate).length, [grouped])
 
   const filteredCount = grouped.length
+  
+  // Compter uniquement les articles terminés (pas les commandes)
+  const totalFinishedArticles = useMemo(() => {
+    return grouped.reduce((total, order) => {
+      return total + order.finished
+    }, 0)
+  }, [grouped])
+
+  // État de chargement progressif
+  const [showPartial, setShowPartial] = useState(false)
+  const [showNone, setShowNone] = useState(false)
+
+  // Afficher progressivement les sections
+  useEffect(() => {
+    if (ready.length > 0) {
+      // Afficher les commandes terminées immédiatement
+      const timer1 = setTimeout(() => setShowPartial(true), 100)
+      const timer2 = setTimeout(() => setShowNone(true), 300)
+      return () => {
+        clearTimeout(timer1)
+        clearTimeout(timer2)
+      }
+    }
+  }, [ready.length])
 
   // Ecouter l'ouverture ciblée depuis une carte
   React.useEffect(() => {
@@ -193,7 +261,7 @@ const TerminePage = () => {
       <div className="mb-6">
         <OrderHeader
           selectedType="termine"
-          filteredArticlesCount={filteredCount}
+          filteredArticlesCount={totalFinishedArticles}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
@@ -249,82 +317,86 @@ const TerminePage = () => {
           </section>
 
           {/* Commandes partiellement terminées */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Partiellement terminées</h2>
-              <span className="text-sm text-gray-600">{partial.length}</span>
-            </div>
-            {partial.length === 0 ? (
-              <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande partielle</div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {partial.map(order => (
-                  <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold">#{order.orderNumber}</div>
-                      <div className="flex items-center gap-2">
-                        {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgente</span>}
-                        {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>}
-                        <span className="text-sm text-gray-700 font-medium">{order.finished}/{order.total} terminé(s)</span>
+          {showPartial && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">Articles en pause</h2>
+                <span className="text-sm text-gray-600">{partial.length}</span>
+              </div>
+              {partial.length === 0 ? (
+                <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande partielle</div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {partial.map(order => (
+                    <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold">#{order.orderNumber}</div>
+                        <div className="flex items-center gap-2">
+                          {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgente</span>}
+                          {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>}
+                          <span className="text-sm text-gray-700 font-medium">{order.finished}/{order.total} terminé(s)</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
+                      <div className="mt-3">
+                        <div className="text-sm font-medium mb-2">Articles en pause:</div>
+                        <ul className="space-y-2">
+                          {order.items.filter(item => item.status === 'en_pause').map(item => (
+                            <li key={item.line_item_id} className="flex items-center justify-between bg-gray-50 border rounded-lg px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs px-2 py-0.5 rounded-full border bg-white">
+                                  {item.productionType === 'maille' ? '🧶 Maille' : '🧵 Couture'}
+                                </span>
+                                <span className="text-sm font-medium">{item.name}</span>
+                                {item.urgent && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgent</span>
+                                )}
+                                {item.isLate && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-600">Statut: {item.status}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
-                    <div className="mt-3">
-                      <div className="text-sm font-medium mb-2">Reste à faire:</div>
-                      <ul className="space-y-2">
-                        {order.remaining.map(item => (
-                          <li key={item.line_item_id} className="flex items-center justify-between bg-gray-50 border rounded-lg px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-0.5 rounded-full border bg-white">
-                                {item.productionType === 'maille' ? '🧶 Maille' : '🧵 Couture'}
-                              </span>
-                              <span className="text-sm font-medium">{item.name}</span>
-                              {item.urgent && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgent</span>
-                              )}
-                              {item.isLate && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-600">Statut: {item.status}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Commandes sans aucun article terminé (repliable, fermé par défaut) */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <button
-                type="button"
-                onClick={() => setShowNoneSection(v => !v)}
-                className="px-3 py-1.5 rounded-md border text-sm font-medium cursor-pointer hover:bg-gray-50"
-                aria-expanded={showNoneSection}
-                aria-controls="none-orders-panel"
-              >
-                {showNoneSection ? '▾' : '▸'} Aucun article terminé
-              </button>
-              <span className="text-sm text-gray-600">{none.length}</span>
-            </div>
-            {showNoneSection && none.length > 0 && (
-              <div id="none-orders-panel" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {none.map(order => (
-                  <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold">#{order.orderNumber}</div>
-                      <div className="text-sm text-gray-700 font-medium">0/{order.total} terminé(s)</div>
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
-                  </div>
-                ))}
+          {showNone && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  type="button"
+                  onClick={() => setShowNoneSection(v => !v)}
+                  className="px-3 py-1.5 rounded-md border text-sm font-medium cursor-pointer hover:bg-gray-50"
+                  aria-expanded={showNoneSection}
+                  aria-controls="none-orders-panel"
+                >
+                  {showNoneSection ? '▾' : '▸'} Articles non terminés
+                </button>
+                <span className="text-sm text-gray-600">{none.length}</span>
               </div>
-            )}
-          </section>
+              {showNoneSection && none.length > 0 && (
+                <div id="none-orders-panel" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {none.map(order => (
+                    <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold">#{order.orderNumber}</div>
+                        <div className="text-sm text-gray-700 font-medium">0/{order.total} terminé(s)</div>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getOrdersFromDatabase, getOrdersByProductionType } from '../../../services/mongodbService'
 
 export const useAllArticles = (selectedType = 'all') => {
+  const queryClient = useQueryClient()
   // Récupérer les commandes selon le filtre actif (all ou par type)
   const { 
     data: dbOrders, 
@@ -35,7 +36,7 @@ export const useAllArticles = (selectedType = 'all') => {
     }
   })
 
-  // Récupérer TOUTES les commandes sans filtre pour calculer les totaux/indices par commande
+  // Toujours précharger les données pour les comptages cross-type
   const { data: allOrdersUnfiltered } = useQuery({
     queryKey: ['all-orders-unfiltered'],
     queryFn: () => getOrdersFromDatabase(),
@@ -47,6 +48,7 @@ export const useAllArticles = (selectedType = 'all') => {
     retryDelay: 1000,
     retryOnMount: false,
     keepPreviousData: true,
+    enabled: true, // Toujours activer pour le cache
   })
 
   // Charger explicitement les commandes par types principaux pour un comptage global cross-type fiable
@@ -61,6 +63,7 @@ export const useAllArticles = (selectedType = 'all') => {
     retryDelay: 1000,
     retryOnMount: false,
     keepPreviousData: true,
+    enabled: true, // Toujours activer pour le cache
   })
 
   const { data: mailleOrders } = useQuery({
@@ -74,6 +77,7 @@ export const useAllArticles = (selectedType = 'all') => {
     retryDelay: 1000,
     retryOnMount: false,
     keepPreviousData: true,
+    enabled: true, // Toujours activer pour le cache
   })
 
   // Préparer les articles avec statuts
@@ -83,22 +87,31 @@ export const useAllArticles = (selectedType = 'all') => {
       return []
     }
     
-    try {
-      // Log d'état des datasets
-      console.log('[useAllArticles] dataset', {
-        selectedType,
-        dbOrdersCount: Array.isArray(dbOrders) ? dbOrders.length : 0,
-        allOrdersUnfilteredCount: Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered.length : 0,
-      })
-    } catch {}
+    // Attendre au moins que les données principales soient disponibles
+    // Les autres données peuvent arriver plus tard pour améliorer les comptages
+    
 
-    // Construire les groupes complets par order_number à partir de l'union des datasets (non filtré + par types)
+
+    // Construire les groupes complets par order_number
     const allByNumber = {}
-    const unionOrders = [
-      ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
-      ...(Array.isArray(coutureOrders) ? coutureOrders : []),
-      ...(Array.isArray(mailleOrders) ? mailleOrders : []),
-    ]
+    let unionOrders = []
+    
+    if (selectedType === 'all') {
+      // Pour 'all', utiliser l'union de tous les datasets pour avoir TOUS les articles
+      unionOrders = [
+        ...(Array.isArray(dbOrders) ? dbOrders : []),
+        ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
+        ...(Array.isArray(coutureOrders) ? coutureOrders : []),
+        ...(Array.isArray(mailleOrders) ? mailleOrders : []),
+      ]
+    } else {
+      // Pour les types spécifiques, utiliser les données déjà chargées
+      unionOrders = [
+        ...(Array.isArray(allOrdersUnfiltered) ? allOrdersUnfiltered : []),
+        ...(Array.isArray(coutureOrders) ? coutureOrders : []),
+        ...(Array.isArray(mailleOrders) ? mailleOrders : []),
+      ]
+    }
 
     unionOrders.forEach((order) => {
       if (!order) return
@@ -116,36 +129,25 @@ export const useAllArticles = (selectedType = 'all') => {
 
     // Fallback: si pas de dataset complet disponible, utiliser uniquement les données actuelles
     const ordersByNumber = {}
-    const sourceForCounts = Object.keys(allByNumber).length > 0 ? allByNumber : ordersByNumber
+    // Toujours utiliser allByNumber pour les comptages car il contient TOUS les articles
+    const sourceForCounts = allByNumber
     dbOrders.forEach((order) => {
       if (!ordersByNumber[order.order_number]) {
         ordersByNumber[order.order_number] = []
       }
       ordersByNumber[order.order_number].push(order)
-      // S'assurer que le map des counts contient bien l'entrée
-      if (!sourceForCounts[order.order_number]) {
-        sourceForCounts[order.order_number] = ordersByNumber[order.order_number]
-      }
     })
+    
+
     
     const articles = []
     Object.entries(ordersByNumber).forEach(([orderNumber, orders]) => {
       const fullOrders = sourceForCounts[orderNumber] || orders
       const totalItems = fullOrders.length
+      
 
-      // Logs ciblés pour la commande 391045
-      if (`${orderNumber}` === '391045') {
-        try {
-          const fullLineItems = fullOrders.map(o => o.items?.[0]?.line_item_id).filter(Boolean)
-          const filteredLineItems = orders.map(o => o.items?.[0]?.line_item_id).filter(Boolean)
-          console.log('[useAllArticles] 391045 group', {
-            filteredCount: orders.length,
-            fullCount: fullOrders.length,
-            filteredLineItems,
-            fullLineItems,
-          })
-        } catch {}
-      }
+
+
 
       // Déterminer l'ordre d'indexation global dans la commande en s'appuyant sur la position dans fullOrders
       // On utilise la correspondance par line_item_id pour retrouver l'index global
@@ -158,17 +160,7 @@ export const useAllArticles = (selectedType = 'all') => {
           })
           const itemIndex = globalIndex >= 0 ? (globalIndex + 1) : (orders.indexOf(order) + 1)
 
-          if (`${orderNumber}` === '391045') {
-            try {
-              console.log('[useAllArticles] 391045 item', {
-                line_item_id: item.line_item_id,
-                computedGlobalIndex: globalIndex,
-                itemIndex,
-                totalItems,
-                productionType: item.production_status?.production_type || 'couture'
-              })
-            } catch {}
-          }
+
 
           articles.push({
             ...item,

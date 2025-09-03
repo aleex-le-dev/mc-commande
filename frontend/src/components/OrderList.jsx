@@ -72,6 +72,8 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
     return () => window.removeEventListener('mc-refresh-data', handleRefreshData)
   }, [refetch, queryClient, articles.length])
 
+
+
   // Calculer le nombre d'articles filtrés
   const filteredArticlesCount = useMemo(() => {
     if (!searchTerm || searchTerm.trim() === '') {
@@ -223,7 +225,7 @@ const OrderList = ({ onNavigateToType, selectedType: propSelectedType }) => {
       {/* Préchargeur d'images en arrière-plan */}
       <ImagePreloader 
         articles={articles}
-        onPreloadComplete={() => console.log('Images préchargées !')}
+        onPreloadComplete={() => {}}
       />
 
       {showBackToTop && (
