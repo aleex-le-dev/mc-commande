@@ -212,7 +212,7 @@ const ProductionPage = ({ productionType, title }) => {
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
         productionType={productionType}
-        prioritizeUrgent={!(selectedStatus === 'all' && !showUrgentOnly && !searchTerm)}
+        prioritizeUrgent={true}
       />
     </div>
   )
