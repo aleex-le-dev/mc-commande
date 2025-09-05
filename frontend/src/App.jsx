@@ -288,7 +288,7 @@ function App() {
             <div className="flex justify-between items-center h-16">
               {/* Logo et titre */}
               <div className="flex items-center">
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 hidden sm:block">
                   <img 
                     src="/mclogosite.png" 
                     alt="Maisoncléo" 
