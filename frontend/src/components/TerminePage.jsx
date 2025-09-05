@@ -31,16 +31,16 @@ const TerminePage = () => {
   // Formatage simple pour gérer le singulier/pluriel en français
   const formatCount = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`
 
-  // Priorité d'affichage des statuts (a_faire, en_cours, en_pause, termine)
+  // Priorité d'affichage des statuts (en_cours, en_pause, termine, a_faire)
   const getStatusPriority = (status) => {
     switch (status) {
       case 'en_cours':
         return 0
-      case 'a_faire':
-        return 1
       case 'en_pause':
-        return 2
+        return 1
       case 'termine':
+        return 2
+      case 'a_faire':
         return 3
       default:
         return 4
@@ -424,7 +424,7 @@ const TerminePage = () => {
                             productionType={article.productionType}
                             tricoteusesProp={tricoteuses}
                             compact
-                            disableStatusBorder
+                            disableStatusBorder={!(article.status === 'en_cours' || article.status === 'en_pause')}
                           />
                         </div>
                       ))}
