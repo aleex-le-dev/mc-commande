@@ -18,6 +18,13 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const [isLoadingTricoteuses, setIsLoadingTricoteuses] = useState(false)
   const [isAssigning, setIsAssigning] = useState(false)
   const [localAssignment, setLocalAssignment] = useState(assignment)
+
+  // Synchroniser localAssignment uniquement si assignment est défini
+  useEffect(() => {
+    if (assignment != null) {
+      setLocalAssignment(assignment)
+    }
+  }, [assignment])
   const [isLoadingAssignment, setIsLoadingAssignment] = useState(true)
 
   const [dateLimite, setDateLimite] = useState(null)
@@ -73,8 +80,9 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
 
   useEffect(() => {
     if (memoizedProductId) {
+      // Vérifier le cache localStorage mais forcer le rechargement si nécessaire
       const cachedImageUrl = localStorage.getItem(`image_${memoizedProductId}`)
-      if (cachedImageUrl) {
+      if (cachedImageUrl && !cachedImageUrl.includes('cache-bust')) {
         setImageUrl(cachedImageUrl)
         setIsImageLoading(false)
         setIsFromCache(true)
@@ -119,7 +127,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     if (imageUrl) return imageUrl
     if (memoizedProductId) {
       const cachedUrl = localStorage.getItem(`image_${memoizedProductId}`)
-      if (cachedUrl) {
+      if (cachedUrl && !cachedUrl.includes('cache-bust')) {
         return cachedUrl
       }
     }
@@ -130,7 +138,9 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
 
   useEffect(() => {
     if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:')) {
-      localStorage.setItem(`image_${memoizedProductId}`, displayImageUrl)
+      // Ajouter un timestamp pour éviter le cache persistant
+      const cacheBustedUrl = `${displayImageUrl}?t=${Date.now()}`
+      localStorage.setItem(`image_${memoizedProductId}`, cacheBustedUrl)
     }
   }, [displayImageUrl, memoizedProductId])
 
@@ -159,6 +169,27 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
       } finally {
         setIsLoadingAssignment(false)
       }
+      return
+    }
+    // Fallback: si aucun assignment mais l'article est en cours avec assigned_to, créer une assignation virtuelle
+    if (article && article.status === 'en_cours' && article.assigned_to) {
+      const virtual = {
+        article_id: uniqueAssignmentId,
+        tricoteuse_id: 'virtual',
+        tricoteuse_name: article.assigned_to,
+        status: 'en_cours',
+        urgent: Boolean(isEnRetard) // conserver l'info d'urgence locale si besoin
+      }
+      // Enrichir depuis la liste des tricoteuses si dispo
+      if (tricoteuses && tricoteuses.length > 0) {
+        const t = tricoteuses.find(x => x.firstName === article.assigned_to)
+        if (t) {
+          virtual.tricoteuse_photo = t.photoUrl
+          virtual.tricoteuse_color = t.color
+        }
+      }
+      setLocalAssignment(virtual)
+      setIsLoadingAssignment(false)
       return
     }
     setLocalAssignment(null)

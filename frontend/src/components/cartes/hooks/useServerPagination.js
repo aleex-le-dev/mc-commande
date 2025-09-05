@@ -53,6 +53,7 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
           permalink: item.permalink,
           productionType: item.production_status?.production_type || 'couture',
           status: item.production_status?.status || 'a_faire',
+          assigned_to: item.production_status?.assigned_to || null,
           isDispatched: item.production_status && item.production_status.status !== 'a_faire'
         })
       })

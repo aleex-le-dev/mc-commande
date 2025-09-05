@@ -54,18 +54,18 @@ const BottomBar = ({
             <div className="w-14 h-14 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
-          ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') ? (
+          ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.status === 'en_cours' && article.assigned_to) ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
               className="group relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 translate-y-[-10px] cursor-pointer"
-              title={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
-              aria-label={`Modifier l'assignation (${localAssignment.tricoteuse_name})`}
+              title={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
+              aria-label={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
             >
-              {localAssignment.tricoteuse_photo ? (
-                <img src={localAssignment.tricoteuse_photo} alt={`Photo de ${localAssignment.tricoteuse_name}`} className="w-full h-full object-cover" />
+              {localAssignment?.tricoteuse_photo ? (
+                <img src={localAssignment.tricoteuse_photo} alt={`Photo de ${localAssignment.tricoteuse_name || article.assigned_to}`} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: localAssignment.tricoteuse_color || '#6b7280' }}>
-                  {localAssignment.tricoteuse_name?.charAt(0)?.toUpperCase() || '?'}
+                <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: localAssignment?.tricoteuse_color || '#6b7280' }}>
+                  {(localAssignment?.tricoteuse_name || article.assigned_to)?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
             </button>

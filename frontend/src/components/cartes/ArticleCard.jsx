@@ -260,8 +260,13 @@ const ArticleCard = forwardRef(({
            localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
            localAssignment.status === 'termine' ? 'border-status-termine' :
            'border-status-retard') :
-        doitAvoirTraitRouge ? 'border-status-retard' : ''
+        // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
+        (article.status === 'en_cours' ? 'border-status-en-cours' :
+         article.status === 'en_pause' ? 'border-status-en-pause' :
+         article.status === 'termine' ? 'border-status-termine' :
+         doitAvoirTraitRouge ? 'border-status-retard' : '')
       }`}
+      data-debug-assignment={localAssignment ? `${localAssignment.status}-${localAssignment.tricoteuse_name}` : `fallback-${article.status}`}
 
              style={{ 
          backgroundColor: 'white'

@@ -34,6 +34,10 @@ const SimpleFlexGrid = ({
       const assignmentsMap = {}
       response.forEach(assignment => {
         assignmentsMap[assignment.article_id] = assignment
+        // Debug: afficher les assignations en cours
+        if (assignment.status === 'en_cours') {
+          console.log('🔍 Assignation en cours trouvée:', assignment)
+        }
       })
       setAssignments(assignmentsMap)
     } catch (error) {

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getOrdersFromDatabase, getOrdersByProductionType } from '../../../services/mongodbService'
-import { useMemo, useCallback, useEffect } from 'react'
+import { useMemo, useEffect } from 'react'
 
 /**
  * Hook simplifié pour gérer tous les articles
@@ -13,16 +13,13 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     queryKey: ['unified-orders'],
     queryFn: getOrdersFromDatabase,
     staleTime: 30000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true, // Rafraîchir quand on revient sur la page
+    refetchOnMount: true, // Rafraîchir à chaque montage
+    refetchInterval: 60000, // Rafraîchir automatiquement toutes les minutes
     retry: 2
   })
 
-  // Exposer la fonction de rafraîchissement
-  const refreshData = useCallback(() => {
-    console.log('🔄 Rafraîchissement des données...')
-    refetch()
-  }, [refetch])
+
 
   // Transformer en articles
   const articles = useMemo(() => {
@@ -34,6 +31,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
       orderItems.forEach((item, index) => {
         const productionType = item.production_status?.production_type || 'couture'
         const status = item.production_status?.status || 'a_faire'
+        const assignedTo = item.production_status?.assigned_to || null
         
         articlesList.push({
           ...item,
@@ -51,6 +49,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
           permalink: item.permalink,
           productionType: productionType,
           status: status,
+          assigned_to: assignedTo,
           isDispatched: status !== 'a_faire',
           // Ajouter les informations de position dans la commande
           itemIndex: index + 1,
@@ -101,7 +100,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
   }, [articles])
 
   // Mise à jour temps réel
-  const updateArticleStatus = useCallback((orderId, lineItemId, newStatus) => {
+  const updateArticleStatus = (orderId, lineItemId, newStatus) => {
     queryClient.setQueryData(['unified-orders'], (oldData) => {
       if (!oldData) return oldData
       return oldData.map(order => {
@@ -122,7 +121,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
         return order
       })
     })
-  }, [queryClient])
+  }
 
   // Écouter les mises à jour
   useEffect(() => {
@@ -130,9 +129,20 @@ export const useUnifiedArticles = (selectedType = 'all') => {
       const { orderId, lineItemId, status } = event.detail
       updateArticleStatus(orderId, lineItemId, status)
     }
+    
+    const handleDataUpdate = (event) => {
+      // Rafraîchir automatiquement les données
+      refetch()
+    }
+    
     window.addEventListener('mc-article-status-updated', handleStatusUpdate)
-    return () => window.removeEventListener('mc-article-status-updated', handleStatusUpdate)
-  }, [updateArticleStatus])
+    window.addEventListener('mc-data-updated', handleDataUpdate)
+    
+    return () => {
+      window.removeEventListener('mc-article-status-updated', handleStatusUpdate)
+      window.removeEventListener('mc-data-updated', handleDataUpdate)
+    }
+  }, [updateArticleStatus, refetch])
 
   return {
     articles: filteredArticles,
@@ -140,7 +150,6 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     ordersByNumber,
     isLoading,
     error: error && !(error.name === 'AbortError' || error.message === 'RequestAborted') ? error : null,
-    totalArticles: filteredArticles.length,
-    refreshData
+    totalArticles: filteredArticles.length
   }
 }

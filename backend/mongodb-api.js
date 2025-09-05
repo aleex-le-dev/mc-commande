@@ -1097,6 +1097,7 @@ app.put('/api/production/status', async (req, res) => {
     }
     
     const statusCollection = db.collection('production_status')
+    const assignmentsCollection = db.collection('article_assignments')
     
     const result = await statusCollection.updateOne(
       {
@@ -1116,7 +1117,25 @@ app.put('/api/production/status', async (req, res) => {
       return res.status(404).json({ error: 'Article non trouvé' })
     }
     
-    console.log(`✅ Statut mis à jour: Commande ${order_id}, Article ${line_item_id} -> ${status}`)
+    // Synchroniser automatiquement les assignations
+    if (status === 'a_faire') {
+      // Si remis en "à faire", supprimer l'assignation
+      await assignmentsCollection.deleteOne({ 
+        order_id: parseInt(order_id), 
+        line_item_id: parseInt(line_item_id)
+      })
+    } else {
+      // Sinon, mettre à jour le statut de l'assignation si elle existe
+      await assignmentsCollection.updateOne(
+        { 
+          order_id: parseInt(order_id), 
+          line_item_id: parseInt(line_item_id)
+        },
+        { $set: { status, updated_at: new Date() } }
+      )
+    }
+    
+
     
     res.json({ 
       success: true, 
@@ -1562,12 +1581,16 @@ app.get('/api/production-status', async (req, res) => {
 // GET /api/production-status/stats - Statistiques de production
 app.get('/api/production-status/stats', async (req, res) => {
   try {
+    const { type } = req.query // Filtrer par type de production
     const statusCollection = db.collection('production_status')
     const ordersCollection = db.collection('orders_sync')
     const itemsCollection = db.collection('order_items')
     
+    // Construire le filtre
+    const filter = type ? { production_type: type } : {}
+    
     // Compter les documents dans chaque collection
-    const totalStatuses = await statusCollection.countDocuments()
+    const totalStatuses = await statusCollection.countDocuments(filter)
     const totalOrders = await ordersCollection.countDocuments()
     const totalItems = await itemsCollection.countDocuments()
     
@@ -1581,8 +1604,9 @@ app.get('/api/production-status/stats', async (req, res) => {
       }
     ]).toArray()
     
-    // Statistiques par statut
+    // Statistiques par statut (filtrées par type si nécessaire)
     const statusesByStatus = await statusCollection.aggregate([
+      ...(type ? [{ $match: { production_type: type } }] : []),
       {
         $group: {
           _id: '$status',
@@ -1692,7 +1716,7 @@ app.post('/api/reset-production-status', async (req, res) => {
     
     const assignmentCount = await assignmentsCollection.countDocuments()
     
-    console.log('✅ Reset complet:', productionResult.modifiedCount, 'articles remis en a_faire,', assignmentsResult.deletedCount, 'assignations supprimées')
+
     
     res.json({ 
       success: true, 
@@ -1707,23 +1731,63 @@ app.post('/api/reset-production-status', async (req, res) => {
   }
 })
 
-// DELETE /api/assignments - Supprimer toutes les assignations
-app.delete('/api/assignments', async (req, res) => {
+// POST /api/sync-assignments-status - Synchroniser les assignations avec les statuts de production
+app.post('/api/sync-assignments-status', async (req, res) => {
   try {
+    const productionCollection = db.collection('production_status')
     const assignmentsCollection = db.collection('article_assignments')
-    const result = await assignmentsCollection.deleteMany({})
     
-    console.log('✅ Suppression des assignations:', result.deletedCount, 'assignations supprimées')
+    // Récupérer tous les statuts de production
+    const productionStatuses = await productionCollection.find({}).toArray()
+    
+    // Récupérer toutes les assignations
+    const assignments = await assignmentsCollection.find({}).toArray()
+    
+    let syncedCount = 0
+    let removedCount = 0
+    
+    // Pour chaque assignation, vérifier si le statut correspond
+    for (const assignment of assignments) {
+      const productionStatus = productionStatuses.find(ps => 
+        ps.order_id === assignment.order_id && ps.line_item_id === assignment.line_item_id
+      )
+      
+      if (productionStatus) {
+        // Si le statut de production est "a_faire", supprimer l'assignation
+        if (productionStatus.status === 'a_faire') {
+          await assignmentsCollection.deleteOne({ _id: assignment._id })
+          removedCount++
+        } else {
+          // Sinon, synchroniser le statut
+          if (assignment.status !== productionStatus.status) {
+            await assignmentsCollection.updateOne(
+              { _id: assignment._id },
+              { $set: { status: productionStatus.status, updated_at: new Date() } }
+            )
+            syncedCount++
+          }
+        }
+      } else {
+        // Si pas de statut de production, supprimer l'assignation
+        await assignmentsCollection.deleteOne({ _id: assignment._id })
+        removedCount++
+      }
+    }
+    
+
     
     res.json({ 
       success: true, 
-      deletedCount: result.deletedCount
+      syncedCount,
+      removedCount
     })
   } catch (error) {
-    console.error('Erreur suppression assignations:', error)
+    console.error('Erreur sync-assignments-status:', error)
     res.status(500).json({ error: error.message })
   }
 })
+
+
 
 // PUT /api/production-status/:lineItemId/type - Mettre à jour le type de production d'un article
 app.put('/api/production-status/:lineItemId/type', async (req, res) => {
@@ -2103,15 +2167,16 @@ app.post('/api/assignments', async (req, res) => {
     }
     
     const assignmentsCollection = db.collection('article_assignments')
+    const productionCollection = db.collection('production_status')
     
-    // Utiliser upsert pour créer ou mettre à jour
+    // Utiliser upsert pour créer ou mettre à jour l'assignation
     const result = await assignmentsCollection.updateOne(
       { article_id: article_id },
       {
         $set: {
           tricoteuse_id: tricoteuse_id,
           tricoteuse_name: tricoteuse_name,
-          status: status || 'non_assigné',
+          status: status || 'en_cours', // Par défaut "en_cours" quand assigné
           urgent: urgent === true,
           assigned_at: new Date(),
           updated_at: new Date()
@@ -2119,6 +2184,46 @@ app.post('/api/assignments', async (req, res) => {
       },
       { upsert: true }
     )
+    
+    // Mettre à jour automatiquement le statut de production
+    // L'article_id peut être soit line_item_id directement, soit au format orderId_lineItemId
+    let orderId, lineItemId
+    
+    if (article_id.toString().includes('_')) {
+      // Format: orderId_lineItemId ou productId_orderNumber_customer
+      const parts = article_id.toString().split('_')
+      if (parts.length >= 2) {
+        // Si c'est un line_item_id direct, l'utiliser
+        if (!isNaN(parts[0]) && !isNaN(parts[1])) {
+          orderId = parts[0]
+          lineItemId = parts[1]
+        } else {
+          // Format productId_orderNumber_customer, chercher par line_item_id
+          lineItemId = article_id
+        }
+      }
+    } else {
+      // Format: line_item_id direct
+      lineItemId = article_id
+    }
+    
+    if (lineItemId) {
+      const updateQuery = orderId ? 
+        { order_id: parseInt(orderId), line_item_id: parseInt(lineItemId) } :
+        { line_item_id: parseInt(lineItemId) }
+        
+      await productionCollection.updateOne(
+        updateQuery,
+        { 
+          $set: { 
+            status: status || 'en_cours',
+            assigned_to: tricoteuse_name,
+            updated_at: new Date()
+          }
+        },
+        { upsert: true }
+      )
+    }
     
     res.json({
       success: true,
@@ -2146,16 +2251,52 @@ app.delete('/api/assignments/:assignmentId', async (req, res) => {
     
     const { assignmentId } = req.params
     const assignmentsCollection = db.collection('article_assignments')
+    const productionCollection = db.collection('production_status')
     
     // Vérifier que l'ID est un ObjectId valide
     if (!ObjectId.isValid(assignmentId)) {
       return res.status(400).json({ error: 'ID d\'assignation invalide' })
     }
     
+    // Récupérer l'assignation avant de la supprimer pour avoir l'article_id
+    const assignment = await assignmentsCollection.findOne({ _id: new ObjectId(assignmentId) })
+    if (!assignment) {
+      return res.status(404).json({ error: 'Aucune assignation trouvée avec cet ID' })
+    }
+    
     const result = await assignmentsCollection.deleteOne({ _id: new ObjectId(assignmentId) })
     
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Aucune assignation trouvée avec cet ID' })
+    // Mettre à jour le statut de production en "à faire"
+    let orderId, lineItemId
+    const articleId = assignment.article_id.toString()
+    
+    if (articleId.includes('_')) {
+      const parts = articleId.split('_')
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        orderId = parts[0]
+        lineItemId = parts[1]
+      } else {
+        lineItemId = articleId
+      }
+    } else {
+      lineItemId = articleId
+    }
+    
+    if (lineItemId) {
+      const updateQuery = orderId ? 
+        { order_id: parseInt(orderId), line_item_id: parseInt(lineItemId) } :
+        { line_item_id: parseInt(lineItemId) }
+        
+      await productionCollection.updateOne(
+        updateQuery,
+        { 
+          $set: { 
+            status: 'a_faire',
+            assigned_to: null,
+            updated_at: new Date()
+          }
+        }
+      )
     }
     
     res.json({
@@ -2179,16 +2320,55 @@ app.delete('/api/assignments/by-article/:articleId', async (req, res) => {
       return res.status(400).json({ error: 'article_id requis' })
     }
     const assignmentsCollection = db.collection('article_assignments')
+    const productionCollection = db.collection('production_status')
+    
     // Supporter article_id stocké en string OU en nombre
     const asNumber = Number(articleId)
     const query = Number.isNaN(asNumber)
       ? { article_id: articleId }
       : { $or: [ { article_id: asNumber }, { article_id: articleId } ] }
+    
     const result = await assignmentsCollection.deleteOne(query)
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
+    const assignmentFound = result.deletedCount > 0
+    
+    // Mettre à jour le statut de production en "à faire" même si l'assignation n'existe pas
+    let orderId, lineItemId
+    const articleIdStr = articleId.toString()
+    
+    if (articleIdStr.includes('_')) {
+      const parts = articleIdStr.split('_')
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        orderId = parts[0]
+        lineItemId = parts[1]
+      } else {
+        lineItemId = articleIdStr
+      }
+    } else {
+      lineItemId = articleIdStr
     }
-    res.json({ success: true, message: 'Assignation supprimée par article_id' })
+    
+    if (lineItemId) {
+      const updateQuery = orderId ? 
+        { order_id: parseInt(orderId), line_item_id: parseInt(lineItemId) } :
+        { line_item_id: parseInt(lineItemId) }
+        
+      await productionCollection.updateOne(
+        updateQuery,
+        { 
+          $set: { 
+            status: 'a_faire',
+            assigned_to: null,
+            updated_at: new Date()
+          }
+        }
+      )
+    }
+    
+    // Retourner le bon message selon si l'assignation existait ou non
+    const message = assignmentFound 
+      ? 'Assignation supprimée par article_id' 
+      : 'Aucune assignation trouvée, mais statut de production mis à jour'
+    res.json({ success: true, message })
   } catch (error) {
     console.error('Erreur DELETE /api/assignments/by-article/:articleId:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })

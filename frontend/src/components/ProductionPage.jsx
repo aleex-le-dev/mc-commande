@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
-import { cacheClear } from '../services/mongodbService'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
+import { useQuery } from '@tanstack/react-query'
 
 /**
  * Page générique pour Maille/Couture
@@ -10,7 +10,23 @@ import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 const ProductionPage = ({ productionType, title }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  const { articles, isLoading, error, refreshData } = useUnifiedArticles(productionType)
+  const { articles, isLoading, error } = useUnifiedArticles(productionType)
+  
+  // Récupérer les vrais compteurs depuis la BDD
+  const { data: productionStats } = useQuery({
+    queryKey: ['production-stats', productionType],
+    queryFn: async () => {
+      const url = productionType === 'all' 
+        ? 'http://localhost:3001/api/production-status/stats'
+        : `http://localhost:3001/api/production-status/stats?type=${productionType}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Erreur récupération stats')
+      const data = await response.json()
+      return data.stats
+    },
+    refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
+    staleTime: 10000 // Considérer comme périmé après 10 secondes
+  })
   
   // Filtrage local par recherche et statut
   const filteredArticles = useMemo(() => {
@@ -36,12 +52,12 @@ const ProductionPage = ({ productionType, title }) => {
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
-  const handleOverlayOpen = useCallback((cardId) => {
+  const handleOverlayOpen = (cardId) => {
     setOpenOverlayCardId(prevId => prevId === cardId ? null : cardId)
-  }, [])
-  const handleClickOutside = useCallback(() => {
+  }
+  const handleClickOutside = () => {
     setOpenOverlayCardId(null)
-  }, [])
+  }
 
   // Fonctions pour les cartes
   const getArticleSize = (article) => {
@@ -66,19 +82,23 @@ const ProductionPage = ({ productionType, title }) => {
     showClientButton: true
   })
 
-  // Compteurs de statuts (basés sur TOUS les articles, pas les articles filtrés)
+  // Compteurs de statuts depuis la BDD (filtrés par type de production)
   const statusCounts = useMemo(() => {
+    if (!productionStats?.statusesByStatus) {
+      return { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
+    }
+    
     const counts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
     
-    articles.forEach(article => {
-      const status = article.status
-      if (counts.hasOwnProperty(status)) {
-        counts[status] = counts[status] + 1
+    // Filtrer par type de production si nécessaire
+    productionStats.statusesByStatus.forEach(stat => {
+      if (counts.hasOwnProperty(stat._id)) {
+        counts[stat._id] = stat.count
       }
     })
     
     return counts
-  }, [articles])
+  }, [productionStats])
 
   if (isLoading) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement...</div></div>
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
@@ -105,19 +125,6 @@ const ProductionPage = ({ productionType, title }) => {
         )}
         
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              console.log('🔄 Bouton Actualiser cliqué')
-              // Vider tout le cache frontend
-              cacheClear()
-              // Rafraîchir les données
-              refreshData()
-            }}
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-            title="Rafraîchir les données"
-          >
-            🔄 Actualiser
-          </button>
           
           <button
             onClick={() => setSelectedStatus('all')}

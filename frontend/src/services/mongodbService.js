@@ -47,12 +47,7 @@ function cacheDelete(key) {
   globalCache[key] = { data: null, at: 0 }
 }
 
-// Vider tout le cache
-function cacheClear() {
-  Object.keys(globalCache).forEach(key => {
-    globalCache[key] = { data: null, at: 0 }
-  })
-}
+
 
 async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
@@ -136,6 +131,15 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
     
     // Invalider le cache pour forcer le rechargement
     cacheDelete('orders')
+    cacheDelete('assignments')
+    
+    // Déclencher un événement pour forcer le rechargement des données
+    window.dispatchEvent(new CustomEvent('mc-data-updated', {
+      detail: { orderId, lineItemId, status }
+    }))
+    
+    // Déclencher un événement pour forcer le rechargement des assignations
+    window.dispatchEvent(new CustomEvent('mc-assignments-updated'))
     
     return data
     } catch (error) {
@@ -235,6 +239,20 @@ export const getOrdersFromDatabase = async () => {
     
     if (!syncResponse.ok) {
       console.warn('Erreur lors de la synchronisation:', syncResponse.status)
+    }
+
+    // Synchroniser automatiquement les assignations avec les statuts
+    try {
+      const syncAssignmentsResponse = await requestWithRetry(`${API_BASE_URL}/sync-assignments-status`, {
+        method: 'POST',
+        timeoutMs: 10000 // 10 secondes pour la synchronisation des assignations
+      })
+      
+      if (syncAssignmentsResponse.ok) {
+        await syncAssignmentsResponse.json()
+      }
+    } catch (error) {
+      console.warn('Erreur lors de la synchronisation des assignations:', error)
     }
 
     // Puis récupérer toutes les commandes depuis la BDD
@@ -585,6 +603,7 @@ export const assignmentsService = {
   // Créer ou mettre à jour une assignation
   async createOrUpdateAssignment(assignmentData) {
     try {
+      console.log('🔄 Sauvegarde assignation:', assignmentData)
       const response = await requestWithRetry('http://localhost:3001/api/assignments', {
         method: 'POST',
         headers: {
@@ -592,13 +611,23 @@ export const assignmentsService = {
         },
         body: JSON.stringify(assignmentData)
       })
-      if (!response.ok) throw new Error('Erreur lors de la sauvegarde de l\'assignation')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Erreur HTTP assignation:', response.status, errorText)
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`)
+      }
       const result = await response.json()
+      console.log('✅ Assignation sauvegardée:', result)
+      
       // Invalider le cache pour refléter la mise à jour
-      cacheSet('assignments', null)
+      cacheDelete('assignments')
+      
+      // Déclencher un événement pour forcer le rechargement des assignations
+      window.dispatchEvent(new CustomEvent('mc-assignments-updated'))
+      
       return result.data
     } catch (error) {
-      console.error('Erreur sauvegarde assignation:', error)
+      console.error('❌ Erreur sauvegarde assignation:', error)
       throw error
     }
   },
@@ -618,9 +647,21 @@ export const assignmentsService = {
           method: 'DELETE'
         })
       }
+      // Si 404, l'assignation n'existe pas - ce n'est pas une erreur
+      if (response.status === 404) {
+        console.log(`ℹ️ Aucune assignation trouvée pour l'article ${idOrArticleId} - suppression ignorée`)
+        // La route DELETE /api/assignments/by-article/:articleId met déjà à jour production_status
+        // Pas besoin de faire un PUT séparé
+        return { success: true, message: 'Aucune assignation à supprimer' }
+      }
+      
       if (!response.ok) throw new Error('Erreur lors de la suppression de l\'assignation')
       const result = await response.json()
-      cacheSet('assignments', null)
+      cacheDelete('assignments')
+      
+      // Déclencher un événement pour forcer le rechargement des assignations
+      window.dispatchEvent(new CustomEvent('mc-assignments-updated'))
+      
       return result.success
     } catch (error) {
       console.error('Erreur suppression assignation:', error)
@@ -648,5 +689,4 @@ export async function prefetchAppData() {
   }
 }
 
-// Exporter cacheClear pour vider le cache
-export { cacheClear }
+

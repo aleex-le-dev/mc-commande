@@ -155,6 +155,16 @@ export const useOrderData = (selectedType, propSelectedType) => {
     return status ? status.status : 'a_faire'
   }, [productionStatuses])
 
+  const getArticleAssignment = useCallback((orderId, lineItemId) => {
+    if (!productionStatuses) return null
+    
+    const status = productionStatuses.find(s => 
+      s.order_id === orderId && s.line_item_id === lineItemId
+    )
+    
+    return status ? status.assigned_to : null
+  }, [productionStatuses])
+
   // Préparer les données des articles avec statuts
   const prepareArticles = useMemo(() => {
     if (!dbOrders) return []
@@ -175,6 +185,7 @@ export const useOrderData = (selectedType, propSelectedType) => {
         }
         
         const currentStatus = getArticleStatus(order.order_id, item.line_item_id)
+        const currentAssignment = getArticleAssignment(order.order_id, item.line_item_id)
         
         articles.push({
           ...item,
@@ -192,13 +203,14 @@ export const useOrderData = (selectedType, propSelectedType) => {
           permalink: item.permalink, // Utiliser le permalink stocké en BDD
           productionType: productionType,
           status: currentStatus,
+          assigned_to: currentAssignment,
           isDispatched: item.production_status && item.production_status.status !== 'a_faire'
         })
       })
     })
     
     return articles
-  }, [dbOrders, getProductionType, getArticleStatus])
+  }, [dbOrders, getProductionType, getArticleStatus, getArticleAssignment])
 
   // Fonction de synchronisation
   const performSync = useCallback(async () => {
