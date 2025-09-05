@@ -24,6 +24,7 @@ const SimpleFlexGrid = ({
   const sentinelRef = useRef(null)
   const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
   const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
+  const [dateLimiteLoading, setDateLimiteLoading] = useState(true)
   const calculEffectue = useRef(false)
 
   // Charger toutes les assignations en une fois
@@ -72,7 +73,8 @@ const SimpleFlexGrid = ({
   // Charger la date limite depuis le service
   const loadDateLimite = useCallback(async () => {
     // Éviter les calculs répétés
-    if (calculEffectue.current) return
+    if (calculEffectue.current) { setDateLimiteLoading(false); return }
+    setDateLimiteLoading(true)
     
     try {
       // Récupérer la configuration des délais et les jours fériés
@@ -164,7 +166,7 @@ const SimpleFlexGrid = ({
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la date limite:', error)
-    }
+    } finally { setDateLimiteLoading(false) }
   }, [])
 
   useEffect(() => {
@@ -295,7 +297,7 @@ const SimpleFlexGrid = ({
   ])
 
   // Afficher le loading pendant les changements d'onglets
-  if (isLoading || assignmentsLoading || tricoteusesLoading) {
+  if (isLoading || assignmentsLoading || tricoteusesLoading || dateLimiteLoading) {
     return <LoadingSpinner />
   }
 

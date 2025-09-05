@@ -1,3 +1,4 @@
+import LoadingSpinner from '../LoadingSpinner'
 import React, { useState, useEffect, useRef } from 'react'
 import delaiService from '../../services/delaiService'
 
@@ -425,21 +426,7 @@ const DateLimiteTab = () => {
 
       {/* Affichage du chargement */}
       {(isCalculating || isLoadingJoursFeries) && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white shadow-md">
-          <div className="text-center">
-            <div className="mb-2">
-              <svg className="w-8 h-8 mx-auto text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold mb-2">
-              {isLoadingJoursFeries ? 'Chargement des jours fériés...' : 'Calcul de la date limite...'}
-            </h3>
-            <div className="flex justify-center">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-            </div>
-          </div>
-        </div>
+        <LoadingSpinner size="large" />
       )}
 
       <div className="space-y-6">
