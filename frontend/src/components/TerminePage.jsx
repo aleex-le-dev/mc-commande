@@ -31,6 +31,22 @@ const TerminePage = () => {
   // Formatage simple pour gérer le singulier/pluriel en français
   const formatCount = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`
 
+  // Priorité d'affichage des statuts (a_faire, en_cours, en_pause, termine)
+  const getStatusPriority = (status) => {
+    switch (status) {
+      case 'en_cours':
+        return 0
+      case 'a_faire':
+        return 1
+      case 'en_pause':
+        return 2
+      case 'termine':
+        return 3
+      default:
+        return 4
+    }
+  }
+
   // Charger les assignations pour récupérer les flags urgent (avec cache)
   useEffect(() => {
     let cancelled = false
@@ -387,10 +403,13 @@ const TerminePage = () => {
                   <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-cours">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status === 'en_cours').length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
+                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status !== 'termine').length; return formatCount(c, 'article non terminé', 'articles non terminés') })()}</span>
                     </div>
                     <div className="flex flex-wrap gap-4">
-                      {order.items.map((article, index) => (
+                      {order.items
+                        .slice()
+                        .sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status))
+                        .map((article, index) => (
                         <div key={`inprogress-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
                           <ArticleCard
                             article={{ ...article }}
