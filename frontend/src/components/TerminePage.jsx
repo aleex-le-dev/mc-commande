@@ -390,7 +390,7 @@ const TerminePage = () => {
                       <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status === 'en_cours').length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
                     </div>
                     <div className="flex flex-wrap gap-4">
-                      {order.items.filter(a => a.status === 'en_cours').map((article, index) => (
+                      {order.items.map((article, index) => (
                         <div key={`inprogress-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
                           <ArticleCard
                             article={{ ...article }}
