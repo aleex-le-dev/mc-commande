@@ -440,7 +440,7 @@ const TerminePage = () => {
                           productionType={article.productionType}
                           tricoteusesProp={tricoteuses}
                           compact
-                            disableStatusBorder={!(article.status === 'en_cours' || article.status === 'en_pause')}
+                            disableStatusBorder={order.items.length === 1 ? true : !(article.status === 'en_cours' || article.status === 'en_pause')}
                         />
                         </div>
                       ))}
