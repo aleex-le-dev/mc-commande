@@ -526,7 +526,7 @@ export const tricoteusesService = {
       const cached = cacheGet('tricoteuses')
       if (cached) return cached
       const response = await requestWithRetry('http://localhost:3001/api/tricoteuses')
-      if (!response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
+      if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
       cacheSet('tricoteuses', data)
