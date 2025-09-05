@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import { useQuery } from '@tanstack/react-query'
 import LoadingSpinner from './LoadingSpinner'
+import { assignmentsService } from '../services/mongodbService'
 
 /**
  * Page générique pour Maille/Couture
@@ -11,6 +12,42 @@ import LoadingSpinner from './LoadingSpinner'
 const ProductionPage = ({ productionType, title }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
+  const [showUrgentOnly, setShowUrgentOnly] = useState(false)
+  const [urgentMap, setUrgentMap] = useState({})
+  // Charger/rafraîchir la carte des urgences
+  const refreshUrgentMap = useCallback(async () => {
+    try {
+      const all = await assignmentsService.getAllAssignments()
+      const map = {}
+      ;(all || []).forEach(a => {
+        if (!a) return
+        const id = a.article_id != null ? String(a.article_id) : ''
+        if (!id) return
+        if (a.urgent) {
+          map[id] = true
+        }
+      })
+      setUrgentMap(map)
+    } catch {
+      setUrgentMap({})
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    refreshUrgentMap()
+
+    const onUrgent = () => { if (!cancelled) refreshUrgentMap() }
+    const onAssignmentsUpdated = () => { if (!cancelled) refreshUrgentMap() }
+    window.addEventListener('mc-mark-urgent', onUrgent)
+    window.addEventListener('mc-assignments-updated', onAssignmentsUpdated)
+    return () => {
+      cancelled = true
+      window.removeEventListener('mc-mark-urgent', onUrgent)
+      window.removeEventListener('mc-assignments-updated', onAssignmentsUpdated)
+    }
+  }, [refreshUrgentMap])
+
   const { articles, isLoading, error } = useUnifiedArticles(productionType)
   
   // Les compteurs sont calculés instantanément côté client pour réactivité
@@ -20,9 +57,18 @@ const ProductionPage = ({ productionType, title }) => {
     const term = searchTerm.toLowerCase().trim()
     let filtered = articles
     
-    // Filtrage par statut
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(article => article.status === selectedStatus)
+    // Filtrage urgent prioritaire
+    if (showUrgentOnly) {
+      filtered = filtered.filter(article => {
+        const composedId = `${article.orderId}_${article.line_item_id}`
+        const simpleId = `${article.line_item_id}`
+        return urgentMap[composedId] === true || urgentMap[simpleId] === true
+      })
+    } else {
+      // Filtrage par statut
+      if (selectedStatus !== 'all') {
+        filtered = filtered.filter(article => article.status === selectedStatus)
+      }
     }
     
     // Filtrage par recherche
@@ -35,7 +81,7 @@ const ProductionPage = ({ productionType, title }) => {
     }
     
     return filtered
-  }, [articles, searchTerm, selectedStatus])
+  }, [articles, searchTerm, selectedStatus, showUrgentOnly, urgentMap])
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
@@ -78,6 +124,14 @@ const ProductionPage = ({ productionType, title }) => {
     return counts
   }, [articles])
 
+  const urgentCount = useMemo(() => {
+    return (articles || []).reduce((n, article) => {
+      const composedId = `${article.orderId}_${article.line_item_id}`
+      const simpleId = `${article.line_item_id}`
+      return n + ((urgentMap[composedId] === true || urgentMap[simpleId] === true) ? 1 : 0)
+    }, 0)
+  }, [articles, urgentMap])
+
   if (isLoading) return <LoadingSpinner />
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
 
@@ -114,9 +168,20 @@ const ProductionPage = ({ productionType, title }) => {
           >
             📋 Total: <strong>{articles.length}</strong>
           </button>
+
+          <button
+            onClick={() => { setShowUrgentOnly(true); setSelectedStatus('all') }}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              showUrgentOnly 
+                ? 'bg-red-100 border-red-300 text-red-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            🚨 Urgentes: <strong>{urgentCount}</strong>
+          </button>
           
           <button
-            onClick={() => setSelectedStatus('a_faire')}
+            onClick={() => { setSelectedStatus('a_faire'); setShowUrgentOnly(false) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'a_faire' 
                 ? 'bg-gray-100 border-gray-400 text-gray-800' 
@@ -127,7 +192,7 @@ const ProductionPage = ({ productionType, title }) => {
           </button>
           
           <button
-            onClick={() => setSelectedStatus('en_cours')}
+            onClick={() => { setSelectedStatus('en_cours'); setShowUrgentOnly(false) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'en_cours' 
                 ? 'bg-blue-100 border-blue-400 text-blue-800' 
@@ -138,7 +203,7 @@ const ProductionPage = ({ productionType, title }) => {
           </button>
           
           <button
-            onClick={() => setSelectedStatus('en_pause')}
+            onClick={() => { setSelectedStatus('en_pause'); setShowUrgentOnly(false) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'en_pause' 
                 ? 'bg-yellow-100 border-yellow-400 text-yellow-800' 
@@ -149,7 +214,7 @@ const ProductionPage = ({ productionType, title }) => {
           </button>
           
           <button
-            onClick={() => setSelectedStatus('termine')}
+            onClick={() => { setSelectedStatus('termine'); setShowUrgentOnly(false) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'termine' 
                 ? 'bg-green-100 border-green-400 text-green-800' 

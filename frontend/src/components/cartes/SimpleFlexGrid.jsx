@@ -26,6 +26,7 @@ const SimpleFlexGrid = ({
   const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
   const [dateLimiteLoading, setDateLimiteLoading] = useState(true)
   const calculEffectue = useRef(false)
+  const [urgentTick, setUrgentTick] = useState(0)
 
   // Charger toutes les assignations en une fois
   const loadAssignments = useCallback(async () => {
@@ -182,6 +183,13 @@ const SimpleFlexGrid = ({
     return () => window.removeEventListener('mc-tricoteuses-updated', handler)
   }, [loadTricoteuses])
 
+  // Re-trier immédiatement quand un article est marqué urgent
+  useEffect(() => {
+    const handleUrgent = () => setUrgentTick((t) => t + 1)
+    window.addEventListener('mc-mark-urgent', handleUrgent)
+    return () => window.removeEventListener('mc-mark-urgent', handleUrgent)
+  }, [])
+
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
   useEffect(() => {
     setVisibleCount(280) // Afficher tous les articles par défaut
@@ -215,7 +223,14 @@ const SimpleFlexGrid = ({
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
     const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticles)
-    const subset = source.slice(0, visibleCount)
+    // Prioriser les urgents en tête
+    const prioritized = [...source].sort((a, b) => {
+      const ua = assignments[a.line_item_id]?.urgent ? 1 : 0
+      const ub = assignments[b.line_item_id]?.urgent ? 1 : 0
+      if (ua !== ub) return ub - ua
+      return 0
+    })
+    const subset = prioritized.slice(0, visibleCount)
     const cards = []
     
     subset.forEach((article, index) => {
@@ -293,6 +308,7 @@ const SimpleFlexGrid = ({
     searchTerm,
     productionType, // Ajouter aux dépendances
     assignments,
+    urgentTick,
     tricoteuses
   ])
 
