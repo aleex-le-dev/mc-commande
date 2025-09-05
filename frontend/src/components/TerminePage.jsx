@@ -17,6 +17,7 @@ const TerminePage = () => {
   const [focusedOrder, setFocusedOrder] = useState(null)
   const [openReadyOverlayId, setOpenReadyOverlayId] = useState(null)
   const [openPausedOverlayId, setOpenPausedOverlayId] = useState(null)
+  const [openInProgressOverlayId, setOpenInProgressOverlayId] = useState(null)
 
   // Récupérer tous les articles (tous types) pour calculer correctement les statuts par commande
   const { ordersByNumber, isLoading, error, totalArticles } = useUnifiedArticles('all')
@@ -234,6 +235,18 @@ const TerminePage = () => {
     })
     return list
   }, [ready])
+  const inProgress = useMemo(() => grouped.filter(g => {
+    return (g.items?.length || 0) > 1 && g.items.some(item => item.status === 'en_cours')
+  }), [grouped])
+  const inProgressArticles = useMemo(() => {
+    const list = []
+    inProgress.forEach(order => {
+      order.items.filter(it => it.status === 'en_cours').forEach(it => {
+        list.push({ ...it })
+      })
+    })
+    return list
+  }, [inProgress])
   const partial = useMemo(() => grouped.filter(g => {
     // Articles en pause : commandes qui ont au moins un article avec statut "en_pause"
     return g.items.some(item => item.status === 'en_pause')
@@ -332,6 +345,37 @@ const TerminePage = () => {
                     getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
                     onOverlayOpen={() => setOpenReadyOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
                     isOverlayOpen={openReadyOverlayId === `${article.orderId}_${article.line_item_id}`}
+                    isHighlighted={false}
+                    searchTerm={''}
+                    productionType={article.productionType}
+                    tricoteusesProp={tricoteuses}
+                    compact
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Commandes en cours */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold">En cours</h2>
+              <span className="text-sm text-gray-600">{inProgress.length} commande(s) — {inProgressArticles.length} article(s)</span>
+            </div>
+            {inProgressArticles.length === 0 ? (
+              <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande en cours</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                {inProgressArticles.map((article, index) => (
+                  <ArticleCard
+                    key={`inprogress-${article.orderId}-${article.line_item_id}`}
+                    article={{ ...article, status: 'en_cours' }}
+                    index={index}
+                    getArticleSize={() => 'medium'}
+                    getArticleColor={() => null}
+                    getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                    onOverlayOpen={() => setOpenInProgressOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                    isOverlayOpen={openInProgressOverlayId === `${article.orderId}_${article.line_item_id}`}
                     isHighlighted={false}
                     searchTerm={''}
                     productionType={article.productionType}
