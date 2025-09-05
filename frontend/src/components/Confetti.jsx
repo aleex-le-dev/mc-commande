@@ -6,7 +6,6 @@ const Confetti = ({ isActive, position = { x: 0, y: 0 } }) => {
     return null
   }
 
-  console.log('🎉 Confetti rendu à la position:', position)
 
   return (
     <div style={{ 

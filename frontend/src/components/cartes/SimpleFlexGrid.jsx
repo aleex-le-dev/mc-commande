@@ -82,12 +82,7 @@ const SimpleFlexGrid = ({
       ])
       
       if (configResponse.success && configResponse.data) {
-        // Log de la date limite actuellement en BDD
-        if (configResponse.data.dateLimite) {
-          console.log('🗄️ Date limite actuellement en BDD:', configResponse.data.dateLimite.split('T')[0])
-        } else {
-          console.log('🗄️ Aucune date limite stockée en BDD')
-        }
+        // Date limite en BDD (logs retirés)
         
         const joursDelai = configResponse.data.joursDelai || 21
         const joursOuvrables = configResponse.data.joursOuvrables || {
@@ -157,7 +152,7 @@ const SimpleFlexGrid = ({
               dateLimite: dateLimiteStr,
               derniereModification: new Date().toISOString()
             })
-            console.log('💾 Date limite sauvegardée en BDD:', dateLimiteStr)
+            // Date limite sauvegardée (log retiré)
           } catch (saveError) {
             console.error('Erreur lors de la sauvegarde de la date limite:', saveError)
           }
@@ -264,7 +259,6 @@ const SimpleFlexGrid = ({
         
         // Vérifier si la commande est de la date limite calculée
         if (dateCommande.toDateString() === dateLimiteObj.toDateString()) {
-          console.log('📅 Ajout du trait de séparation après la commande:', article.orderNumber, 'Date:', article.orderDate, 'Date limite calculée:', dateLimite)
           
           // Ajouter le trait de séparation qui traverse toute la largeur
           cards.push(

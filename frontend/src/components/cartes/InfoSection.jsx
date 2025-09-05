@@ -48,18 +48,28 @@ const getArticleColor = (metaData) => {
 const InfoSection = ({
   article,
   searchTerm,
-  compact = false
+  compact = false,
+  // Mode très compact pour réduire encore la densité des infos (utilisé sur la page Terminé)
+  veryCompact = false
 }) => {
   const articleSize = getArticleSize(article.meta_data)
   const articleColor = getArticleColor(article.meta_data)
+  // Sélection du mode d'affichage: regular, compact, very
+  const mode = veryCompact ? 'very' : (compact ? 'compact' : 'regular')
+  const classHeight = mode === 'very' ? 'h-16' : (mode === 'compact' ? 'h-20' : 'h-24')
+  const containerPadding = mode === 'very' ? 'px-2 pt-1 pb-10' : (mode === 'compact' ? 'px-2 pt-1.5 pb-12' : 'p-3 pt-2 pb-16')
+  const titleClass = mode === 'very' ? 'text-xs' : (mode === 'compact' ? 'text-sm' : 'text-lg')
+  const gridClass = mode === 'very' ? 'gap-1 text-xs' : (mode === 'compact' ? 'gap-2 text-sm' : 'gap-3 text-base')
+  const labelClass = mode === 'very' ? 'text-[10px]' : (mode === 'compact' ? 'text-[11px]' : 'text-sm')
+  const valueClass = mode === 'very' ? 'text-sm' : (mode === 'compact' ? 'text-base' : 'text-lg')
   return (
-    <div className={`${compact ? 'h-20' : 'h-24'} bg-white backdrop-blur-md transition-all duration-300 relative`}>
-      <div className={`${compact ? 'px-2 pt-1.5 pb-12' : 'p-3 pt-2 pb-16'}`}>
+    <div className={`${classHeight} bg-white backdrop-blur-md transition-all duration-300 relative`}>
+      <div className={`${containerPadding}`}>
         <div className="space-y-1">
-          <h3 className={`${compact ? 'text-sm' : 'text-lg'} font-bold text-gray-900 leading-tight`}>
+          <h3 className={`${titleClass} font-bold text-gray-900 leading-tight`}>
             {highlightText(article.product_name, searchTerm)}
           </h3>
-          <div className={`grid ${compact ? 'gap-2 text-sm' : 'gap-3 text-base'} text-gray-700`} style={{ 
+          <div className={`grid ${gridClass} text-gray-700`} style={{ 
             gridTemplateColumns: `repeat(${[
               'quantity',
               articleSize ? 'size' : null,
@@ -67,21 +77,21 @@ const InfoSection = ({
             ].filter(Boolean).length}, 1fr)`
           }}>
             <div className="text-center">
-              <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Quantité</div>
-              <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{article.quantity}</div>
+              <div className={`${labelClass} text-gray-500`}>Quantité</div>
+              <div className={`${valueClass} font-semibold`}>{article.quantity}</div>
             </div>
 
             {articleSize && (
               <div className="text-center">
-                <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Taille</div>
-                <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{articleSize}</div>
+                <div className={`${labelClass} text-gray-500`}>Taille</div>
+                <div className={`${valueClass} font-semibold`}>{articleSize}</div>
               </div>
             )}
 
             {articleColor && (
               <div className="text-center">
-                <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Couleur</div>
-                <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{articleColor}</div>
+                <div className={`${labelClass} text-gray-500`}>Couleur</div>
+                <div className={`${valueClass} font-semibold`}>{articleColor}</div>
               </div>
             )}
           </div>

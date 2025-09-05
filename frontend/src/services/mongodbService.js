@@ -603,7 +603,6 @@ export const assignmentsService = {
   // Créer ou mettre à jour une assignation
   async createOrUpdateAssignment(assignmentData) {
     try {
-      console.log('🔄 Sauvegarde assignation:', assignmentData)
       const response = await requestWithRetry('http://localhost:3001/api/assignments', {
         method: 'POST',
         headers: {
@@ -617,7 +616,6 @@ export const assignmentsService = {
         throw new Error(`Erreur HTTP ${response.status}: ${errorText}`)
       }
       const result = await response.json()
-      console.log('✅ Assignation sauvegardée:', result)
       
       // Invalider le cache pour refléter la mise à jour
       cacheDelete('assignments')
