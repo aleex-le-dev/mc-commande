@@ -1,5 +1,6 @@
 import React from 'react'
 import { getArchivedOrders } from '../../services/mongodbService'
+import LoadingSpinner from '../LoadingSpinner'
 
 // Tableau des commandes archivées
 const ArchivedTab = () => {
@@ -44,7 +45,7 @@ const ArchivedTab = () => {
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement…</div>
+        <LoadingSpinner />
       ) : error ? (
         <div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">{error}</div>
       ) : (

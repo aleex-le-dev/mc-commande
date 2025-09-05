@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { getProductionStats } from '../../services/mongodbService'
+import LoadingSpinner from '../LoadingSpinner'
 
 // Onglet Statistiques: affiche les nombres d'articles terminés par semaine et par mois,
 // segmentés par type (couture/maille) et par couturière.
@@ -85,7 +86,7 @@ const StatsTab = () => {
   }), { couture: 0, maille: 0, total: 0 }), [tableRows])
 
   if (loading) {
-    return <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement…</div>
+    return <LoadingSpinner />
   }
   if (error) {
     return <div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">{error}</div>
