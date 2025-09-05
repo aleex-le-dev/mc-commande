@@ -476,6 +476,28 @@ export const updateOrderStatus = async (orderId, newStatus) => {
   }
 }
 
+// Supprimer entièrement une commande (et ses éléments/statuts) par orderId
+export const deleteOrderCompletely = async (orderId) => {
+  try {
+    const response = await requestWithRetry(`${API_BASE_URL}/orders/${orderId}`, {
+      method: 'DELETE'
+    })
+    if (!response) throw new Error('Aucune réponse')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    // Invalider caches
+    cacheDelete('orders')
+    cacheDelete('assignments')
+    // Notifier le front
+    try { window.dispatchEvent(new Event('mc-data-updated')) } catch {}
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
 // Service pour les tricoteuses
 export const tricoteusesService = {
   // Récupérer toutes les tricoteuses

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import ArticleCard from './cartes/ArticleCard'
 import { tricoteusesService } from '../services/mongodbService'
+import { deleteOrderCompletely } from '../services/mongodbService'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import { assignmentsService } from '../services/mongodbService'
 import delaiService from '../services/delaiService'
@@ -360,7 +361,22 @@ const TerminePage = () => {
                   <div key={`ready-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border-2 border-green-500 p-4 w-fit inline-block align-top">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <span className="text-xs text-gray-600">{order.items.length} article(s)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600">{order.items.length} article(s)</span>
+                        <button
+                          className="text-xs px-3 py-1 rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                          onClick={async () => {
+                            const ok = window.confirm(`Confirmer l'envoi et supprimer la commande #${order.orderNumber} ?`)
+                            if (!ok) return
+                            const res = await deleteOrderCompletely(order.orderId)
+                            if (!res.success) {
+                              alert('Erreur lors de la suppression: ' + (res.error || 'inconnue'))
+                            }
+                          }}
+                        >
+                          Confirmer l'envoi
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-4">
                       {order.items.map((article, index) => (
