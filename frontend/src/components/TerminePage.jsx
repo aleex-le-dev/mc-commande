@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
+import ArticleCard from './cartes/ArticleCard'
+import { tricoteusesService } from '../services/mongodbService'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import { assignmentsService } from '../services/mongodbService'
 import delaiService from '../services/delaiService'
@@ -13,10 +15,13 @@ import delaiService from '../services/delaiService'
 const TerminePage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [focusedOrder, setFocusedOrder] = useState(null)
-  const [showNoneSection, setShowNoneSection] = useState(false)
+  const [openReadyOverlayId, setOpenReadyOverlayId] = useState(null)
+  const [openPausedOverlayId, setOpenPausedOverlayId] = useState(null)
 
   // Récupérer tous les articles (tous types) pour calculer correctement les statuts par commande
   const { ordersByNumber, isLoading, error, totalArticles } = useUnifiedArticles('all')
+  const [tricoteuses, setTricoteuses] = useState([])
+  const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
   const [urgentByArticleId, setUrgentByArticleId] = useState({})
   const [delaiConfig, setDelaiConfig] = useState(null)
   const [holidays, setHolidays] = useState({})
@@ -51,6 +56,23 @@ const TerminePage = () => {
           timestamp: Date.now()
         }
       } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Charger tricoteuses (pour avatars/couleurs)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setTricoteusesLoading(true)
+        const data = await tricoteusesService.getAllTricoteuses()
+        if (!cancelled) setTricoteuses(data || [])
+      } catch {
+        if (!cancelled) setTricoteuses([])
+      } finally {
+        if (!cancelled) setTricoteusesLoading(false)
+      }
     })()
     return () => { cancelled = true }
   }, [])
@@ -201,11 +223,30 @@ const TerminePage = () => {
     
     return readyOrders
   }, [grouped])
+
+  // Aplatir les articles terminés des commandes prêtes
+  const readyArticles = useMemo(() => {
+    const list = []
+    ready.forEach(order => {
+      order.items.filter(it => it.status === 'termine').forEach(it => {
+        list.push({ ...it })
+      })
+    })
+    return list
+  }, [ready])
   const partial = useMemo(() => grouped.filter(g => {
     // Articles en pause : commandes qui ont au moins un article avec statut "en_pause"
     return g.items.some(item => item.status === 'en_pause')
   }), [grouped])
-  const none = useMemo(() => grouped.filter(g => g.finished === 0), [grouped])
+  const pausedArticles = useMemo(() => {
+    const list = []
+    grouped.forEach(order => {
+      order.items.filter(it => it.status === 'en_pause').forEach(it => {
+        list.push({ ...it })
+      })
+    })
+    return list
+  }, [grouped])
   const urgentCount = useMemo(() => grouped.filter(g => g.hasUrgent).length, [grouped])
   const lateCount = useMemo(() => grouped.filter(g => g.isLate).length, [grouped])
 
@@ -220,17 +261,13 @@ const TerminePage = () => {
 
   // État de chargement progressif
   const [showPartial, setShowPartial] = useState(false)
-  const [showNone, setShowNone] = useState(false)
 
   // Afficher progressivement les sections
   useEffect(() => {
     if (ready.length > 0) {
-      // Afficher les commandes terminées immédiatement
       const timer1 = setTimeout(() => setShowPartial(true), 100)
-      const timer2 = setTimeout(() => setShowNone(true), 300)
       return () => {
         clearTimeout(timer1)
-        clearTimeout(timer2)
       }
     }
   }, [ready.length])
@@ -279,135 +316,67 @@ const TerminePage = () => {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Prêtes à expédier</h2>
-              <span className="text-sm text-gray-600">{ready.length}</span>
+              <span className="text-sm text-gray-600">{ready.length} commande(s) — {readyArticles.length} article(s)</span>
             </div>
-            {ready.length === 0 ? (
+            {readyArticles.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {ready.map(order => (
-                  <div key={order.orderNumber} className="bg-white border rounded-xl p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-bold text-lg">#{order.orderNumber}</div>
-                      <div className="flex items-center gap-1">
-                        {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨</span>}
-                        {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️</span>}
-                        <span className="text-green-700 text-sm font-semibold">✅</span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">{order.customer || 'Client inconnu'}</div>
-                    <div className="text-sm mb-3">
-                      <span className="font-medium">Articles terminés:</span> {order.finished}/{order.total}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Date commande: {new Date(order.orderDate).toLocaleDateString('fr-FR')}
-                    </div>
-                    <div className="mt-2">
-                      <div className="text-xs font-medium mb-1">Articles terminés:</div>
-                      <div className="space-y-1">
-                        {order.items.filter(item => item.status === 'termine').map(item => (
-                          <div key={item.line_item_id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded px-2 py-1">
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs px-1 py-0.5 rounded border bg-white">
-                                {item.productionType === 'maille' ? '🧶' : '🧵'}
-                              </span>
-                              <span className="text-xs font-medium truncate">{item.name}</span>
-                            </div>
-                            <span className="text-xs text-green-700">✅</span>
-                          </div>
-
-
-
-))}
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                {readyArticles.map((article, index) => (
+                  <ArticleCard
+                    key={`ready-${article.orderId}-${article.line_item_id}`}
+                    article={{ ...article, status: 'termine' }}
+                    index={index}
+                    getArticleSize={() => 'medium'}
+                    getArticleColor={() => null}
+                    getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                    onOverlayOpen={() => setOpenReadyOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                    isOverlayOpen={openReadyOverlayId === `${article.orderId}_${article.line_item_id}`}
+                    isHighlighted={false}
+                    searchTerm={''}
+                    productionType={article.productionType}
+                    tricoteusesProp={tricoteuses}
+                    compact
+                  />
                 ))}
               </div>
             )}
           </section>
 
-          {/* Commandes partiellement terminées */}
+          {/* Articles en pause */}
           {showPartial && (
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">Articles en pause</h2>
-                <span className="text-sm text-gray-600">{partial.length}</span>
+                <h2 className="text-lg font-semibold">Commandes en pause</h2>
+                <span className="text-sm text-gray-600">{pausedArticles.length}</span>
               </div>
-              {partial.length === 0 ? (
-                <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande partielle</div>
+              {pausedArticles.length === 0 ? (
+                <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucun article en pause</div>
               ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {partial.map(order => (
-                    <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="font-bold">#{order.orderNumber}</div>
-                        <div className="flex items-center gap-2">
-                          {order.hasUrgent && <span className="text-xs px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgente</span>}
-                          {order.isLate && <span className="text-xs px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>}
-                          <span className="text-sm text-gray-700 font-medium">{order.finished}/{order.total} terminé(s)</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
-                      <div className="mt-3">
-                        <div className="text-sm font-medium mb-2">Articles en pause:</div>
-                        <ul className="space-y-2">
-                          {order.items.filter(item => item.status === 'en_pause').map(item => (
-                            <li key={item.line_item_id} className="flex items-center justify-between bg-gray-50 border rounded-lg px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs px-2 py-0.5 rounded-full border bg-white">
-                                  {item.productionType === 'maille' ? '🧶 Maille' : '🧵 Couture'}
-                                </span>
-                                <span className="text-sm font-medium">{item.name}</span>
-                                {item.urgent && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border bg-red-50 text-red-700">🚨 Urgent</span>
-                                )}
-                                {item.isLate && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800">⚠️ En retard</span>
-                                )}
-                              </div>
-                              <span className="text-xs text-gray-600">Statut: {item.status}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                  {pausedArticles.map((article, index) => (
+                    <ArticleCard
+                      key={`paused-${article.orderId}-${article.line_item_id}`}
+                      article={{ ...article, status: 'en_pause' }}
+                      index={index}
+                      getArticleSize={() => 'medium'}
+                      getArticleColor={() => null}
+                      getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                      onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                      isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
+                      isHighlighted={false}
+                      searchTerm={''}
+                      productionType={article.productionType}
+                      tricoteusesProp={tricoteuses}
+                      compact
+                    />
                   ))}
                 </div>
               )}
             </section>
           )}
 
-          {/* Commandes sans aucun article terminé (repliable, fermé par défaut) */}
-          {showNone && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  type="button"
-                  onClick={() => setShowNoneSection(v => !v)}
-                  className="px-3 py-1.5 rounded-md border text-sm font-medium cursor-pointer hover:bg-gray-50"
-                  aria-expanded={showNoneSection}
-                  aria-controls="none-orders-panel"
-                >
-                  {showNoneSection ? '▾' : '▸'} Articles non terminés
-                </button>
-                <span className="text-sm text-gray-600">{none.length}</span>
-              </div>
-              {showNoneSection && none.length > 0 && (
-                <div id="none-orders-panel" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                  {none.map(order => (
-                    <div key={order.orderNumber} className="bg-white border rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="font-bold">#{order.orderNumber}</div>
-                        <div className="text-sm text-gray-700 font-medium">0/{order.total} terminé(s)</div>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">{order.customer || 'Client inconnu'}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+          
         </div>
       )}
     </div>

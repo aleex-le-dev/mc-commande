@@ -47,19 +47,19 @@ const getArticleColor = (metaData) => {
 // Section d'informations principales (titre, quantité, taille, couleur)
 const InfoSection = ({
   article,
-  translatedData,
-  searchTerm
+  searchTerm,
+  compact = false
 }) => {
   const articleSize = getArticleSize(article.meta_data)
   const articleColor = getArticleColor(article.meta_data)
   return (
-    <div className="h-24 bg-white backdrop-blur-md transition-all duration-300 relative">
-      <div className="p-3 pt-2 pb-16">
+    <div className={`${compact ? 'h-20' : 'h-24'} bg-white backdrop-blur-md transition-all duration-300 relative`}>
+      <div className={`${compact ? 'px-2 pt-1.5 pb-12' : 'p-3 pt-2 pb-16'}`}>
         <div className="space-y-1">
-          <h3 className="text-lg font-bold text-gray-900 leading-tight">
-            {highlightText(translatedData?.product_name || article.product_name, searchTerm)}
+          <h3 className={`${compact ? 'text-sm' : 'text-lg'} font-bold text-gray-900 leading-tight`}>
+            {highlightText(article.product_name, searchTerm)}
           </h3>
-          <div className="grid gap-3 text-base text-gray-700" style={{ 
+          <div className={`grid ${compact ? 'gap-2 text-sm' : 'gap-3 text-base'} text-gray-700`} style={{ 
             gridTemplateColumns: `repeat(${[
               'quantity',
               articleSize ? 'size' : null,
@@ -67,21 +67,21 @@ const InfoSection = ({
             ].filter(Boolean).length}, 1fr)`
           }}>
             <div className="text-center">
-              <div className="text-sm text-gray-500">Quantité</div>
-              <div className="text-lg font-semibold">{article.quantity}</div>
+              <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Quantité</div>
+              <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{article.quantity}</div>
             </div>
 
             {articleSize && (
               <div className="text-center">
-                <div className="text-sm text-gray-500">Taille</div>
-                <div className="text-lg font-semibold">{articleSize}</div>
+                <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Taille</div>
+                <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{articleSize}</div>
               </div>
             )}
 
             {articleColor && (
               <div className="text-center">
-                <div className="text-sm text-gray-500">Couleur</div>
-                <div className="text-lg font-semibold">{articleColor}</div>
+                <div className={`${compact ? 'text-[11px]' : 'text-sm'} text-gray-500`}>Couleur</div>
+                <div className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{articleColor}</div>
               </div>
             )}
           </div>

@@ -17,7 +17,7 @@ import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrde
 import statusService from '../../services/statusService'
 // Icônes utilisées dans BottomBar uniquement; ArticleCard n'en a plus besoin
 import delaiService from '../../services/delaiService'
-import TranslationIcon from './TranslationIcon'
+ 
 import Confetti from '../Confetti'
 
 // Composant carte d'article moderne optimisé
@@ -39,7 +39,10 @@ const ArticleCard = forwardRef(({
   isLastArticleOfDateLimite = false, // Indique si c'est le dernier article de la date limite
   tricoteusesProp = [], // Prop pour les tricoteuses
   showRetardIndicator = true, // Nouvelle prop pour contrôler l'affichage de l'indicateur de retard
-  isEnRetard = false // Nouvelle prop pour indiquer si l'article est en retard
+  isEnRetard = false, // Nouvelle prop pour indiquer si l'article est en retard
+  disableStatusBorder = false, // Désactive la bordure de statut (pour affichages spéciaux)
+  hideInfoSection = false, // Masque la section d'infos (nom, options)
+  compact = false // Mode compact: hauteur réduite (utilisé en Terminé)
 }, ref) => {
   const queryClient = useQueryClient()
   const {
@@ -254,17 +257,23 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg h-[480px] max-w-full ${isHighlighted ? `border-2 border-accent animate-pink-blink` : ''} ${
-        localAssignment ? 
-          (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
-           localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
-           localAssignment.status === 'termine' ? 'border-status-termine' :
-           'border-status-retard') :
-        // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
-        (article.status === 'en_cours' ? 'border-status-en-cours' :
-         article.status === 'en_pause' ? 'border-status-en-pause' :
-         article.status === 'termine' ? 'border-status-termine' :
-         doitAvoirTraitRouge ? 'border-status-retard' : '')
+      className={`group relative rounded-3xl overflow-hidden shadow-lg ${compact ? 'h-[340px]' : 'h-[480px]'} max-w-full ${
+        isHighlighted && !disableStatusBorder ? 'border-2 border-accent animate-pink-blink' : ''
+      } ${
+        disableStatusBorder
+          ? ''
+          : (
+            localAssignment ? 
+              (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
+               localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
+               localAssignment.status === 'termine' ? 'border-status-termine' :
+               'border-status-retard') :
+            // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
+            (article.status === 'en_cours' ? 'border-status-en-cours' :
+             article.status === 'en_pause' ? 'border-status-en-pause' :
+             article.status === 'termine' ? 'border-status-termine' :
+             doitAvoirTraitRouge ? 'border-status-retard' : '')
+          )
       }`}
       data-debug-assignment={localAssignment ? `${localAssignment.status}-${localAssignment.tricoteuse_name}` : `fallback-${article.status}`}
 
@@ -307,28 +316,31 @@ const ArticleCard = forwardRef(({
         isUrgent={localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent)}
         handleOverlayToggle={handleOverlayToggle}
         isOverlayOpen={isOverlayOpen}
-        handleTranslation={handleTranslation}
-        translatedData={translatedData}
+        compact={compact}
+        
+        
       />
 
-      <InfoSection
-        article={article}
-        translatedData={translatedData}
-        searchTerm={searchTerm}
-      />
+      {!hideInfoSection && (
+        <InfoSection
+          article={article}
+          compact={compact}
+          searchTerm={searchTerm}
+        />
+      )}
 
             {/* Date / heure / note / assignation */}
       <BottomBar
             article={article} 
-        translatedData={translatedData}
+        compact={compact}
         isNoteOpen={isNoteOpen}
         onToggleNote={() => { 
                     window.dispatchEvent(new Event('mc-close-notes'));
-                    setEditingNote(translatedData?.customerNote || article.customerNote || '');
+                    setEditingNote(article.customerNote || '');
                     setIsNoteOpen(v => !v);
                   }}
         noteBtnRef={noteBtnRef}
-        hasNote={Boolean(translatedData?.customerNote || article.customerNote)}
+        hasNote={Boolean(article.customerNote)}
         localAssignment={localAssignment}
         isLoadingAssignment={isLoadingAssignment}
         onOpenAssignModal={() => openTricoteuseModal()}
@@ -344,6 +356,7 @@ const ArticleCard = forwardRef(({
         onCopy={handleCopy}
         renderFormattedAddress={renderFormattedAddress}
         highlightText={highlightText}
+        compact={compact}
       />
 
       {/* Effet de brillance au survol */}

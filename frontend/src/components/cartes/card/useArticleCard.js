@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import imageService from '../../../services/imageService'
 import delaiService from '../../../services/delaiService'
-import { assignmentsService } from '../../../services/mongodbService'
+import { assignmentsService, updateArticleStatus } from '../../../services/mongodbService'
 
 // Hook: encapsule les états, effets et helpers d'ArticleCard
 const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite }) => {
@@ -224,6 +224,10 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const removeAssignment = useCallback(async () => {
     try {
       await assignmentsService.deleteAssignment(uniqueAssignmentId)
+      // Mettre immédiatement le statut à "a_faire" côté BDD et UI
+      try {
+        await updateArticleStatus(article.orderId, article.line_item_id, 'a_faire')
+      } catch {}
       setLocalAssignment(null)
       if (onAssignmentUpdate) {
         onAssignmentUpdate()
@@ -234,13 +238,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     }
   }, [uniqueAssignmentId, onAssignmentUpdate, closeTricoteuseModal])
 
-  const handleTranslation = useCallback((data) => {
-    if (data === null) {
-      setTranslatedData(null)
-    } else {
-      setTranslatedData(data)
-    }
-  }, [])
+  const handleTranslation = useCallback(() => {}, [])
 
   const isValidPhotoUrl = useCallback((url) => {
     if (!url || typeof url !== 'string') return false

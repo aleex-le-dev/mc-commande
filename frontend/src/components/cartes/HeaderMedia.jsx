@@ -1,7 +1,7 @@
 import React from 'react'
 import ImageLoader from './ImageLoader'
 import TopBadges from './TopBadges'
-import TranslationIcon from './TranslationIcon'
+ 
 
 // En-tête média: image, badges, liens, overlay et actions latérales
 const HeaderMedia = ({
@@ -18,11 +18,11 @@ const HeaderMedia = ({
   isUrgent,
   handleOverlayToggle,
   isOverlayOpen,
-  handleTranslation,
-  translatedData
+  compact = false,
+  
 }) => {
   return (
-    <div className="relative h-60 overflow-hidden rounded-t-3xl">
+    <div className={`relative ${compact ? 'h-40' : 'h-60'} overflow-hidden rounded-t-3xl`}>
       {displayImageUrl ? (
         <div className="relative">
           <ImageLoader 
@@ -118,13 +118,7 @@ const HeaderMedia = ({
         </button>
       </div>
 
-      <div className="absolute left-4 top-32 z-5 pointer-events-auto">
-        <TranslationIcon 
-          article={article} 
-          onTranslate={handleTranslation}
-          isTranslated={!!translatedData}
-        />
-      </div>
+      
 
     </div>
   )
