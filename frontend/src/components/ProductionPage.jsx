@@ -3,6 +3,7 @@ import OrderHeader from './cartes/OrderHeader'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import { useQuery } from '@tanstack/react-query'
+import LoadingSpinner from './LoadingSpinner'
 
 /**
  * Page générique pour Maille/Couture
@@ -77,7 +78,7 @@ const ProductionPage = ({ productionType, title }) => {
     return counts
   }, [articles])
 
-  if (isLoading) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement...</div></div>
+  if (isLoading) return <LoadingSpinner />
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
 
   return (

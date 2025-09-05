@@ -339,7 +339,7 @@ const TerminePage = () => {
 
       {/* Etat de chargement / erreur */}
       {isLoading && (
-        <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement…</div>
+        <LoadingSpinner />
       )}
       {error && (
         <div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div>
