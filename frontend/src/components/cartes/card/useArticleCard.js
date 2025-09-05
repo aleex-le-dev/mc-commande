@@ -172,12 +172,12 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
       return
     }
     // Fallback: si aucun assignment mais l'article est en cours avec assigned_to, créer une assignation virtuelle
-    if (article && article.status === 'en_cours' && article.assigned_to) {
+    if (article && article.status && article.status !== 'a_faire' && article.assigned_to) {
       const virtual = {
         article_id: uniqueAssignmentId,
         tricoteuse_id: 'virtual',
         tricoteuse_name: article.assigned_to,
-        status: 'en_cours',
+        status: article.status,
         urgent: Boolean(isEnRetard) // conserver l'info d'urgence locale si besoin
       }
       // Enrichir depuis la liste des tricoteuses si dispo
