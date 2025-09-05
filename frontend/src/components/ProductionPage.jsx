@@ -12,21 +12,7 @@ const ProductionPage = ({ productionType, title }) => {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const { articles, isLoading, error } = useUnifiedArticles(productionType)
   
-  // Récupérer les vrais compteurs depuis la BDD
-  const { data: productionStats } = useQuery({
-    queryKey: ['production-stats', productionType],
-    queryFn: async () => {
-      const url = productionType === 'all' 
-        ? 'http://localhost:3001/api/production-status/stats'
-        : `http://localhost:3001/api/production-status/stats?type=${productionType}`
-      const response = await fetch(url)
-      if (!response.ok) throw new Error('Erreur récupération stats')
-      const data = await response.json()
-      return data.stats
-    },
-    refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
-    staleTime: 10000 // Considérer comme périmé après 10 secondes
-  })
+  // Les compteurs sont calculés instantanément côté client pour réactivité
   
   // Filtrage local par recherche et statut
   const filteredArticles = useMemo(() => {
@@ -82,23 +68,14 @@ const ProductionPage = ({ productionType, title }) => {
     showClientButton: true
   })
 
-  // Compteurs de statuts depuis la BDD (filtrés par type de production)
   const statusCounts = useMemo(() => {
-    if (!productionStats?.statusesByStatus) {
-      return { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
-    }
-    
     const counts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
-    
-    // Filtrer par type de production si nécessaire
-    productionStats.statusesByStatus.forEach(stat => {
-      if (counts.hasOwnProperty(stat._id)) {
-        counts[stat._id] = stat.count
-      }
+    // Comptage instantané basé sur la liste déjà filtrée par type
+    ;(articles || []).forEach(a => {
+      if (counts[a.status] !== undefined) counts[a.status] += 1
     })
-    
     return counts
-  }, [productionStats])
+  }, [articles])
 
   if (isLoading) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement...</div></div>
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
