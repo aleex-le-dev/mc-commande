@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 import TricoteusesTab from './cartes/TricoteusesTab'
 import StatusTab from './cartes/StatusTab'
+import StatsTab from './cartes/StatsTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
 
 const ParametresPanel = () => {
@@ -9,8 +10,9 @@ const ParametresPanel = () => {
 
   const tabs = [
     { id: 'tricoteuses', label: 'Couturières', icon: '🧶' },
-    { id: 'status', label: 'Statut et tests', icon: '📊' },
-    { id: 'dateLimite', label: 'Date limite', icon: '⏰' }
+    { id: 'dateLimite', label: 'Date limite', icon: '⏰' },
+    { id: 'stats', label: 'Statistiques', icon: '📈' },
+    { id: 'status', label: 'Statut et tests', icon: '📊' }
   ]
 
   const activeTabMeta = tabs.find(t => t.id === activeTab) || tabs[0]
@@ -30,6 +32,8 @@ const ParametresPanel = () => {
         return <StatusTab />
       case 'dateLimite':
         return <DateLimiteTab />
+      case 'stats':
+        return <StatsTab />
       default:
         return <TricoteusesTab />
     }
