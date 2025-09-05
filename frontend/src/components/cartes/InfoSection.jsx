@@ -66,7 +66,16 @@ const InfoSection = ({
     <div className={`${classHeight} bg-white backdrop-blur-md transition-all duration-300 relative`}>
       <div className={`${containerPadding}`}>
         <div className="space-y-1">
-          <h3 className={`${titleClass} font-bold text-gray-900 leading-tight`}>
+          <h3
+            className={`${titleClass} font-bold text-gray-900 leading-tight`}
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              wordBreak: 'break-word'
+            }}
+          >
             {highlightText(article.product_name, searchTerm)}
           </h3>
           <div className={`grid ${gridClass} text-gray-700`} style={{ 
