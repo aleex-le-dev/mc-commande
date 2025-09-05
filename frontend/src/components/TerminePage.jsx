@@ -384,7 +384,7 @@ const TerminePage = () => {
             ) : (
               <div className="flex flex-wrap gap-5">
                 {inProgress.map(order => (
-                  <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top">
+                  <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-cours">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
                       <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status === 'en_cours').length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
@@ -405,6 +405,7 @@ const TerminePage = () => {
                             productionType={article.productionType}
                             tricoteusesProp={tricoteuses}
                             compact
+                            disableStatusBorder
                           />
                         </div>
                       ))}
@@ -425,23 +426,26 @@ const TerminePage = () => {
               {pausedArticles.length === 0 ? (
                 <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucun article en pause</div>
               ) : (
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-5">
                   {pausedArticles.map((article, index) => (
-                    <div key={`paused-${article.orderId}-${article.line_item_id}`} className="w-[260px]">
-                      <ArticleCard
-                        article={{ ...article, status: 'en_pause' }}
-                        index={index}
-                        getArticleSize={() => 'medium'}
-                        getArticleColor={() => null}
-                        getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                        onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                        isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
-                        isHighlighted={false}
-                        searchTerm={''}
-                        productionType={article.productionType}
-                        tricoteusesProp={tricoteuses}
-                        compact
-                      />
+                    <div key={`paused-${article.orderId}-${article.line_item_id}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-pause">
+                      <div className="w-[260px]">
+                        <ArticleCard
+                          article={{ ...article, status: 'en_pause' }}
+                          index={index}
+                          getArticleSize={() => 'medium'}
+                          getArticleColor={() => null}
+                          getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                          onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                          isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
+                          isHighlighted={false}
+                          searchTerm={''}
+                          productionType={article.productionType}
+                          tricoteusesProp={tricoteuses}
+                          compact
+                          disableStatusBorder
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
