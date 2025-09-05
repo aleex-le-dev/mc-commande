@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { getProductionStats } from '../../services/mongodbService'
-import { useUnifiedArticles } from './hooks/useUnifiedArticles'
 
 // Onglet Statistiques: affiche les nombres d'articles terminés par semaine et par mois,
 // segmentés par type (couture/maille) et par couturière.
@@ -8,7 +7,6 @@ const StatsTab = () => {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { allArticles } = useUnifiedArticles('all')
 
   useEffect(() => {
     let cancelled = false
@@ -47,62 +45,9 @@ const StatsTab = () => {
     })
   }, [stats])
 
-  // Fallback local à partir des articles terminés si l'API ne renvoie rien
-  const computedFromArticles = useMemo(() => {
-    if (!allArticles || allArticles.length === 0) return { weekly: [], monthly: [], yearly: [] }
-
-    const getSeamName = (a) => {
-      const at = a.assigned_to
-      if (!at) return 'Non assignée'
-      if (typeof at === 'string') return at
-      return at.firstName || at.name || at.displayName || 'Non assignée'
-    }
-
-    const getYearMonth = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const getWeekOfYear = (d) => {
-      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
-      const dayNum = date.getUTCDay() || 7
-      date.setUTCDate(date.getUTCDate() + 4 - dayNum)
-      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
-      const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
-      return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
-    }
-
-    const wk = new Map()
-    const mo = new Map()
-    const yr = new Map()
-
-    allArticles.forEach(a => {
-      if (a.status !== 'termine') return
-      const type = a.productionType || '-'
-      const seam = getSeamName(a)
-      const d = a.orderDate ? new Date(a.orderDate) : null
-      if (!d || isNaN(d.getTime())) return
-      const week = getWeekOfYear(d)
-      const month = getYearMonth(d)
-      const year = String(d.getFullYear())
-
-      const inc = (map, k) => map.set(k, (map.get(k) || 0) + 1)
-      inc(wk, `${week}|${type}|${seam}`)
-      inc(mo, `${month}|${type}|${seam}`)
-      inc(yr, `${year}|${type}|${seam}`)
-    })
-
-    const mapToRows = (map, periodIndex = 0) => Array.from(map.entries()).map(([key, count]) => {
-      const parts = key.split('|')
-      return { period: parts[periodIndex], type: parts[1], seamstress: parts[2], count }
-    })
-
-    return {
-      weekly: mapToRows(wk),
-      monthly: mapToRows(mo),
-      yearly: mapToRows(yr)
-    }
-  }, [allArticles])
-
-  const weeklyToShow = weekly.length > 0 ? weekly : computedFromArticles.weekly
-  const monthlyToShow = monthly.length > 0 ? monthly : computedFromArticles.monthly
-  const yearlyToShow = yearly.length > 0 ? yearly : computedFromArticles.yearly
+  const weeklyToShow = weekly
+  const monthlyToShow = monthly
+  const yearlyToShow = yearly
 
   // Sélecteur de période (tableau unique) + filtre de type
   const [period, setPeriod] = useState('week') // 'week' | 'month' | 'year'

@@ -304,7 +304,8 @@ export const getOrdersByProductionType = async (productionType) => {
 // Récupérer les statistiques de production
 export const getProductionStats = async () => {
   try {
-    const response = await requestWithRetry(`${API_BASE_URL}/production-status/stats`)
+    // Utiliser désormais les statistiques basées sur les archives
+    const response = await requestWithRetry(`${API_BASE_URL}/archived-orders/stats`)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -479,6 +480,12 @@ export const updateOrderStatus = async (orderId, newStatus) => {
 // Supprimer entièrement une commande (et ses éléments/statuts) par orderId
 export const deleteOrderCompletely = async (orderId) => {
   try {
+    // Archiver d'abord
+    try {
+      await requestWithRetry(`${API_BASE_URL}/orders/${orderId}/archive`, { method: 'POST' })
+    } catch (e) {
+      // on continue même si l'archive échoue
+    }
     const response = await requestWithRetry(`${API_BASE_URL}/orders/${orderId}`, {
       method: 'DELETE'
     })
@@ -495,6 +502,19 @@ export const deleteOrderCompletely = async (orderId) => {
     return { success: true, data }
   } catch (error) {
     return { success: false, error: error.message }
+  }
+}
+
+// Lister les commandes archivées (résumé)
+export const getArchivedOrders = async (page = 1, limit = 100) => {
+  try {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    const response = await requestWithRetry(`${API_BASE_URL}/archived-orders?${params}`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return { success: true, ...data }
+  } catch (error) {
+    return { success: false, data: [], pagination: { page: 1, limit: 100, total: 0 } }
   }
 }
 

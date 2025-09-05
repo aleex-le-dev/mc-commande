@@ -884,6 +884,123 @@ app.delete('/api/orders/:orderId', async (req, res) => {
   }
 })
 
+// POST /api/orders/:orderId/archive - Archiver une commande complète avant suppression
+app.post('/api/orders/:orderId/archive', async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const numericOrderId = parseInt(orderId)
+    if (Number.isNaN(numericOrderId)) {
+      return res.status(400).json({ success: false, error: 'orderId invalide' })
+    }
+
+    const ordersCollection = db.collection('orders_sync')
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+    const archiveCollection = db.collection('archived_orders')
+
+    const orderDoc = await ordersCollection.findOne({ order_id: numericOrderId })
+    if (!orderDoc) {
+      return res.status(404).json({ success: false, message: 'Commande introuvable' })
+    }
+    const items = await itemsCollection.find({ order_id: numericOrderId }).toArray()
+    const statuses = await statusCollection.find({ order_id: numericOrderId }).toArray()
+
+    const archiveDoc = {
+      order_id: numericOrderId,
+      archived_at: new Date().toISOString(),
+      order: orderDoc,
+      items,
+      statuses
+    }
+    await archiveCollection.insertOne(archiveDoc)
+
+    res.json({ success: true, archived: true, orderId: numericOrderId })
+  } catch (error) {
+    console.error('Erreur POST /orders/:orderId/archive:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+// GET /api/archived-orders - Lister les commandes archivées (résumé)
+app.get('/api/archived-orders', async (req, res) => {
+  try {
+    const { limit = 200, page = 1 } = req.query
+    const nLimit = Math.min(500, Math.max(1, parseInt(limit)))
+    const nPage = Math.max(1, parseInt(page))
+    const coll = db.collection('archived_orders')
+    const cursor = coll.find({}, { projection: { order_id: 1, archived_at: 1, 'order.order_number': 1, 'order.customer_name': 1, 'items': { $slice: 1 } } })
+      .sort({ archived_at: -1 })
+      .skip((nPage - 1) * nLimit)
+      .limit(nLimit)
+    const rows = await cursor.toArray()
+    const total = await coll.countDocuments()
+    res.json({ success: true, data: rows, pagination: { page: nPage, limit: nLimit, total } })
+  } catch (error) {
+    console.error('Erreur GET /api/archived-orders:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+// GET /api/archived-orders/stats - Statistiques basées sur les archives
+app.get('/api/archived-orders/stats', async (req, res) => {
+  try {
+    const coll = db.collection('archived_orders')
+    // Ne charger que le nécessaire
+    const cursor = coll.find({}, { projection: { archived_at: 1, statuses: 1 } })
+    const all = await cursor.toArray()
+
+    const weekKey = (d) => {
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+      const dayNum = date.getUTCDay() || 7
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum)
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+      const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
+      return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
+    }
+    const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    const yearKey = (d) => `${d.getFullYear()}`
+    const seamName = (s) => {
+      const at = s?.assigned_to
+      if (!at) return 'Non assignée'
+      if (typeof at === 'string') return at
+      return at.firstName || at.name || at.displayName || 'Non assignée'
+    }
+
+    const sum = (map, key) => map.set(key, (map.get(key) || 0) + 1)
+    const wk = new Map(), mo = new Map(), yr = new Map()
+
+    for (const doc of all) {
+      const d = doc.archived_at ? new Date(doc.archived_at) : null
+      if (!d || isNaN(d.getTime())) continue
+      const w = weekKey(d), m = monthKey(d), y = yearKey(d)
+      const statuses = Array.isArray(doc.statuses) ? doc.statuses : []
+      for (const st of statuses) {
+        const type = (st.production_type || '-').toLowerCase()
+        if (st.status !== 'termine') continue
+        if (type !== 'couture' && type !== 'maille') continue
+        const seam = seamName(st)
+        sum(wk, `${w}|${type}|${seam}`)
+        sum(mo, `${m}|${type}|${seam}`)
+        sum(yr, `${y}|${type}|${seam}`)
+      }
+    }
+
+    const mapToRows = (map) => Array.from(map.entries()).map(([key, count]) => {
+      const [period, type, seamstress] = key.split('|')
+      return { period, type, seamstress, count }
+    })
+
+    res.json({ success: true, stats: {
+      weekly: mapToRows(wk),
+      monthly: mapToRows(mo),
+      yearly: mapToRows(yr)
+    } })
+  } catch (error) {
+    console.error('Erreur GET /api/archived-orders/stats:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
 // DELETE /api/orders/:orderId/items/:lineItemId - Supprimer un article d'une commande
 app.delete('/api/orders/:orderId/items/:lineItemId', async (req, res) => {
   try {
@@ -1579,79 +1696,9 @@ app.get('/api/production-status', async (req, res) => {
 })
 
 // GET /api/production-status/stats - Statistiques de production
+// Ancien endpoint legacy remplacé par /api/archived-orders/stats
 app.get('/api/production-status/stats', async (req, res) => {
-  try {
-    const { type } = req.query // Filtrer par type de production
-    const statusCollection = db.collection('production_status')
-    const ordersCollection = db.collection('orders_sync')
-    const itemsCollection = db.collection('order_items')
-    
-    // Construire le filtre
-    const filter = type ? { production_type: type } : {}
-    
-    // Compter les documents dans chaque collection
-    const totalStatuses = await statusCollection.countDocuments(filter)
-    const totalOrders = await ordersCollection.countDocuments()
-    const totalItems = await itemsCollection.countDocuments()
-    
-    // Statistiques par type de production
-    const statusesByType = await statusCollection.aggregate([
-      {
-        $group: {
-          _id: '$production_type',
-          count: { $sum: 1 }
-        }
-      }
-    ]).toArray()
-    
-    // Statistiques par statut (filtrées par type si nécessaire)
-    const statusesByStatus = await statusCollection.aggregate([
-      ...(type ? [{ $match: { production_type: type } }] : []),
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 }
-        }
-      }
-    ]).toArray()
-    
-    // Articles sans statut de production
-    const itemsWithoutStatus = await itemsCollection.aggregate([
-      {
-        $lookup: {
-          from: 'production_status',
-          localField: 'line_item_id',
-          foreignField: 'line_item_id',
-          as: 'status'
-        }
-      },
-      {
-        $match: {
-          status: { $size: 0 }
-        }
-      }
-    ]).toArray()
-    
-    res.json({
-      success: true,
-      stats: {
-        totalOrders,
-        totalItems,
-        totalStatuses,
-        statusesByType,
-        statusesByStatus,
-        itemsWithoutStatus: itemsWithoutStatus.length,
-        sampleItems: itemsWithoutStatus.slice(0, 3).map(item => ({
-          id: item.line_item_id,
-          name: item.product_name,
-          order_id: item.order_id
-        }))
-      }
-    })
-  } catch (error) {
-    console.error('Erreur GET /production-status/stats:', error)
-    res.status(500).json({ error: 'Erreur serveur' })
-  }
+  return res.json({ success: true, stats: { weekly: [], monthly: [], yearly: [] } })
 })
 
 app.post('/api/production-status', async (req, res) => {
