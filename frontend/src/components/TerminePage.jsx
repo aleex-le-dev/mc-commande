@@ -28,6 +28,9 @@ const TerminePage = () => {
   const [holidays, setHolidays] = useState({})
   const [dateLimiteStr, setDateLimiteStr] = useState(null)
 
+  // Formatage simple pour gérer le singulier/pluriel en français
+  const formatCount = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`
+
   // Charger les assignations pour récupérer les flags urgent (avec cache)
   useEffect(() => {
     let cancelled = false
@@ -236,15 +239,14 @@ const TerminePage = () => {
     return list
   }, [ready])
   const inProgress = useMemo(() => grouped.filter(g => {
-    // Inclure les commandes dès qu'au moins un article a un statut (différent de 'a_faire')
-    // Exclure les commandes prêtes à expédier
+    // Afficher uniquement les commandes qui ont au moins un article en statut "en_cours"
     if (g.isReadyToShip) return false
-    return g.items.some(item => item.status && item.status !== 'a_faire')
+    return g.items.some(item => item.status === 'en_cours')
   }), [grouped])
   const inProgressArticles = useMemo(() => {
     const list = []
     inProgress.forEach(order => {
-      order.items.forEach(it => {
+      order.items.filter(it => it.status === 'en_cours').forEach(it => {
         list.push({ ...it })
       })
     })
@@ -332,7 +334,7 @@ const TerminePage = () => {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Prêtes à expédier</h2>
-              <span className="text-sm text-gray-600">{ready.length} commande(s) — {readyArticles.length} article(s)</span>
+              <span className="text-sm text-gray-600">{formatCount(ready.length, 'commande', 'commandes')} — {formatCount(readyArticles.length, 'article', 'articles')}</span>
             </div>
             {readyArticles.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
@@ -375,20 +377,20 @@ const TerminePage = () => {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">En cours</h2>
-              <span className="text-sm text-gray-600">{inProgress.length} commande(s) — {inProgressArticles.length} article(s)</span>
+              <span className="text-sm text-gray-600">{formatCount(inProgress.length, 'commande', 'commandes')} — {formatCount(inProgressArticles.length, 'article', 'articles')}</span>
             </div>
             {inProgressArticles.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande en cours</div>
             ) : (
-              <div className="space-y-5">
+              <div className="flex flex-wrap gap-5">
                 {inProgress.map(order => (
-                  <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4">
+                  <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <span className="text-xs text-gray-600">{order.items.length} article(s) — restants: {order.items.filter(it => it.status !== 'termine').length}</span>
+                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status === 'en_cours').length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
                     </div>
                     <div className="flex flex-wrap gap-4">
-                      {order.items.map((article, index) => (
+                      {order.items.filter(a => a.status === 'en_cours').map((article, index) => (
                         <div key={`inprogress-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
                           <ArticleCard
                             article={{ ...article }}
@@ -417,7 +419,7 @@ const TerminePage = () => {
           {showPartial && (
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">Commandes en pause</h2>
+                <h2 className="text-lg font-semibold">Articles en pause</h2>
                 <span className="text-sm text-gray-600">{pausedArticles.length}</span>
               </div>
               {pausedArticles.length === 0 ? (
