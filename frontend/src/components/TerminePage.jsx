@@ -173,6 +173,7 @@ const TerminePage = () => {
   const grouped = useMemo(() => {
     // Utiliser directement ordersByNumber du hook unifié
     const enriched = ordersByNumber.map((order) => {
+      console.log('[TERMINE] Build grouped order', order.orderId, 'items:', order.items?.length)
       // Construire des clés d'articles compatibles avec les deux formats d'assignation
       const itemsWithUrgent = order.items.map(item => {
         const composedId = `${order.orderId}_${item.line_item_id}`

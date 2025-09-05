@@ -157,8 +157,17 @@ export const useUnifiedArticles = (selectedType = 'all') => {
       if (orderId && lineItemId) updateArticleUrgent(orderId, lineItemId, urgent)
     }
     
-    const handleDataUpdate = (event) => {
-      // Rafraîchir automatiquement les données
+    const handleDataUpdate = () => {
+      console.log('[UNIFIED] mc-data-updated reçu -> nettoyage commandes vides + refetch')
+      // Sync immédiate avec le cache: si une commande devient vide, on la retire
+      // puis on force un refetch léger
+      try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = true } catch {}
+      queryClient.setQueryData(['unified-orders'], (oldData) => {
+        if (!oldData) return oldData
+        const cleaned = oldData.filter(order => (order.items || []).length > 0)
+        console.log('[UNIFIED] Taille cache après nettoyage:', Array.isArray(cleaned) ? cleaned.length : 'NA')
+        return cleaned
+      })
       refetch()
     }
     
@@ -171,7 +180,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
       window.removeEventListener('mc-article-urgent-updated', handleUrgentUpdate)
       window.removeEventListener('mc-data-updated', handleDataUpdate)
     }
-  }, [updateArticleStatus, refetch])
+  }, [updateArticleStatus, refetch, queryClient])
 
   return {
     articles: filteredArticles,

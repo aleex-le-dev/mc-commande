@@ -258,13 +258,14 @@ const ArticleCard = forwardRef(({
         e.stopPropagation();
         // Récupérer tous les articles de la même commande
         const allArticlesOfOrder = window.mcAllArticles?.filter(a => a.orderNumber === article.orderNumber) || [article]
+        const isOrderUrgent = Array.isArray(allArticlesOfOrder) && allArticlesOfOrder.some(a => a?.production_status?.urgent === true)
         
         const detail = {
           x: e.clientX,
           y: e.clientY,
           uniqueAssignmentId,
           hasAssignment: Boolean(localAssignment),
-          currentUrgent: localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent),
+          currentUrgent: Boolean(isOrderUrgent || article?.production_status?.urgent === true),
           hasNote: Boolean(article.customerNote),
           currentProductionType: article.productionType,
           orderNumber: article.orderNumber,

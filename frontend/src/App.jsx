@@ -135,13 +135,36 @@ function App() {
   // Fonction pour gérer la suppression d'un article spécifique
   const handleDeleteArticle = async (orderId, lineItemId) => {
     try {
+      console.log('[DELETE-ARTICLE] Demande de suppression', { orderId, lineItemId })
       const response = await fetch(`http://localhost:3001/api/orders/${orderId}/items/${lineItemId}`, {
         method: 'DELETE'
       })
       
       if (response.ok) {
-        // Rafraîchir les données
-        window.dispatchEvent(new Event('mc-refresh-data'))
+        console.log('[DELETE-ARTICLE] API OK')
+        // Mise à jour optimiste du cache
+        try {
+          const targetOrderId = String(orderId)
+          const targetLineId = String(lineItemId)
+          const before = queryClient.getQueryData(['unified-orders'])
+          console.log('[DELETE-ARTICLE] Cache avant', { orders: Array.isArray(before) ? before.length : 'NA' })
+          queryClient.setQueryData(['unified-orders'], (oldData) => {
+            if (!oldData) return oldData
+            const updated = oldData.map(order => {
+              if (String(order.order_id) === targetOrderId) {
+                const newItems = (order.items || []).filter(item => String(item.line_item_id) !== targetLineId)
+                return { ...order, items: newItems }
+              }
+              return order
+            }).filter(order => (order.items || []).length > 0)
+            return updated
+          })
+          const after = queryClient.getQueryData(['unified-orders'])
+          console.log('[DELETE-ARTICLE] Cache après', { orders: Array.isArray(after) ? after.length : 'NA' })
+        } catch {}
+        // Notifier l'UI
+        console.log('[DELETE-ARTICLE] Dispatch mc-data-updated')
+        window.dispatchEvent(new Event('mc-data-updated'))
       } else {
         console.error('Erreur lors de la suppression de l\'article:', response.statusText)
         alert('Erreur lors de la suppression de l\'article')
@@ -166,7 +189,20 @@ function App() {
         // Fermer le toast et rafraîchir les données
         setShowDeleteToast(false)
         setDeleteOrderInfo(null)
-        window.dispatchEvent(new Event('mc-refresh-data'))
+        try {
+          console.log('[DELETE-ORDER] API OK', { orderId: deleteOrderInfo.orderId })
+          const before = queryClient.getQueryData(['unified-orders'])
+          console.log('[DELETE-ORDER] Cache avant', { orders: Array.isArray(before) ? before.length : 'NA' })
+          const targetOrderId = String(deleteOrderInfo.orderId)
+          queryClient.setQueryData(['unified-orders'], (oldData) => {
+            if (!oldData) return oldData
+            return oldData.filter(order => String(order.order_id) !== targetOrderId)
+          })
+          const after = queryClient.getQueryData(['unified-orders'])
+          console.log('[DELETE-ORDER] Cache après', { orders: Array.isArray(after) ? after.length : 'NA' })
+        } catch {}
+        console.log('[DELETE-ORDER] Dispatch mc-data-updated')
+        window.dispatchEvent(new Event('mc-data-updated'))
       } else {
         console.error('Erreur lors de la suppression:', response.statusText)
         alert('Erreur lors de la suppression de la commande')

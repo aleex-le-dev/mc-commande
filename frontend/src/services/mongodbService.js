@@ -259,11 +259,15 @@ export const getOrdersPaginated = async (page = 1, limit = 50, type = 'all', sea
 // Récupérer toutes les commandes depuis la base de données avec synchronisation automatique
 export const getOrdersFromDatabase = async () => {
   try {
-    // Vérifier le cache d'abord
-    const cached = cacheGet('orders')
-    if (cached) {
-      return cached
-    }
+    // Vérifier le cache d'abord (sauf si bypass demandé)
+    try {
+      if (!(typeof window !== 'undefined' && window && window.mcBypassOrdersCache === true)) {
+        const cached = cacheGet('orders')
+        if (cached) {
+          return cached
+        }
+      }
+    } catch {}
 
     // D'abord synchroniser depuis WordPress
     const syncResponse = await requestWithRetry(`${API_BASE_URL}/sync-orders`, {
@@ -303,6 +307,7 @@ export const getOrdersFromDatabase = async () => {
     
     // Mettre en cache
     cacheSet('orders', orders)
+    try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = false } catch {}
     return orders
   } catch (error) {
     if (error.name === 'AbortError') {
