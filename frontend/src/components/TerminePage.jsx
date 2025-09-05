@@ -337,31 +337,32 @@ const TerminePage = () => {
             {readyArticles.length === 0 ? (
               <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
             ) : (
-              <div className="space-y-5">
+              <div className="flex flex-wrap gap-5">
                 {ready.map(order => (
-                  <div key={`ready-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border-2 border-green-500 p-4">
+                  <div key={`ready-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border-2 border-green-500 p-4 w-fit inline-block align-top">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
                       <span className="text-xs text-gray-600">{order.items.length} article(s)</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                    <div className="flex flex-wrap gap-4">
                       {order.items.map((article, index) => (
-                        <ArticleCard
-                          key={`ready-${order.orderId}-${article.line_item_id}`}
-                          article={{ ...article }}
-                          index={index}
-                          getArticleSize={() => 'medium'}
-                          getArticleColor={() => null}
-                          getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                          onOverlayOpen={() => setOpenReadyOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                          isOverlayOpen={openReadyOverlayId === `${article.orderId}_${article.line_item_id}`}
-                          isHighlighted={false}
-                          searchTerm={''}
-                          productionType={article.productionType}
-                          tricoteusesProp={tricoteuses}
-                          compact
-                          disableStatusBorder
-                        />
+                        <div key={`ready-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
+                          <ArticleCard
+                            article={{ ...article }}
+                            index={index}
+                            getArticleSize={() => 'medium'}
+                            getArticleColor={() => null}
+                            getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                            onOverlayOpen={() => setOpenReadyOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                            isOverlayOpen={openReadyOverlayId === `${article.orderId}_${article.line_item_id}`}
+                            isHighlighted={false}
+                            searchTerm={''}
+                            productionType={article.productionType}
+                            tricoteusesProp={tricoteuses}
+                            compact
+                            disableStatusBorder
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -386,23 +387,24 @@ const TerminePage = () => {
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
                       <span className="text-xs text-gray-600">{order.items.length} article(s) — restants: {order.items.filter(it => it.status !== 'termine').length}</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                    <div className="flex flex-wrap gap-4">
                       {order.items.map((article, index) => (
-                        <ArticleCard
-                          key={`inprogress-${order.orderId}-${article.line_item_id}`}
-                          article={{ ...article }}
-                          index={index}
-                          getArticleSize={() => 'medium'}
-                          getArticleColor={() => null}
-                          getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                          onOverlayOpen={() => setOpenInProgressOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                          isOverlayOpen={openInProgressOverlayId === `${article.orderId}_${article.line_item_id}`}
-                          isHighlighted={false}
-                          searchTerm={''}
-                          productionType={article.productionType}
-                          tricoteusesProp={tricoteuses}
-                          compact
-                        />
+                        <div key={`inprogress-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
+                          <ArticleCard
+                            article={{ ...article }}
+                            index={index}
+                            getArticleSize={() => 'medium'}
+                            getArticleColor={() => null}
+                            getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                            onOverlayOpen={() => setOpenInProgressOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                            isOverlayOpen={openInProgressOverlayId === `${article.orderId}_${article.line_item_id}`}
+                            isHighlighted={false}
+                            searchTerm={''}
+                            productionType={article.productionType}
+                            tricoteusesProp={tricoteuses}
+                            compact
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -421,23 +423,24 @@ const TerminePage = () => {
               {pausedArticles.length === 0 ? (
                 <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucun article en pause</div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5">
+                <div className="flex flex-wrap gap-4">
                   {pausedArticles.map((article, index) => (
-                    <ArticleCard
-                      key={`paused-${article.orderId}-${article.line_item_id}`}
-                      article={{ ...article, status: 'en_pause' }}
-                      index={index}
-                      getArticleSize={() => 'medium'}
-                      getArticleColor={() => null}
-                      getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                      onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                      isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
-                      isHighlighted={false}
-                      searchTerm={''}
-                      productionType={article.productionType}
-                      tricoteusesProp={tricoteuses}
-                      compact
-                    />
+                    <div key={`paused-${article.orderId}-${article.line_item_id}`} className="w-[260px]">
+                      <ArticleCard
+                        article={{ ...article, status: 'en_pause' }}
+                        index={index}
+                        getArticleSize={() => 'medium'}
+                        getArticleColor={() => null}
+                        getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
+                        onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
+                        isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
+                        isHighlighted={false}
+                        searchTerm={''}
+                        productionType={article.productionType}
+                        tricoteusesProp={tricoteuses}
+                        compact
+                      />
+                    </div>
                   ))}
                 </div>
               )}
