@@ -123,11 +123,38 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     })
   }
 
+  const updateArticleUrgent = (orderId, lineItemId, urgent) => {
+    queryClient.setQueryData(['unified-orders'], (oldData) => {
+      if (!oldData) return oldData
+      return oldData.map(order => {
+        if (order.order_id === orderId) {
+          return {
+            ...order,
+            items: order.items.map(item => {
+              if (item.line_item_id === lineItemId) {
+                return {
+                  ...item,
+                  production_status: { ...(item.production_status || {}), urgent: Boolean(urgent) }
+                }
+              }
+              return item
+            })
+          }
+        }
+        return order
+      })
+    })
+  }
+
   // Écouter les mises à jour
   useEffect(() => {
     const handleStatusUpdate = (event) => {
       const { orderId, lineItemId, status } = event.detail
       updateArticleStatus(orderId, lineItemId, status)
+    }
+    const handleUrgentUpdate = (event) => {
+      const { orderId, lineItemId, urgent } = event.detail || {}
+      if (orderId && lineItemId) updateArticleUrgent(orderId, lineItemId, urgent)
     }
     
     const handleDataUpdate = (event) => {
@@ -136,10 +163,12 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     }
     
     window.addEventListener('mc-article-status-updated', handleStatusUpdate)
+    window.addEventListener('mc-article-urgent-updated', handleUrgentUpdate)
     window.addEventListener('mc-data-updated', handleDataUpdate)
     
     return () => {
       window.removeEventListener('mc-article-status-updated', handleStatusUpdate)
+      window.removeEventListener('mc-article-urgent-updated', handleUrgentUpdate)
       window.removeEventListener('mc-data-updated', handleDataUpdate)
     }
   }, [updateArticleStatus, refetch])

@@ -13,7 +13,7 @@ import InfoSection from './InfoSection'
 import useArticleCard from './card/useArticleCard'
 import { highlightText, renderFormattedAddress } from '../../utils/textUtils.jsx'
 import imageService from '../../services/imageService'
-import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote } from '../../services/mongodbService'
+import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote, setArticleUrgent } from '../../services/mongodbService'
 import statusService from '../../services/statusService'
 // Icônes utilisées dans BottomBar uniquement; ArticleCard n'en a plus besoin
 import delaiService from '../../services/delaiService'
@@ -85,43 +85,16 @@ const ArticleCard = forwardRef(({
     const handleMarkUrgent = async (ev) => {
       const { uniqueAssignmentId: targetId, urgent } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
-      if (localAssignment) {
-        const updated = { ...localAssignment, urgent }
-        setLocalAssignment(updated)
-        try {
-          await assignmentsService.createOrUpdateAssignment(updated)
-          if (onAssignmentUpdate) {
-            onAssignmentUpdate(uniqueAssignmentId, updated)
-          }
-          // Notifier pour déclencher le re-tri immédiat
-          window.dispatchEvent(new Event('mc-mark-urgent'))
-        } catch (e) {
-          setLocalAssignment(localAssignment)
-        }
-      } else {
-        // Créer/mettre à jour une assignation minimale côté serveur pour persister URGENT
-        // Le backend requiert tricoteuse_id et tricoteuse_name
-        const minimalAssignment = { 
-          article_id: uniqueAssignmentId, 
-          tricoteuse_id: 'unassigned', 
-          tricoteuse_name: 'Non assigné', 
-          status: 'non_assigné',
-          urgent 
-        }
-        try {
-          await assignmentsService.createOrUpdateAssignment(minimalAssignment)
-          setLocalAssignment(minimalAssignment)
-          if (onAssignmentUpdate) {
-            onAssignmentUpdate(uniqueAssignmentId, minimalAssignment)
-          }
-          // Notifier pour déclencher le re-tri immédiat
-          window.dispatchEvent(new Event('mc-mark-urgent'))
-        } catch (e) {
-          // Fallback local si le backend échoue
-          setLocalUrgent(urgent)
-          // Notifier pour déclencher le re-tri immédiat même en cas d'erreur
-          window.dispatchEvent(new Event('mc-mark-urgent'))
-        }
+      try {
+        await setArticleUrgent(article.orderId, article.line_item_id, urgent)
+        setLocalUrgent(Boolean(urgent))
+        // notifier tri + mise à jour locale des données unifiées
+        window.dispatchEvent(new Event('mc-mark-urgent'))
+        window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
+      } catch (e) {
+        setLocalUrgent(Boolean(urgent))
+        window.dispatchEvent(new Event('mc-mark-urgent'))
+        window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
@@ -313,7 +286,7 @@ const ArticleCard = forwardRef(({
         setImageUrl={setImageUrl}
         imageService={imageService}
         doitAvoirTraitRouge={doitAvoirTraitRouge}
-        isUrgent={localAssignment ? Boolean(localAssignment?.urgent) : Boolean(localUrgent)}
+        isUrgent={Boolean(article?.production_status?.urgent === true || localUrgent)}
         handleOverlayToggle={handleOverlayToggle}
         isOverlayOpen={isOverlayOpen}
         compact={compact}

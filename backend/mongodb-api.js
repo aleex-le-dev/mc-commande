@@ -1207,7 +1207,7 @@ app.put('/api/production/redispatch', async (req, res) => {
 // PUT /api/production/status - Mettre à jour le statut de production (temps réel)
 app.put('/api/production/status', async (req, res) => {
   try {
-    const { order_id, line_item_id, status, notes } = req.body
+    const { order_id, line_item_id, status, notes, urgent } = req.body
     
     if (!order_id || !line_item_id || !status) {
       return res.status(400).json({ error: 'Paramètres manquants' })
@@ -1225,6 +1225,7 @@ app.put('/api/production/status', async (req, res) => {
         $set: {
           status,
           notes: notes || null,
+          ...(typeof urgent === 'boolean' ? { urgent: urgent === true } : {}),
           updated_at: new Date()
         }
       }
@@ -1262,6 +1263,26 @@ app.put('/api/production/status', async (req, res) => {
   } catch (error) {
     console.error('Erreur PUT /production/status:', error)
     res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// PUT /api/production/urgent - Marquer/démarquer l'urgence d'un article
+app.put('/api/production/urgent', async (req, res) => {
+  try {
+    const { order_id, line_item_id, urgent } = req.body
+    if (typeof urgent !== 'boolean' || !order_id || !line_item_id) {
+      return res.status(400).json({ success: false, error: 'Paramètres invalides' })
+    }
+    const statusCollection = db.collection('production_status')
+    const result = await statusCollection.updateOne(
+      { order_id: parseInt(order_id), line_item_id: parseInt(line_item_id) },
+      { $set: { urgent: urgent === true, updated_at: new Date() } },
+      { upsert: true }
+    )
+    res.json({ success: true, result })
+  } catch (error) {
+    console.error('Erreur PUT /production/urgent:', error)
+    res.status(500).json({ success: false, error: 'Erreur serveur' })
   }
 })
 
@@ -1703,7 +1724,7 @@ app.get('/api/production-status/stats', async (req, res) => {
 
 app.post('/api/production-status', async (req, res) => {
   try {
-    const { order_id, line_item_id, status, assigned_to } = req.body
+    const { order_id, line_item_id, status, assigned_to, urgent } = req.body
     const collection = db.collection('production_status')
     
     const result = await collection.updateOne(
@@ -1717,6 +1738,7 @@ app.post('/api/production-status', async (req, res) => {
           line_item_id: parseInt(line_item_id),
           status,
           assigned_to,
+          ...(typeof urgent === 'boolean' ? { urgent: urgent === true } : {}),
           updated_at: new Date()
         }
       },

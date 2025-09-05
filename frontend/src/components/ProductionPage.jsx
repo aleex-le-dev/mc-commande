@@ -38,12 +38,15 @@ const ProductionPage = ({ productionType, title }) => {
     refreshUrgentMap()
 
     const onUrgent = () => { if (!cancelled) refreshUrgentMap() }
+    const onUrgentUnified = (ev) => { if (!cancelled) refreshUrgentMap() }
     const onAssignmentsUpdated = () => { if (!cancelled) refreshUrgentMap() }
     window.addEventListener('mc-mark-urgent', onUrgent)
+    window.addEventListener('mc-article-urgent-updated', onUrgentUnified)
     window.addEventListener('mc-assignments-updated', onAssignmentsUpdated)
     return () => {
       cancelled = true
       window.removeEventListener('mc-mark-urgent', onUrgent)
+      window.removeEventListener('mc-article-urgent-updated', onUrgentUnified)
       window.removeEventListener('mc-assignments-updated', onAssignmentsUpdated)
     }
   }, [refreshUrgentMap])
@@ -59,11 +62,7 @@ const ProductionPage = ({ productionType, title }) => {
     
     // Filtrage urgent prioritaire
     if (showUrgentOnly) {
-      filtered = filtered.filter(article => {
-        const composedId = `${article.orderId}_${article.line_item_id}`
-        const simpleId = `${article.line_item_id}`
-        return urgentMap[composedId] === true || urgentMap[simpleId] === true
-      })
+      filtered = filtered.filter(article => article.production_status?.urgent === true)
     } else {
       // Filtrage par statut
       if (selectedStatus !== 'all') {
@@ -125,12 +124,8 @@ const ProductionPage = ({ productionType, title }) => {
   }, [articles])
 
   const urgentCount = useMemo(() => {
-    return (articles || []).reduce((n, article) => {
-      const composedId = `${article.orderId}_${article.line_item_id}`
-      const simpleId = `${article.line_item_id}`
-      return n + ((urgentMap[composedId] === true || urgentMap[simpleId] === true) ? 1 : 0)
-    }, 0)
-  }, [articles, urgentMap])
+    return (articles || []).reduce((n, article) => n + (article.production_status?.urgent === true ? 1 : 0), 0)
+  }, [articles])
 
   if (isLoading) return <LoadingSpinner />
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
@@ -145,21 +140,12 @@ const ProductionPage = ({ productionType, title }) => {
           onSearchChange={setSearchTerm}
         />
         
-        {selectedStatus !== 'all' && (
-          <div className="mt-2 text-sm text-gray-600">
-            Filtre actif: <span className="font-semibold">
-              {selectedStatus === 'a_faire' && '⏳ À faire'}
-              {selectedStatus === 'en_cours' && '🔄 En cours'}
-              {selectedStatus === 'en_pause' && '⏸️ En pause'}
-              {selectedStatus === 'termine' && '✅ Terminé'}
-            </span> - {filteredArticles.length} article{filteredArticles.length > 1 ? 's' : ''} affiché{filteredArticles.length > 1 ? 's' : ''}
-          </div>
-        )}
+        {/* Bandeau "Filtre actif" supprimé */}
         
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           
           <button
-            onClick={() => setSelectedStatus('all')}
+            onClick={() => { setSelectedStatus('all'); setShowUrgentOnly(false); setSearchTerm(''); setOpenOverlayCardId(null) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'all' 
                 ? 'bg-blue-100 border-blue-300 text-blue-800' 
@@ -180,16 +166,7 @@ const ProductionPage = ({ productionType, title }) => {
             🚨 Urgentes: <strong>{urgentCount}</strong>
           </button>
           
-          <button
-            onClick={() => { setSelectedStatus('a_faire'); setShowUrgentOnly(false) }}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
-              selectedStatus === 'a_faire' 
-                ? 'bg-gray-100 border-gray-400 text-gray-800' 
-                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            ⏳ À faire: <strong>{statusCounts.a_faire}</strong>
-          </button>
+          {/* Filtre "À faire" retiré */}
           
           <button
             onClick={() => { setSelectedStatus('en_cours'); setShowUrgentOnly(false) }}
@@ -235,6 +212,7 @@ const ProductionPage = ({ productionType, title }) => {
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
         productionType={productionType}
+        prioritizeUrgent={!(selectedStatus === 'all' && !showUrgentOnly && !searchTerm)}
       />
     </div>
   )

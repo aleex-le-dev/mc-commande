@@ -148,6 +148,40 @@ export const updateArticleStatus = async (orderId, lineItemId, status, notes = n
   }
 }
 
+// Mettre à jour l'urgence d'un article sans passer par les assignations
+export const setArticleUrgent = async (orderId, lineItemId, urgent) => {
+  try {
+    const response = await requestWithRetry(`${API_BASE_URL}/production/urgent`, {
+      method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        line_item_id: lineItemId,
+        urgent: Boolean(urgent)
+      })
+      })
+
+      if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+    // Invalider le cache pour forcer le rechargement
+    cacheDelete('orders')
+    cacheDelete('assignments')
+
+    // Déclencher un événement pour re-tri urgent
+    window.dispatchEvent(new Event('mc-mark-urgent'))
+
+    return data
+    } catch (error) {
+    return { success: false }
+  }
+}
+
 // Dispatcher un article vers la production
 export const dispatchToProduction = async (orderId, lineItemId, productionType, assignedTo = null) => {
   try {

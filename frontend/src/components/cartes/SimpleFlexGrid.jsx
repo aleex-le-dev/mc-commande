@@ -13,7 +13,8 @@ const SimpleFlexGrid = ({
   handleOverlayOpen, 
   openOverlayCardId, 
   searchTerm,
-  productionType = 'unknown' // Ajouter le type de production
+  productionType = 'unknown', // Ajouter le type de production
+  prioritizeUrgent = true
 }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [assignments, setAssignments] = useState({})
@@ -223,14 +224,16 @@ const SimpleFlexGrid = ({
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
     const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticles)
-    // Prioriser les urgents en tête
-    const prioritized = [...source].sort((a, b) => {
-      const ua = assignments[a.line_item_id]?.urgent ? 1 : 0
-      const ub = assignments[b.line_item_id]?.urgent ? 1 : 0
-      if (ua !== ub) return ub - ua
-      return 0
-    })
-    const subset = prioritized.slice(0, visibleCount)
+    // Prioriser les urgents en tête selon le flag
+    const arranged = prioritizeUrgent
+      ? [...source].sort((a, b) => {
+          const ua = (a.production_status?.urgent === true) ? 1 : 0
+          const ub = (b.production_status?.urgent === true) ? 1 : 0
+          if (ua !== ub) return ub - ua
+          return 0
+        })
+      : source
+    const subset = arranged.slice(0, visibleCount)
     const cards = []
     
     subset.forEach((article, index) => {
@@ -309,7 +312,8 @@ const SimpleFlexGrid = ({
     productionType, // Ajouter aux dépendances
     assignments,
     urgentTick,
-    tricoteuses
+    tricoteuses,
+    prioritizeUrgent
   ])
 
   // Afficher le loading pendant les changements d'onglets
