@@ -45,6 +45,12 @@ const ArticleCard = forwardRef(({
   compact = false // Mode compact: hauteur réduite (utilisé en Terminé)
 }, ref) => {
   const queryClient = useQueryClient()
+  // Gestion du long-press mobile pour ouvrir le menu contextuel
+  // Utilise des refs pour éviter des re-rendus inutiles
+  const longPressTimerRef = useRef(null)
+  const touchStartPositionRef = useRef({ x: 0, y: 0 })
+  const lastTouchPositionRef = useRef({ x: 0, y: 0 })
+  const longPressTriggeredRef = useRef(false)
   const {
     copiedText, setCopiedText,
     isNoteOpen, setIsNoteOpen,
@@ -75,6 +81,67 @@ const ArticleCard = forwardRef(({
     estApresDateLimite,
     localUrgent, setLocalUrgent,
   } = useArticleCard({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite })
+  // Fonction utilitaire: dispatcher l'événement de menu contextuel
+  const dispatchContextMenu = useCallback((clientX, clientY) => {
+    try {
+      const allArticlesOfOrder = window.mcAllArticles?.filter(a => a.orderNumber === article.orderNumber) || [article]
+      const isOrderUrgent = Array.isArray(allArticlesOfOrder) && allArticlesOfOrder.some(a => a?.production_status?.urgent === true)
+      const detail = {
+        x: clientX,
+        y: clientY,
+        uniqueAssignmentId,
+        hasAssignment: Boolean(localAssignment),
+        currentUrgent: Boolean(isOrderUrgent || article?.production_status?.urgent === true),
+        hasNote: Boolean(article.customerNote),
+        currentProductionType: article.productionType,
+        orderNumber: article.orderNumber,
+        orderId: article.orderId,
+        articles: allArticlesOfOrder,
+      }
+      window.dispatchEvent(new CustomEvent('mc-context', { detail }))
+    } catch {}
+  }, [article, localAssignment, uniqueAssignmentId])
+
+  // Handlers long-press mobile → clic droit simulé
+  const handleTouchStart = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return
+    const t = e.touches[0]
+    touchStartPositionRef.current = { x: t.clientX, y: t.clientY }
+    lastTouchPositionRef.current = { x: t.clientX, y: t.clientY }
+    longPressTriggeredRef.current = false
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current) }
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true
+      dispatchContextMenu(lastTouchPositionRef.current.x, lastTouchPositionRef.current.y)
+    }, 600)
+  }, [dispatchContextMenu])
+
+  const handleTouchMove = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return
+    const t = e.touches[0]
+    lastTouchPositionRef.current = { x: t.clientX, y: t.clientY }
+    // Annuler le long-press si le doigt bouge trop (scroll ou glissé)
+    const dx = lastTouchPositionRef.current.x - touchStartPositionRef.current.x
+    const dy = lastTouchPositionRef.current.y - touchStartPositionRef.current.y
+    const movedDistance = Math.sqrt(dx * dx + dy * dy)
+    if (movedDistance > 12 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const endTouch = useCallback((e) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    if (longPressTriggeredRef.current) {
+      // Empêcher les clics/presses suivants quand le menu a été ouvert
+      try { e.preventDefault() } catch {}
+      try { e.stopPropagation() } catch {}
+      longPressTriggeredRef.current = false
+    }
+  }, [])
 
   const handleOverlayToggle = useCallback((e) => {
     e.stopPropagation()
@@ -274,6 +341,10 @@ const ArticleCard = forwardRef(({
         };
         window.dispatchEvent(new CustomEvent('mc-context', { detail }));
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={endTouch}
+      onTouchCancel={endTouch}
     >
 
       <HeaderMedia

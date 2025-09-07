@@ -20,12 +20,12 @@ const BottomBar = ({
   return (
     <div className={`absolute bottom-1 left-0 right-0 ${compact ? 'h-10' : 'h-16'} z-10 ${compact ? 'px-2 pt-2' : 'px-3 pt-3'} ${localAssignment ? (compact ? 'pb-3' : 'pb-5') : (compact ? 'pb-2' : 'pb-3')}`}>
       <div className="flex items-center justify-between">
-        {/* Date et heure */}
-        <div className={`flex items-center ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium ${localAssignment ? (compact ? 'translate-y-[-4px]' : 'translate-y-[-6px]') : ''}`}>
+        {/* Date et heure (heure masquée en mobile) */}
+        <div className={`flex items-center ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
           <span className={`bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
             {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
           </span>
-          <span className={`bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
+          <span className={`hidden sm:inline-block bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
             {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
           </span>
           {/* Bouton note: style différent si note présente */}
@@ -52,20 +52,20 @@ const BottomBar = ({
         {/* Avatar assignation / bouton assigner */}
         <div className="flex items-center">
           {isLoadingAssignment ? (
-            <div className={`${compact ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center` }>
+            <div className={`w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center mb-1`} >
               <div className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} border-2 border-gray-400 border-t-transparent rounded-full animate-spin`}></div>
             </div>
           ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.status === 'en_cours' && article.assigned_to) ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
-              className={`group relative ${compact ? 'w-10 h-10 translate-y-[-6px]' : 'w-14 h-14 translate-y-[-10px]'} rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 cursor-pointer`}
+              className={`group relative w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 cursor-pointer`}
               title={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
               aria-label={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
             >
               {localAssignment?.tricoteuse_photo ? (
                 <img src={localAssignment.tricoteuse_photo} alt={`Photo de ${localAssignment.tricoteuse_name || article.assigned_to}`} className="w-full h-full object-cover" />
               ) : (
-                <div className={`w-full h-full flex items-center justify-center text-white ${compact ? 'text-base' : 'text-2xl'} font-bold`} style={{ backgroundColor: localAssignment?.tricoteuse_color || '#6b7280' }}>
+                <div className={`w-full h-full flex items-center justify-center text-white ${compact ? 'text-xs sm:text-base' : 'text-sm sm:text-2xl'} font-bold`} style={{ backgroundColor: localAssignment?.tricoteuse_color || '#6b7280' }}>
                   {(localAssignment?.tricoteuse_name || article.assigned_to)?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
@@ -73,12 +73,14 @@ const BottomBar = ({
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
-              className={`group relative ${compact ? 'px-2 py-1 space-x-1 text-[10px]' : 'px-3 py-2 space-x-2 text-xs'} rounded-xl flex items-center transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600 mb-1`}
+              className={`group relative transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600
+                w-8 h-8 rounded-full flex items-center justify-center border-2 border-white
+                sm:w-auto sm:h-auto sm:rounded-xl sm:flex sm:items-center sm:justify-start ${compact ? 'sm:px-2 sm:py-1 sm:space-x-1 sm:text-[10px]' : 'sm:px-3 sm:py-2 sm:space-x-2 sm:text-xs'}`}
               title="Assigner à une couturière"
               aria-label="Assigner à une couturière"
             >
-              <span className="font-semibold">Assigner</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <span className="hidden sm:inline font-semibold">Assigner</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`w-3 h-3 ${compact ? 'sm:w-2.5 sm:h-2.5' : 'sm:w-3 sm:h-3'}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21a8 8 0 0 0-16 0" />
                 <circle cx="12" cy="7" r="4" />
               </svg>

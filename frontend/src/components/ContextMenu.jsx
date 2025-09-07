@@ -26,12 +26,21 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
 
   if (!visible) return null
 
-  const style = {
-    top: Math.max(8, position.y),
-    left: Math.max(8, position.x),
-    position: 'fixed',
-    zIndex: 10000
-  }
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const style = isMobile
+    ? {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        position: 'fixed',
+        zIndex: 10000
+      }
+    : {
+        top: Math.max(8, position.y),
+        left: Math.max(8, position.x),
+        position: 'fixed',
+        zIndex: 10000
+      }
 
   // Grouper par catégorie si fournie
   const groups = items.reduce((acc, item) => {
@@ -55,7 +64,7 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
   }
 
   return (
-    <div ref={menuRef} style={style} className="min-w-[220px] max-w-[300px] bg-[#182235] text-white border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+    <div ref={menuRef} style={style} className="min-w-[220px] max-w-[300px] sm:w-auto w-[90vw] max-h-[80vh] bg-[#182235] text-white border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
       <div className="py-1">
         {orderedKeys.map((key, idx) => (
           <div key={key} className="py-1">
