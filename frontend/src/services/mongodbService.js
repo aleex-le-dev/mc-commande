@@ -76,8 +76,8 @@ async function requestWithRetry(url, options = {}, retries = 2) {
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      // Ne pas relancer les requêtes annulées
-      return
+      // Propager l'annulation pour permettre au caller de gérer un fallback
+      throw e
     }
     if (retries > 0) {
       // Backoff exponentiel avec jitter pour les erreurs réseau
