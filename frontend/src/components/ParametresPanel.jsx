@@ -20,7 +20,7 @@ const ParametresPanel = () => {
 
   useEffect(() => {
     if (activeTabMeta) {
-      document.title = `${activeTabMeta.icon} ${activeTabMeta.label} – Admin`
+      document.title = `${activeTabMeta.icon} ${activeTabMeta.label} – Paramètres`
     }
     return () => {}
   }, [activeTabMeta])

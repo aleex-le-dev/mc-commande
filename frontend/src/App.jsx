@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { assignmentsService } from './components/../services/mongodbService'
 import ContextMenu from './components/ContextMenu'
 import ConfirmationToast from './components/ConfirmationToast'
-import { IoSettingsOutline, IoLockClosedOutline } from 'react-icons/io5'
+import { IoSettingsOutline, IoLockClosedOutline, IoMenuOutline, IoCloseOutline } from 'react-icons/io5'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -32,6 +32,7 @@ function App() {
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
   const [ctxItems, setCtxItems] = useState([])
   const [urgentMap, setUrgentMap] = useState({})
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false) // Menu hamburger mobile
   
   // État pour le toast de confirmation de suppression
   const [showDeleteToast, setShowDeleteToast] = useState(false)
@@ -226,7 +227,7 @@ function App() {
         case 'termine':
           return 'Terminé - Maisoncléo'
         case 'parametres':
-          return 'Admin - Maisoncléo'
+          return 'Paramètres - Maisoncléo'
         default:
           return 'Maisoncléo'
       }
@@ -260,7 +261,7 @@ function App() {
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' },
     { id: 'termine', label: 'Terminé', icon: '✅' },
-    { id: 'parametres', label: 'Admin', icon: '⚙️' }
+    { id: 'parametres', label: 'Paramètres', icon: '⚙️' }
   ]
 
   const renderContent = () => {
@@ -288,7 +289,7 @@ function App() {
             <div className="flex justify-between items-center h-16">
               {/* Logo et titre */}
               <div className="flex items-center">
-                <div className="flex-shrink-0 hidden sm:block">
+                <div className="flex-shrink-0">
                   <img 
                     src="/mclogosite.png" 
                     alt="Maisoncléo" 
@@ -297,9 +298,9 @@ function App() {
                 </div>
               </div>
 
-              {/* Onglets centrés */}
-              <div className="flex-1 min-w-0 flex justify-center">
-                <div className="flex space-x-1 flex-nowrap overflow-x-auto no-scrollbar max-w-full px-1">
+              {/* Onglets alignés à droite */}
+              <div className="hidden sm:flex flex-1 min-w-0 justify-end">
+                <div className="flex space-x-1 flex-nowrap overflow-x-auto no-scrollbar max-w-full px-1 mr-2">
                   {tabs.filter(tab => tab.id !== 'parametres').map((tab) => (
                     <button
                       key={tab.id}
@@ -322,7 +323,7 @@ function App() {
               </div>
 
               {/* Paramètres à droite */}
-              <div className="flex items-center">
+              <div className="hidden sm:flex items-center">
                 <ThemeToggle />
                 {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
@@ -347,11 +348,60 @@ function App() {
                   onClick={async () => { try { await authService.logout() } catch {} try { sessionStorage.removeItem('mc-auth-ok-v2') } catch {} window.location.reload() }}
                   className="ml-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)]"
                   style={{ color: 'var(--text-secondary)' }}
-                  title="Se déconnecter"
-                  aria-label="Se déconnecter"
+                  title="Verrouiller"
+                  aria-label="Verrouiller"
                 >
                   <IoLockClosedOutline className="w-5 h-5" aria-hidden="true" />
                 </button>
+              </div>
+              {/* Contrôles mobiles à droite (hamburger) */}
+              <div className="sm:hidden flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen((v) => !v)}
+                  className="p-2 rounded-md hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-secondary)' }}
+                  aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                >
+                  {mobileMenuOpen ? <IoCloseOutline className="w-6 h-6" /> : <IoMenuOutline className="w-6 h-6" />}
+                </button>
+              </div>
+            </div>
+            {/* Menu mobile déroulant: liens d'onglets et actions */}
+            <div className={`${mobileMenuOpen ? 'block' : 'hidden'} sm:hidden`}>
+              <div className="px-2 pb-3 space-y-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={`m-${tab.id}`}
+                    onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false) }}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                      activeTab === tab.id
+                        ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
+                        : 'hover:bg-[var(--bg-tertiary)]'
+                    }`}
+                    style={{ 
+                      color: activeTab === tab.id ? 'var(--rose-clair-text)' : 'var(--text-secondary)',
+                      backgroundColor: activeTab === tab.id ? 'var(--rose-clair)' : 'transparent'
+                    }}
+                  >
+                    <span className="mr-1">{tab.icon}</span>
+                    {tab.label}
+                  </button>
+                ))}
+                <div className="pt-2 border-t" style={{ borderColor: 'var(--border-primary)' }}>
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Thème</span>
+                    <ThemeToggle />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => { try { await authService.logout() } catch {} try { sessionStorage.removeItem('mc-auth-ok-v2') } catch {} window.location.reload() }}
+                    className="mt-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 hover:bg-[var(--bg-tertiary)]"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    Verrouiller
+                  </button>
+                </div>
               </div>
             </div>
           </div>
