@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { assignmentsService } from './components/../services/mongodbService'
 import ContextMenu from './components/ContextMenu'
 import ConfirmationToast from './components/ConfirmationToast'
-import { IoSettingsOutline, IoLockClosedOutline, IoMenuOutline, IoCloseOutline, IoRefreshOutline } from 'react-icons/io5'
-import { syncOrders } from './components/../services/mongodbService'
+import { IoSettingsOutline, IoLockClosedOutline, IoMenuOutline, IoCloseOutline } from 'react-icons/io5'
+import SyncButton from './components/SyncButton'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -34,7 +34,6 @@ function App() {
   const [ctxItems, setCtxItems] = useState([])
   const [urgentMap, setUrgentMap] = useState({})
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false) // Menu hamburger mobile
-  const [isSyncing, setIsSyncing] = useState(false)
   
   // État pour le toast de confirmation de suppression
   const [showDeleteToast, setShowDeleteToast] = useState(false)
@@ -312,29 +311,7 @@ function App() {
     }
   }
 
-  // Synchronisation manuelle avec logs détaillés
-  const handleManualSync = async () => {
-    if (isSyncing) return
-    const t0 = performance.now()
-    console.log('🔄 [SYNC] Démarrage de la synchronisation manuelle…')
-    try {
-      setIsSyncing(true)
-      console.time('[SYNC] Durée')
-      const result = await syncOrders([])
-      console.log('✅ [SYNC] Réponse backend:', result)
-      // Invalider les requêtes liées pour recharger depuis la BDD
-      queryClient.invalidateQueries(['db-orders'])
-      queryClient.invalidateQueries(['production-statuses'])
-      console.log('🗂️ [SYNC] Invalidation des caches React Query: [\'db-orders\'], [\'production-statuses\']')
-      const dt = Math.round(performance.now() - t0)
-      console.timeEnd('[SYNC] Durée')
-      console.log(`🎉 [SYNC] Terminé en ${dt}ms`)
-    } catch (e) {
-      console.error('❌ [SYNC] Échec de la synchronisation:', e)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
+  // Synchro déportée dans le composant SyncButton
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -382,17 +359,7 @@ function App() {
               {/* Paramètres à droite */}
               <div className="hidden sm:flex items-center justify-end flex-1">
                 {/* Bouton Synchro */}
-                <button
-                  type="button"
-                  onClick={handleManualSync}
-                  className="mr-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)] disabled:opacity-60"
-                  style={{ color: 'var(--text-secondary)' }}
-                  title={isSyncing ? 'Synchronisation…' : 'Synchroniser'}
-                  aria-label="Synchroniser"
-                  disabled={isSyncing}
-                >
-                  <IoRefreshOutline className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
-                </button>
+                <SyncButton className="mr-2" />
                 <ThemeToggle />
                 {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
@@ -458,16 +425,7 @@ function App() {
                   </button>
                 ))}
                 <div className="pt-2 border-t" style={{ borderColor: 'var(--border-primary)' }}>
-                  <button
-                    type="button"
-                    onClick={async () => { await handleManualSync(); setMobileMenuOpen(false) }}
-                    className="mb-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 hover:bg-[var(--bg-tertiary)] disabled:opacity-60"
-                    style={{ color: 'var(--text-secondary)' }}
-                    aria-label="Synchroniser"
-                    disabled={isSyncing}
-                  >
-                    {isSyncing ? 'Synchronisation…' : 'Synchroniser'}
-                  </button>
+                  <SyncButton variant="block" className="mb-2" onDone={() => setMobileMenuOpen(false)} />
                   <div className="flex items-center justify-between px-1">
                     <span className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Thème</span>
                     <ThemeToggle />

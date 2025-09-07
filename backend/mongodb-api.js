@@ -444,6 +444,7 @@ app.post('/api/sync/orders', async (req, res) => {
     
     // Récupérer les commandes depuis WooCommerce
     let woocommerceOrders = []
+    let noOrdersFetched = false
     const sinceRaw = (req.query && req.query.since) || (req.body && req.body.since) || null
     let afterIso = null
     if (sinceRaw) {
@@ -481,6 +482,7 @@ app.post('/api/sync/orders', async (req, res) => {
       try {
         const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
         // 1) Vérification rapide: y a-t-il des commandes nouvelles après la dernière date ?
+        let noNewQuick = false
         if (afterIso) {
           const quickUrlBase = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=1&page=1&status=processing,completed&orderby=date&order=desc&_fields=id,date`
           const quickUrl = `${quickUrlBase}&after=${encodeURIComponent(afterIso)}`
@@ -489,11 +491,7 @@ app.post('/api/sync/orders', async (req, res) => {
             const quickData = await quickRes.json()
             if (Array.isArray(quickData) && quickData.length === 0) {
               addSyncLog('ℹ️ Aucune commande à synchroniser (vérification rapide)', 'info')
-              return res.json({
-                success: true,
-                message: 'Aucune nouvelle commande',
-                results: { ordersCreated: 0, ordersUpdated: 0, itemsCreated: 0, itemsUpdated: 0 }
-              })
+              noNewQuick = true
             }
           }
         }
@@ -503,25 +501,113 @@ app.post('/api/sync/orders', async (req, res) => {
         let page = 1
         let fetched = []
         currentSyncAbortController = new AbortController()
-        while (true) {
-          const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
-          const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
-        const response = await fetch(url, {
-          method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: currentSyncAbortController.signal
-          })
-          if (!response.ok) {
-            addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes (page ${page})`, 'warning')
-            break
+        if (!noNewQuick) {
+          while (true) {
+            const base = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${page}&status=processing,completed&orderby=date&order=desc`
+            const url = afterIso ? `${base}&after=${encodeURIComponent(afterIso)}` : base
+            const response = await fetch(url, {
+              method: 'GET',
+              headers: { 'Accept': 'application/json' },
+              signal: currentSyncAbortController.signal
+            })
+            if (!response.ok) {
+              addSyncLog(`⚠️ Erreur HTTP ${response.status} lors de la récupération des commandes (page ${page})`, 'warning')
+              break
+            }
+            const data = await response.json()
+            fetched = fetched.concat(data)
+            addSyncLog(`📥 Page ${page} récupérée: ${data.length} commandes`, 'info')
+            if (data.length < perPage) break
+            page += 1
           }
-          const data = await response.json()
-          fetched = fetched.concat(data)
-          addSyncLog(`📥 Page ${page} récupérée: ${data.length} commandes`, 'info')
-          if (data.length < perPage) break
-          page += 1
+          woocommerceOrders = fetched
+        } else {
+          noOrdersFetched = true
         }
-        woocommerceOrders = fetched
+
+        // 3) Nettoyage des commandes WooCommerce en échec: suppression en BDD
+        try {
+          let failedPage = 1
+          let failedFetched = []
+          while (true) {
+            const fbase = `${WOOCOMMERCE_URL}/wp-json/wc/v3/orders?${authParams}&per_page=${perPage}&page=${failedPage}&status=failed&orderby=date&order=desc&_fields=id,date`
+            const furl = afterIso ? `${fbase}&after=${encodeURIComponent(afterIso)}` : fbase
+            const fres = await fetch(furl, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) })
+            if (!fres.ok) break
+            const fdata = await fres.json()
+            failedFetched = failedFetched.concat(fdata)
+            if (fdata.length < perPage) break
+            failedPage += 1
+          }
+          if (Array.isArray(failedFetched) && failedFetched.length > 0) {
+            const failedIds = failedFetched.map(x => parseInt(x.id)).filter(x => !Number.isNaN(x))
+            if (failedIds.length > 0) {
+              const ordersCollection = db.collection('orders_sync')
+              const itemsCollection = db.collection('order_items')
+              const statusCollection = db.collection('production_status')
+              const delOrders = await ordersCollection.deleteMany({ order_id: { $in: failedIds } })
+              const delItems = await itemsCollection.deleteMany({ order_id: { $in: failedIds } })
+              const delStatuses = await statusCollection.deleteMany({ order_id: { $in: failedIds } })
+              addSyncLog(`🗑️ Commandes échouées supprimées: ${delOrders.deletedCount || 0} (items: ${delItems.deletedCount || 0}, statuts: ${delStatuses.deletedCount || 0})`, 'info')
+            }
+          }
+        } catch (cleanupErr) {
+          addSyncLog(`⚠️ Erreur lors du nettoyage des commandes échouées: ${cleanupErr.message}`, 'warning')
+        }
+
+        // 4) Vérification/log des articles retirés ou annulés côté Woo par rapport à la BDD
+        try {
+          if (Array.isArray(woocommerceOrders) && woocommerceOrders.length > 0) {
+            const wooOrderIds = woocommerceOrders.map(o => parseInt(o.id)).filter(n => !Number.isNaN(n))
+            const itemsCollection = db.collection('order_items')
+            const dbItems = await itemsCollection.find(
+              { order_id: { $in: wooOrderIds } },
+              { projection: { order_id: 1, line_item_id: 1 } }
+            ).toArray()
+
+            const wooOrderToItemIds = new Map()
+            const cancelledOrderIds = new Set()
+            for (const ord of woocommerceOrders) {
+              const oid = parseInt(ord.id)
+              if (Number.isNaN(oid)) continue
+              const ids = new Set((ord.line_items || []).map(li => parseInt(li.id)).filter(n => !Number.isNaN(n)))
+              wooOrderToItemIds.set(oid, ids)
+              const st = String(ord.status || '').toLowerCase()
+              if (st === 'cancelled' || st === 'refunded') {
+                cancelledOrderIds.add(oid)
+              }
+            }
+
+            let missingCount = 0
+            let missingOrders = new Set()
+            for (const it of dbItems) {
+              const setIds = wooOrderToItemIds.get(parseInt(it.order_id))
+              if (!setIds) continue
+              if (!setIds.has(parseInt(it.line_item_id))) {
+                missingCount += 1
+                missingOrders.add(parseInt(it.order_id))
+              }
+            }
+
+            // Compter les articles dans des commandes annulées
+            let cancelledItemsCount = 0
+            if (cancelledOrderIds.size > 0) {
+              const cancelledItems = await itemsCollection.countDocuments({ order_id: { $in: Array.from(cancelledOrderIds) } })
+              cancelledItemsCount = cancelledItems || 0
+            }
+
+            if (missingCount > 0) {
+              addSyncLog(`🧹 Articles retirés côté Woo détectés: ${missingCount} sur ${missingOrders.size} commande(s) (log uniquement)`, 'info')
+            } else {
+              addSyncLog('🧹 Aucun article retiré côté Woo détecté', 'info')
+            }
+            if (cancelledItemsCount > 0) {
+              addSyncLog(`🚫 Articles appartenant à des commandes annulées: ${cancelledItemsCount} (log uniquement)`, 'info')
+            }
+          }
+        } catch (diffErr) {
+          addSyncLog(`⚠️ Erreur lors de la vérification des articles retirés/annulés: ${diffErr.message}`, 'warning')
+        }
       } catch (error) {
         addSyncLog(`⚠️ Erreur lors de la récupération des commandes WooCommerce: ${error.message}`, 'error')
       } finally {
@@ -535,25 +621,16 @@ app.post('/api/sync/orders', async (req, res) => {
       })
     }
     
+    let syncResults = { ordersCreated: 0, ordersUpdated: 0, itemsCreated: 0, itemsUpdated: 0 }
     if (woocommerceOrders.length === 0) {
       addSyncLog('ℹ️ Aucune commande à synchroniser', 'info')
-      console.log('🔄 Backend - Aucune commande à synchroniser, envoi de la réponse')
-      return res.json({
-        success: true,
-        message: 'Aucune nouvelle commande',
-        results: {
-          ordersCreated: 0,
-          ordersUpdated: 0,
-          itemsCreated: 0,
-          itemsUpdated: 0
-        }
-      })
+      console.log('🔄 Backend - Aucune commande à synchroniser')
+    } else {
+      // Synchroniser les commandes
+      addSyncLog('🔄 Début de la synchronisation avec la base de données...', 'info')
+      syncResults = await syncOrdersToDatabase(woocommerceOrders)
+      console.log('🔄 Backend - Résultats de la synchronisation:', syncResults)
     }
-    
-    // Synchroniser les commandes
-    addSyncLog('🔄 Début de la synchronisation avec la base de données...', 'info')
-    const syncResults = await syncOrdersToDatabase(woocommerceOrders)
-    console.log('🔄 Backend - Résultats de la synchronisation:', syncResults)
     
     // Afficher le message approprié selon le résultat
     if (syncResults.ordersCreated === 0 && syncResults.itemsCreated === 0) {

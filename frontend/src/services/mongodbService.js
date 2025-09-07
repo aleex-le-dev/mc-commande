@@ -211,15 +211,27 @@ export const dispatchToProduction = async (orderId, lineItemId, productionType, 
 }
 
 // Synchroniser les commandes avec la base de données
-export const syncOrders = async (woocommerceOrders = []) => {
+export const syncOrders = async (optionsOrOrders = []) => {
   try {
+    // Construire le corps de requête de façon rétrocompatible
+    let bodyPayload
+    if (Array.isArray(optionsOrOrders)) {
+      // Ancien usage: tableau d'ordres fourni
+      bodyPayload = { orders: optionsOrOrders }
+    } else if (optionsOrOrders && typeof optionsOrOrders === 'object') {
+      // Nouvel usage: options (ex: { since: '2025-09-01T00:00:00.000Z' })
+      bodyPayload = { ...optionsOrOrders }
+    } else {
+      bodyPayload = {}
+    }
+
     // Appeler le backend qui se chargera de récupérer les données WooCommerce
     const response = await requestWithRetry(`${API_BASE_URL}/sync/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-      body: JSON.stringify({ orders: woocommerceOrders })
+      body: JSON.stringify(bodyPayload)
       })
 
       if (!response.ok) {
