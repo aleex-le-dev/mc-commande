@@ -42,7 +42,7 @@ const AssignModal = ({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {localAssignment && (
             <button onClick={onRemove} className="group p-3 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200">
               <div className="flex flex-col items-center space-y-2">
@@ -53,7 +53,7 @@ const AssignModal = ({
           )}
 
           {isLoadingTricoteuses && (
-            <div className="col-span-2 p-6 text-center">
+            <div className="col-span-2 sm:col-span-3 p-6 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-rose-400 border-t-transparent mx-auto mb-3"></div>
               <p className="text-gray-600 text-sm">Chargement des tricoteuses...</p>
             </div>
@@ -80,7 +80,7 @@ const AssignModal = ({
             ))}
 
           {!isLoadingTricoteuses && tricoteuses.length === 0 && (
-            <div className="col-span-2 p-6 text-center text-gray-500">
+            <div className="col-span-2 sm:col-span-3 p-6 text-center text-gray-500">
               <p className="text-sm">Aucune tricoteuse disponible</p>
             </div>
           )}

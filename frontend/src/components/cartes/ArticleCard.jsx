@@ -243,13 +243,20 @@ const ArticleCard = forwardRef(({
       setEditingNote(article.customerNote || '')
       setIsNoteOpen(true)
     }
+    const handleOpenAssign = (ev) => {
+      const { uniqueAssignmentId: targetId } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      openTricoteuseModal()
+    }
     window.addEventListener('mc-edit-note', handleEditNote, true)
+    window.addEventListener('mc-open-assign', handleOpenAssign, true)
     window.addEventListener('mc-move-production', handleMoveProduction, true)
     window.addEventListener('mc-change-status', handleChangeStatus, true)
     return () => {
       window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
       window.removeEventListener('mc-open-client-overlay', handleOpenClientOverlay, true)
       window.removeEventListener('mc-edit-note', handleEditNote, true)
+      window.removeEventListener('mc-open-assign', handleOpenAssign, true)
       window.removeEventListener('mc-move-production', handleMoveProduction, true)
       window.removeEventListener('mc-change-status', handleChangeStatus, true)
     }

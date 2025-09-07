@@ -51,9 +51,11 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
   }, {})
 
   const orderedKeys = Object.keys(groups).sort((a, b) => {
-    // Garder non catégorisés en premier
+    // Garder non catégorisés en premier, puis prioriser "Couturière" avant "Admin"
     if (a === '__default__') return -1
     if (b === '__default__') return 1
+    if (a === 'Couturière' && b !== 'Couturière') return -1
+    if (b === 'Couturière' && a !== 'Couturière') return 1
     return a.localeCompare(b)
   })
 
@@ -64,7 +66,7 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
   }
 
   return (
-    <div ref={menuRef} style={style} className="min-w-[220px] max-w-[300px] sm:w-auto w-[90vw] max-h-[80vh] bg-[#182235] text-white border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+    <div ref={menuRef} style={style} className="min-w-[220px] max-w-[300px] sm:w-auto w-[90vw] max-h-[80vh] bg-[#182235] text-white border border-slate-700 rounded-xl shadow-2xl overflow-y-auto">
       <div className="py-1">
         {orderedKeys.map((key, idx) => (
           <div key={key} className="py-1">

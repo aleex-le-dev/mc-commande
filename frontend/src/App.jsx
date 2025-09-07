@@ -95,11 +95,13 @@ function App() {
         console.log('⚠️ Type de production non reconnu:', currentProductionType)
       }
       
-      // Changer le statut (si assignée)
+      // Couturière: si assigné → actions de statut, sinon → ajouter couturière
       if (hasAssignment) {
         items.push({ id: 'change-status-en-cours', label: '🟡 Statut: En cours', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'en_cours' } })) })
         items.push({ id: 'change-status-en-pause', label: '🟠 Statut: En pause', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'en_pause' } })) })
         items.push({ id: 'change-status-termine', label: '✅ Statut: Terminé', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-change-status', { detail: { uniqueAssignmentId, newStatus: 'termine' } })) })
+      } else {
+        items.push({ id: 'add-couturiere', label: '➕ Ajouter une couturière', category: 'Couturière', onClick: () => window.dispatchEvent(new CustomEvent('mc-open-assign', { detail: { uniqueAssignmentId } })) })
       }
       
       // Ajouter les options de suppression
