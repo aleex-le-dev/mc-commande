@@ -138,6 +138,12 @@ const ProductionPage = ({ productionType, title }) => {
           filteredArticlesCount={filteredArticles.length}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          onGoToEnd={() => {
+            try {
+              const container = document.scrollingElement || document.documentElement
+              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+            } catch {}
+          }}
         />
         
         {/* Bandeau "Filtre actif" supprimé */}
