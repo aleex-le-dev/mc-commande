@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: maisoncleo-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install --production
+    startCommand: npm start
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: MONGO_URI
+        sync: false
+      - key: APP_AUTH_SECRET
+        generateValue: true
+      - key: VITE_FRONTEND_ORIGIN
+        sync: false
+      - key: VITE_WORDPRESS_URL
+        sync: false
+      - key: VITE_WORDPRESS_CONSUMER_KEY
+        sync: false
+      - key: VITE_WORDPRESS_CONSUMER_SECRET
+        sync: false

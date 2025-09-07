@@ -28,4 +28,8 @@
   ],
   "author": "Maison Cléo",
   "license": "MIT"
+  ,
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }
