@@ -42,53 +42,63 @@ const AssignModal = ({
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="space-y-3">
           {localAssignment && (
-            <button onClick={onRemove} className="group p-3 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-base shadow-md">✕</div>
-                <p className="font-semibold text-red-700 text-center text-xs">Retirer</p>
+            <button onClick={onRemove} className="w-full group p-3 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200">
+              <div className="flex items-center justify-center">
+                <span className="sm:hidden text-red-600 font-semibold text-sm">Retirer</span>
+                <div className="hidden sm:flex w-10 h-10 rounded-full bg-red-500 items-center justify-center text-white font-bold text-base shadow-md">✕</div>
               </div>
             </button>
           )}
 
           {isLoadingTricoteuses && (
-            <div className="col-span-2 sm:col-span-3 p-6 text-center">
+            <div className="w-full p-6 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-rose-400 border-t-transparent mx-auto mb-3"></div>
               <p className="text-gray-600 text-sm">Chargement des tricoteuses...</p>
             </div>
           )}
 
-          {!isLoadingTricoteuses && tricoteuses.length > 0 && tricoteuses
-            .filter(t => !localAssignment || t._id !== localAssignment.tricoteuse_id)
-            .map((t) => (
-              <button key={t._id} onClick={() => onPick(t)} className={`group p-2 rounded-xl transition-all duration-200 ${isAssigning ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'hover:bg-rose-50'}`} disabled={isAssigning}>
-                <div className="flex flex-col items-center space-y-2">
-                  {isValidPhotoUrl(t.photoUrl) ? (
-                    <div className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
-                      <ImageLoader src={t.photoUrl} alt={`Photo de ${t.firstName}`} className="w-full h-full object-cover" fallback="👤" maxRetries={1} retryDelay={300} />
+          {!isLoadingTricoteuses && tricoteuses.length > 0 && (
+            <div className="flex flex-wrap -mx-1">
+              {tricoteuses
+                .filter(t => !localAssignment || t._id !== localAssignment.tricoteuse_id)
+                .map((t) => (
+                  <button
+                    key={t._id}
+                    onClick={() => onPick(t)}
+                    className={`px-1 w-1/2 md:w-1/3 mb-2`}
+                    disabled={isAssigning}
+                  >
+                    <div className={`w-full p-2 rounded-xl transition-all duration-200 ${isAssigning ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'hover:bg-rose-50'}`}>
+                      <div className="flex flex-col items-center justify-center">
+                        {isValidPhotoUrl(t.photoUrl) ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
+                            <ImageLoader src={t.photoUrl} alt={`Photo de ${t.firstName}`} className="w-full h-full object-cover" fallback="👤" maxRetries={1} retryDelay={300} />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm" style={{ backgroundColor: t.color || '#6b7280' }}>
+                            <span>{t.firstName.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <span className="hidden min-[500px]:block text-[11px] font-semibold text-gray-900 mt-1 text-center">{t.firstName}</span>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm" style={{ backgroundColor: t.color || '#6b7280' }}>
-                      <span>{t.firstName.charAt(0).toUpperCase()}</span>
-                    </div>
-                  )}
-                  <p className="font-semibold text-gray-900 text-center text-[11px] leading-none">{isAssigning ? 'Assignation...' : t.firstName}</p>
-                  {isAssigning && (<div className="animate-spin rounded-full h-3 w-3 border-2 border-rose-400 border-t-transparent"></div>)}
-                </div>
-              </button>
-            ))}
+                  </button>
+                ))}
+            </div>
+          )}
 
           {!isLoadingTricoteuses && tricoteuses.length === 0 && (
-            <div className="col-span-2 sm:col-span-3 p-6 text-center text-gray-500">
+            <div className="w-full p-6 text-center text-gray-500">
               <p className="text-sm">Aucune tricoteuse disponible</p>
             </div>
           )}
 
           {localAssignment && !isLoadingTricoteuses && (
-            <div className="col-span-3 border-t border-gray-200 pt-3 mt-3">
+            <div className="w-full border-t border-gray-200 pt-3 mt-3">
               <h4 className="text-xs font-semibold text-gray-700 text-center mb-2">Changer le statut</h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <button onClick={() => onChangeStatus('en_cours')} className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-yellow-200 ${localAssignment.status === 'en_cours' ? 'text-black shadow-lg' : 'text-black hover:shadow-md'}`} style={{ backgroundColor: localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' : 'var(--couture-en-cours-hover)', borderColor: localAssignment.status === 'en_cours' ? 'var(--couture-en-cours-selected-border)' : 'var(--couture-en-cours-border)' }}>
                   <div className="text-center"><p className="text-xs font-medium">En cours</p></div>
                 </button>
