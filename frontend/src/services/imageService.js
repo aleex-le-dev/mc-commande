@@ -5,7 +5,8 @@
 
 class ImageService {
   constructor() {
-    this.backendUrl = 'http://localhost:3001/api/images'
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    this.backendUrl = `${apiBase}/api/images`
   }
 
   /**
