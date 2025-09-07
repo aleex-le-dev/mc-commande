@@ -263,6 +263,8 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  /* Empêcher tout débordement horizontal global (problème navbar mobile) */
+  overflow-x: hidden;
 }
 
 /* Animation de chargement personnalisée */
@@ -392,6 +394,15 @@ body {
   .mobile-full {
     width: 100%;
   }
+}
+
+/* Utilitaire: masquer les barres de défilement (pour conteneurs scroll horizontaux) */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE et Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 /* Dark mode support (optionnel) */

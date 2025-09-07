@@ -298,8 +298,8 @@ function App() {
               </div>
 
               {/* Onglets centrés */}
-              <div className="flex-1 flex justify-center">
-                <div className="flex space-x-1">
+              <div className="flex-1 min-w-0 flex justify-center">
+                <div className="flex space-x-1 flex-nowrap overflow-x-auto no-scrollbar max-w-full px-1">
                   {tabs.filter(tab => tab.id !== 'parametres').map((tab) => (
                     <button
                       key={tab.id}
