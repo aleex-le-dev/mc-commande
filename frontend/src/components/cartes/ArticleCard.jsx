@@ -165,6 +165,13 @@ const ArticleCard = forwardRef(({
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)
+    const handleOpenClientOverlay = (ev) => {
+      const { uniqueAssignmentId: targetId } = ev.detail || {}
+      if (targetId !== uniqueAssignmentId) return
+      // Simule un clic sur le bouton overlay
+      onOverlayOpen && onOverlayOpen()
+    }
+    window.addEventListener('mc-open-client-overlay', handleOpenClientOverlay, true)
     
     const handleMoveProduction = async (ev) => {
       const { uniqueAssignmentId: targetId, newType } = ev.detail || {}
@@ -241,6 +248,7 @@ const ArticleCard = forwardRef(({
     window.addEventListener('mc-change-status', handleChangeStatus, true)
     return () => {
       window.removeEventListener('mc-mark-urgent', handleMarkUrgent, true)
+      window.removeEventListener('mc-open-client-overlay', handleOpenClientOverlay, true)
       window.removeEventListener('mc-edit-note', handleEditNote, true)
       window.removeEventListener('mc-move-production', handleMoveProduction, true)
       window.removeEventListener('mc-change-status', handleChangeStatus, true)
@@ -297,7 +305,7 @@ const ArticleCard = forwardRef(({
 
   return (
     <div 
-      className={`group relative rounded-3xl overflow-hidden shadow-lg ${compact ? 'h-[340px]' : 'h-[480px]'} max-w-full ${
+      className={`group relative rounded-3xl overflow-hidden shadow-lg ${compact ? 'h-[300px] sm:h-[340px]' : 'h-[360px] sm:h-[480px]'} max-w-full ${
         isHighlighted && !disableStatusBorder ? 'border-2 border-accent animate-pink-blink' : ''
       } ${
         disableStatusBorder

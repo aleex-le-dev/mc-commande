@@ -52,6 +52,35 @@ function App() {
       const items = [
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', category: 'Couturière', icon: hasNote ? <RiStickyNoteFill size={16} /> : <RiStickyNoteAddLine size={16} />, onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
         { id: 'urgent', label: currentUrgent ? '🚨 Retirer URGENT' : '🚨 Mettre en URGENT', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
+        { id: 'view-order', label: '📦 Voir la commande complète', category: 'Admin', onClick: () => {
+            try {
+              const first = (articles && articles[0]) || null
+              const orderIdToOpen = first?.orderId || orderId
+              if (orderIdToOpen) {
+                const url = `https://maisoncleo.com/wp-admin/post.php?post=${orderIdToOpen}&action=edit`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }
+            } catch {}
+          } },
+        { id: 'view-client', label: '👤 Voir les infos client', category: 'Admin', onClick: () => {
+            try {
+              // Ouvrir l’overlay client de la carte courante
+              window.dispatchEvent(new CustomEvent('mc-open-client-overlay', { detail: { uniqueAssignmentId } }))
+            } catch {}
+          } },
+        { id: 'view-product', label: '🛍️ Voir la fiche produit', category: 'Admin', onClick: () => {
+            try {
+              const first = (articles && articles[0]) || null
+              const productId = first?.product_id || article?.product_id
+              const permalink = first?.permalink || article?.permalink
+              if (permalink) {
+                window.open(permalink, '_blank', 'noopener,noreferrer')
+              } else if (productId) {
+                const url = `https://maisoncleo.com/produit/${productId}/`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }
+            } catch {}
+          } },
       ]
       
       // Ajouter les options de déplacement selon le type de production actuel

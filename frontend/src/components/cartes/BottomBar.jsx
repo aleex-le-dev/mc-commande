@@ -17,11 +17,14 @@ const BottomBar = ({
   isHighlightedDate = false,
   compact = false
 }) => {
+  // Coller la barre à la bordure inférieure
+  const bottomClass = 'bottom-0'
+
   return (
-    <div className={`absolute bottom-1 left-0 right-0 ${compact ? 'h-10' : 'h-16'} z-10 ${compact ? 'px-2 pt-2' : 'px-3 pt-3'} ${localAssignment ? (compact ? 'pb-3' : 'pb-5') : (compact ? 'pb-2' : 'pb-3')}`}>
-      <div className="flex items-center justify-between">
+    <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-2 pt-2' : 'px-3 pt-3'} pb-2 sm:pb-3`}>
+      <div className="flex items-end justify-between">
         {/* Date et heure (heure masquée en mobile) */}
-        <div className={`flex items-center ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
+        <div className={`flex items-end ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
           <span className={`bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
             {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
           </span>
@@ -50,9 +53,9 @@ const BottomBar = ({
         </div>
 
         {/* Avatar assignation / bouton assigner */}
-        <div className="flex items-center">
+        <div className="flex items-end">
           {isLoadingAssignment ? (
-            <div className={`w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center mb-1`} >
+            <div className={`w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center`}>
               <div className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} border-2 border-gray-400 border-t-transparent rounded-full animate-spin`}></div>
             </div>
           ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.status === 'en_cours' && article.assigned_to) ? (

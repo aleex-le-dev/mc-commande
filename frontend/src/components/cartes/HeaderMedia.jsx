@@ -22,7 +22,7 @@ const HeaderMedia = ({
   
 }) => {
   return (
-    <div className={`relative ${compact ? 'h-40' : 'h-60'} overflow-hidden rounded-t-3xl`}>
+    <div className={`relative ${compact ? 'h-36 sm:h-40' : 'h-44 sm:h-60'} overflow-hidden rounded-t-3xl`}>
       {displayImageUrl ? (
         <div className="relative">
           <ImageLoader 
