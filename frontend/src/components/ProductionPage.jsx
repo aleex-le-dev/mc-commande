@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import LoadingSpinner from './LoadingSpinner'
 import { assignmentsService } from '../services/mongodbService'
 
@@ -10,6 +10,7 @@ import { assignmentsService } from '../services/mongodbService'
  * Page générique pour Maille/Couture
  */
 const ProductionPage = ({ productionType, title }) => {
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
@@ -50,6 +51,8 @@ const ProductionPage = ({ productionType, title }) => {
       window.removeEventListener('mc-assignments-updated', onAssignmentsUpdated)
     }
   }, [refreshUrgentMap])
+
+  // Synchro au chargement retirée (manuel via navbar)
 
   const { articles, isLoading, error } = useUnifiedArticles(productionType)
   
