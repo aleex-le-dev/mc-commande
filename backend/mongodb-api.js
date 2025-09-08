@@ -61,22 +61,6 @@ console.log('🔍 Variables d\'environnement:', {
 
 let db
 
-// Route de santé pour les health checks Render
-// - Renvoie 200 si l'application est démarrée
-// - Renvoie 200 et "db: connected" si la connexion Mongo est active, sinon 503
-app.get('/health', async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(503).json({ status: 'unhealthy', db: 'disconnected' })
-    }
-    // Ping léger de la base pour valider l'état
-    await db.command({ ping: 1 })
-    return res.status(200).json({ status: 'ok', db: 'connected' })
-  } catch (error) {
-    return res.status(503).json({ status: 'unhealthy', error: error.message })
-  }
-})
-
 // Connexion à MongoDB
 async function connectToMongo() {
   try {
