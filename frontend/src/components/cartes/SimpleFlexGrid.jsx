@@ -321,13 +321,9 @@ const SimpleFlexGrid = ({
     return <LoadingSpinner />
   }
 
-  // Si chargements terminés et aucune donnée, afficher un état vide
-  if (!isLoading && !assignmentsLoading && !tricoteusesLoading && !dateLimiteLoading && filteredArticles.length === 0 && lastNonEmptyArticles.length === 0) {
-    return (
-      <div className="w-full py-12 text-center text-gray-500">
-        Aucun article à afficher pour le moment.
-      </div>
-    )
+  // Si toujours pas d'articles et pas de cache, afficher un loader
+  if (filteredArticles.length === 0 && lastNonEmptyArticles.length === 0) {
+    return <LoadingSpinner />
   }
 
   return (
