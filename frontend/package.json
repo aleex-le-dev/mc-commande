@@ -4,10 +4,10 @@
   "description": "Frontend React pour la gestion de production Maison Cléo",
   "type": "module",
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
+    "dev": "vite",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "npx vite preview"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.0.0",
