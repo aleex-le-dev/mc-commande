@@ -10,36 +10,11 @@ const PORT = process.env.PORT || 3001
 
 // Middleware
 const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || 'http://localhost:5173'
-const FRONTEND_ORIGINS = (process.env.VITE_FRONTEND_ORIGINS || FRONTEND_ORIGIN)
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean)
-
-function extractHostname(value) {
-  try {
-    const url = new URL(value)
-    return url.hostname
-  } catch (_) {
-    // Supporte une valeur sans schéma (ex: domaine brut)
-    return String(value)
-      .replace(/^https?:\/\//i, '')
-      .replace(/\/$/, '')
-      .split('/')[0]
-      .trim()
-  }
-}
-
-const ALLOWED_HOSTNAMES = new Set(FRONTEND_ORIGINS.map(extractHostname))
-
-function isOriginAllowed(origin) {
-  if (!origin) return true
-  const hostname = extractHostname(origin)
-  return ALLOWED_HOSTNAMES.has(hostname)
-}
-
 const corsOptions = {
   origin: (origin, cb) => {
-    if (isOriginAllowed(origin)) return cb(null, true)
+    // Autoriser requêtes locales et outils (origin peut être undefined pour curl)
+    if (!origin) return cb(null, true)
+    if (origin === FRONTEND_ORIGIN) return cb(null, true)
     return cb(null, false)
   },
   credentials: true,
@@ -51,19 +26,14 @@ app.options('*', cors(corsOptions))
 
 // Forcer les en-têtes CORS explicitement sur toutes les réponses
 app.use((req, res, next) => {
-  const requestOrigin = req.headers.origin
-  if (isOriginAllowed(requestOrigin)) {
-    // Toujours renvoyer exactement l'Origin fourni par le navigateur
-    if (requestOrigin) res.header('Access-Control-Allow-Origin', requestOrigin)
-    res.header('Vary', 'Origin')
-    res.header('Access-Control-Allow-Credentials', 'true')
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  }
+  res.header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+  res.header('Vary', 'Origin')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   // Désactiver l'indexation par les moteurs de recherche
   res.header('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet')
   if (req.method === 'OPTIONS') {
-    if (!isOriginAllowed(requestOrigin)) return res.sendStatus(403)
     return res.sendStatus(204)
   }
   next()
@@ -249,12 +219,10 @@ app.post('/api/auth/verify', async (req, res) => {
     }
     const ok = await bcrypt.compare(password, doc.hash)
     if (!ok) return res.status(401).json({ success: false, error: 'Mot de passe incorrect' })
-    // Cookies d'auth: en dev (HTTP) -> SameSite=Lax, Secure=false ; en prod (Render HTTPS) -> SameSite=None, Secure=true
-    const isProd = process.env.NODE_ENV === 'production'
     res.cookie('mc_auth', '1', {
       httpOnly: true,
-      sameSite: isProd ? 'none' : 'lax',
-      secure: isProd,
+      sameSite: 'lax',
+      secure: false,
       signed: true
     })
     res.json({ success: true })
@@ -266,13 +234,7 @@ app.post('/api/auth/verify', async (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   try {
-    const isProd = process.env.NODE_ENV === 'production'
-    res.clearCookie('mc_auth', {
-      httpOnly: true,
-      sameSite: isProd ? 'none' : 'lax',
-      secure: isProd,
-      signed: true
-    })
+    res.clearCookie('mc_auth')
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ success: false })

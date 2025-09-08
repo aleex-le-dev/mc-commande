@@ -1,5 +1,5 @@
 // Service pour l'API MongoDB
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api`
+const API_BASE_URL = 'http://localhost:3001/api'
 
 // Limiteur optimisé + retry/backoff pour réduire les erreurs réseau
 let concurrentRequests = 0
@@ -576,7 +576,7 @@ export const tricoteusesService = {
     try {
       const cached = cacheGet('tricoteuses')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`)
+      const response = await requestWithRetry('http://localhost:3001/api/tricoteuses')
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
@@ -591,7 +591,7 @@ export const tricoteusesService = {
   // Créer une nouvelle tricoteuse
   async createTricoteuse(tricoteuseData) {
     try {
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, {
+      const response = await requestWithRetry('http://localhost:3001/api/tricoteuses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -613,7 +613,7 @@ export const tricoteusesService = {
   // Modifier une tricoteuse
   async updateTricoteuse(id, tricoteuseData) {
     try {
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses/${id}`, {
+      const response = await requestWithRetry(`http://localhost:3001/api/tricoteuses/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -635,7 +635,7 @@ export const tricoteusesService = {
   // Supprimer une tricoteuse
   async deleteTricoteuse(id) {
     try {
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses/${id}`, {
+      const response = await requestWithRetry(`http://localhost:3001/api/tricoteuses/${id}`, {
         method: 'DELETE'
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression de la tricoteuse')
@@ -658,7 +658,7 @@ export const assignmentsService = {
     try {
       const cached = cacheGet('assignments')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`)
+      const response = await requestWithRetry('http://localhost:3001/api/assignments')
       if (!response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
@@ -674,7 +674,7 @@ export const assignmentsService = {
   async getAssignmentByArticleId(articleId) {
     try {
       // Récupérer toutes les assignations en une fois (pas d'erreur 404)
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`)
+      const response = await requestWithRetry('http://localhost:3001/api/assignments')
       
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des assignations')
@@ -696,7 +696,7 @@ export const assignmentsService = {
   // Créer ou mettre à jour une assignation
   async createOrUpdateAssignment(assignmentData) {
     try {
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, {
+      const response = await requestWithRetry('http://localhost:3001/api/assignments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -729,12 +729,12 @@ export const assignmentsService = {
       const isObjectId = typeof idOrArticleId === 'string' && /^[a-fA-F0-9]{24}$/.test(idOrArticleId)
       let response
       if (isObjectId) {
-        response = await requestWithRetry(`${API_BASE_URL}/assignments/${idOrArticleId}`, {
+        response = await requestWithRetry(`http://localhost:3001/api/assignments/${idOrArticleId}`, {
           method: 'DELETE'
         })
       } else {
         // Suppression par article_id directement
-        response = await requestWithRetry(`${API_BASE_URL}/assignments/by-article/${idOrArticleId}`, {
+        response = await requestWithRetry(`http://localhost:3001/api/assignments/by-article/${idOrArticleId}`, {
           method: 'DELETE'
         })
       }
