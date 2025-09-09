@@ -42,7 +42,8 @@ const ArticleCard = forwardRef(({
   isEnRetard = false, // Nouvelle prop pour indiquer si l'article est en retard
   disableStatusBorder = false, // Désactive la bordure de statut (pour affichages spéciaux)
   hideInfoSection = false, // Masque la section d'infos (nom, options)
-  compact = false // Mode compact: hauteur réduite (utilisé en Terminé)
+  compact = false, // Mode compact: hauteur réduite (utilisé en Terminé)
+  disableAssignmentModal = false // Désactive l'ouverture de la modal d'assignation
 }, ref) => {
   const queryClient = useQueryClient()
   // Gestion du long-press mobile pour ouvrir le menu contextuel
@@ -404,7 +405,8 @@ const ArticleCard = forwardRef(({
         hasNote={Boolean(article.customerNote)}
         localAssignment={localAssignment}
         isLoadingAssignment={isLoadingAssignment}
-        onOpenAssignModal={() => openTricoteuseModal()}
+        onOpenAssignModal={disableAssignmentModal ? () => {} : () => openTricoteuseModal()}
+        disableAssignmentModal={disableAssignmentModal}
       />
 
       {/* Overlay client affiché instantanément sans transition */}

@@ -217,6 +217,16 @@ const UltraFastGrid = ({
             (article.product_name || '').toLowerCase().includes(data.searchTerm.toLowerCase())
           )
           
+          // Déterminer si l'article est en retard selon la date limite
+          const isEnRetard = (() => {
+            if (!data.dateLimite || !article.orderDate) return false
+            const dateCommande = new Date(article.orderDate)
+            const dateLimiteObj = new Date(data.dateLimite)
+            const dc = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
+            const dl = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
+            return dc <= dl
+          })()
+
           return (
             <div style={style} className="p-3">
               <ArticleCard 
@@ -236,6 +246,7 @@ const UltraFastGrid = ({
                 onAssignmentUpdate={(articleId, assignment) => {
                   setAssignments(prev => ({ ...prev, [articleId]: assignment }))
                 }}
+                isEnRetard={isEnRetard}
               />
             </div>
           )

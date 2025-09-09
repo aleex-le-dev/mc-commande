@@ -256,14 +256,14 @@ const TerminePage = () => {
     return list
   }, [ready])
   const inProgress = useMemo(() => grouped.filter(g => {
-    // Afficher uniquement les commandes qui ont au moins un article en statut "en_cours"
+    // Afficher les commandes qui ont au moins un article en statut "en_cours", "en_pause" ou "termine" (mais pas entièrement terminées)
     if (g.isReadyToShip) return false
-    return g.items.some(item => item.status === 'en_cours')
+    return g.items.some(item => ['en_cours', 'en_pause', 'termine'].includes(item.status))
   }), [grouped])
   const inProgressArticles = useMemo(() => {
     const list = []
     inProgress.forEach(order => {
-      order.items.filter(it => it.status === 'en_cours').forEach(it => {
+      order.items.filter(it => ['en_cours', 'en_pause', 'termine'].includes(it.status)).forEach(it => {
         list.push({ ...it })
       })
     })
@@ -395,6 +395,7 @@ const TerminePage = () => {
                             tricoteusesProp={tricoteuses}
                             compact
                             disableStatusBorder
+                            disableAssignmentModal
                           />
                         </div>
                       ))}
@@ -419,7 +420,7 @@ const TerminePage = () => {
                   <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-cours">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => it.status !== 'termine').length; return formatCount(c, 'article non terminé', 'articles non terminés') })()}</span>
+                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => ['en_cours', 'en_pause', 'termine'].includes(it.status)).length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
                     </div>
                     <div className="flex flex-wrap gap-4">
                       {order.items
@@ -440,7 +441,8 @@ const TerminePage = () => {
                           productionType={article.productionType}
                           tricoteusesProp={tricoteuses}
                           compact
-                            disableStatusBorder={order.items.length === 1 ? true : !(article.status === 'en_cours' || article.status === 'en_pause')}
+                            disableStatusBorder={order.items.length === 1 ? true : !(['en_cours', 'en_pause', 'termine'].includes(article.status))}
+                            disableAssignmentModal
                         />
                         </div>
                       ))}
@@ -479,6 +481,7 @@ const TerminePage = () => {
                       tricoteusesProp={tricoteuses}
                       compact
                           disableStatusBorder
+                          disableAssignmentModal
                     />
                       </div>
                     </div>

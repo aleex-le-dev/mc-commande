@@ -120,7 +120,21 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     }
   }, [dateLimite])
 
-  const doitAvoirTraitRouge = isEnRetard
+  // Calcul local du retard si non fourni: compare orderDate à dateLimite (inclusif)
+  const computeIsEnRetardLocal = () => {
+    try {
+      if (!dateLimite || !article?.orderDate) return false
+      const dateCommande = new Date(article.orderDate)
+      const dateLimiteObj = new Date(dateLimite)
+      const dc = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
+      const dl = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
+      return dc <= dl
+    } catch {
+      return false
+    }
+  }
+
+  const doitAvoirTraitRouge = Boolean(isEnRetard || computeIsEnRetardLocal())
   const estApresDateLimite = isAfterDateLimite
 
   const getImageUrl = () => {

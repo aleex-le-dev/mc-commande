@@ -236,6 +236,16 @@ const SimpleFlexGrid = ({
     const subset = arranged.slice(0, visibleCount)
     const cards = []
     
+    // Helper: déterminer si l'article est en retard par rapport à la date limite
+    const isArticleEnRetard = (article) => {
+      if (!dateLimite || !article.orderDate) return false
+      const dateCommande = new Date(article.orderDate)
+      const dateLimiteObj = new Date(dateLimite)
+      const dc = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
+      const dl = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
+      return dc <= dl
+    }
+
     subset.forEach((article, index) => {
       const cardId = `${article.orderId}-${article.line_item_id}`
       const isHighlighted = searchTerm && (
@@ -264,6 +274,7 @@ const SimpleFlexGrid = ({
             assignment={assignments[article.line_item_id]} // Passer l'assignation directement
             tricoteusesProp={tricoteuses}
             onAssignmentUpdate={(articleId, assignment) => updateAssignment(articleId, assignment)} // Fonction pour rafraîchir les assignations
+            isEnRetard={isArticleEnRetard(article)}
           />
         </div>
       )

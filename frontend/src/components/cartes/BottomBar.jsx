@@ -15,7 +15,8 @@ const BottomBar = ({
   isLoadingAssignment,
   onOpenAssignModal,
   isHighlightedDate = false,
-  compact = false
+  compact = false,
+  disableAssignmentModal = false
 }) => {
   // Coller la barre à la bordure inférieure
   const bottomClass = 'bottom-0'
@@ -60,10 +61,10 @@ const BottomBar = ({
             </div>
           ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.status === 'en_cours' && article.assigned_to) ? (
             <button
-              onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
-              className={`group relative w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full overflow-hidden border-2 border-white shadow-md hover:shadow-xl transition-all duration-300 hover:scale-110 cursor-pointer`}
-              title={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
-              aria-label={`Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
+              onClick={disableAssignmentModal ? undefined : (e) => { e.stopPropagation(); onOpenAssignModal(); }}
+              className={`group relative w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full overflow-hidden border-2 border-white shadow-md ${disableAssignmentModal ? 'cursor-default' : 'hover:shadow-xl transition-all duration-300 hover:scale-110 cursor-pointer'}`}
+              title={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
+              aria-label={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
             >
               {localAssignment?.tricoteuse_photo ? (
                 <img src={localAssignment.tricoteuse_photo} alt={`Photo de ${localAssignment.tricoteuse_name || article.assigned_to}`} className="w-full h-full object-cover" />
@@ -75,12 +76,12 @@ const BottomBar = ({
             </button>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); onOpenAssignModal(); }}
-              className={`group relative transition-all duration-300 shadow-md hover:shadow-xl bg-gradient-to-r from-rose-400 to-pink-500 text-white hover:from-rose-500 hover:to-pink-600
+              onClick={disableAssignmentModal ? undefined : (e) => { e.stopPropagation(); onOpenAssignModal(); }}
+              className={`group relative transition-all duration-300 shadow-md ${disableAssignmentModal ? 'cursor-default' : 'hover:shadow-xl'} bg-gradient-to-r from-rose-400 to-pink-500 text-white ${disableAssignmentModal ? '' : 'hover:from-rose-500 hover:to-pink-600'}
                 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white
                 sm:w-auto sm:h-auto sm:rounded-xl sm:flex sm:items-center sm:justify-start ${compact ? 'sm:px-2 sm:py-1 sm:space-x-1 sm:text-[10px]' : 'sm:px-3 sm:py-2 sm:space-x-2 sm:text-xs'}`}
-              title="Assigner à une couturière"
-              aria-label="Assigner à une couturière"
+              title={disableAssignmentModal ? "Assignation désactivée" : "Assigner à une couturière"}
+              aria-label={disableAssignmentModal ? "Assignation désactivée" : "Assigner à une couturière"}
             >
               <span className="hidden sm:inline font-semibold">Assigner</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`w-3 h-3 ${compact ? 'sm:w-2.5 sm:h-2.5' : 'sm:w-3 sm:h-3'}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
