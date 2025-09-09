@@ -26,16 +26,33 @@ export const OrdersService = {
 
     const cacheKey = `orders_${page}_${limit}_${status}_${search}_${sortBy}_${sortOrder}`
     
-    // Vérifier le cache d'abord
-    const cached = CacheService.get(cacheKey)
-    if (cached) {
-      console.log('📋 Commandes depuis le cache')
-      return cached
+    // Forcer un refetch sans cache pour diagnostic
+    console.log('🔄 Refetch forcé sans cache pour diagnostic...')
+    
+    // Vider le cache persistant
+    try {
+      // Vider tous les caches possibles
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.includes('orders') || key.includes('cache')) {
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // Vider aussi sessionStorage
+      const sessionKeys = Object.keys(sessionStorage)
+      sessionKeys.forEach(key => {
+        if (key.includes('orders') || key.includes('cache')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+      
+      console.log('🗑️ Cache localStorage et sessionStorage vidé')
+    } catch (e) {
+      console.log('⚠️ Erreur vidage cache:', e.message)
     }
 
     try {
-      await CacheService.acquireSlot()
-      
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -45,13 +62,14 @@ export const OrdersService = {
         sortOrder
       })
 
+      // Ajouter un paramètre de cache-busting
+      params.append('_t', Date.now().toString())
+      
       const response = await fetch(`${API_BASE_URL}/orders?${params}`, {
         credentials: 'include',
         mode: 'cors',
         headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
+          'Content-Type': 'application/json'
         }
       })
 
@@ -61,10 +79,15 @@ export const OrdersService = {
 
       const data = await response.json()
       
-      // Mettre en cache
-      CacheService.set(cacheKey, data)
-      
+      // Ne pas mettre en cache pour diagnostic
       console.log(`📋 Commandes récupérées: page ${page}, ${data.orders?.length || 0} articles`)
+      console.log('🔍 Structure des données:', data)
+      console.log('🔍 Premier ordre:', data.orders?.[0])
+      if (data.orders?.[0]) {
+        console.log('🔍 Clés du premier ordre:', Object.keys(data.orders[0]))
+        console.log('🔍 line_items du premier ordre:', data.orders[0].line_items)
+        console.log('🔍 items du premier ordre:', data.orders[0].items)
+      }
       return data
 
     } catch (error) {
@@ -89,7 +112,9 @@ export const OrdersService = {
   async getOrderById(orderId) {
     const cacheKey = `order_${orderId}`
     
-    const cached = CacheService.get(cacheKey)
+    // Désactiver le cache pour diagnostic
+    console.log(`🚫 Cache désactivé pour diagnostic: ${cacheKey}`)
+    const cached = null
     if (cached) {
       return cached
     }
@@ -125,7 +150,9 @@ export const OrdersService = {
   async getOrdersStats() {
     const cacheKey = 'orders_stats'
     
-    const cached = CacheService.get(cacheKey)
+    // Désactiver le cache pour diagnostic
+    console.log(`🚫 Cache désactivé pour diagnostic: ${cacheKey}`)
+    const cached = null
     if (cached) {
       return cached
     }
@@ -167,7 +194,9 @@ export const OrdersService = {
 
     const cacheKey = `search_${query}_${page}_${limit}_${status}`
     
-    const cached = CacheService.get(cacheKey)
+    // Désactiver le cache pour diagnostic
+    console.log(`🚫 Cache désactivé pour diagnostic: ${cacheKey}`)
+    const cached = null
     if (cached) {
       return cached
     }

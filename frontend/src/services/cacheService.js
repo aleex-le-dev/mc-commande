@@ -12,16 +12,16 @@ const CACHE_CONFIG = {
   PERSISTENT_TTL: 60 * 60 * 1000, // 1 heure
   
   // Taille maximale du cache mémoire
-  MAX_MEMORY_SIZE: 100,
-  
-  // Clés de cache
-  KEYS: {
-    ORDERS: 'orders',
-    ASSIGNMENTS: 'assignments',
-    TRICOTEUSES: 'tricoteuses',
-    DELAI_CONFIG: 'delai_config',
-    JOURS_FERIES: 'jours_feries'
-  }
+  MAX_MEMORY_SIZE: 100
+}
+
+// Clés de cache exportées
+export const CACHE_KEYS = {
+  ORDERS: 'orders',
+  ASSIGNMENTS: 'assignments',
+  TRICOTEUSES: 'tricoteuses',
+  DELAI_CONFIG: 'delai_config',
+  JOURS_FERIES: 'jours_feries'
 }
 
 // Cache mémoire global
@@ -87,6 +87,10 @@ export const CacheService = {
    * Obtenir une valeur du cache mémoire
    */
   getMemory(key) {
+    // Désactiver temporairement le cache pour diagnostic
+    console.log(`🚫 Cache mémoire désactivé pour diagnostic: ${key}`)
+    return null
+    
     const entry = memoryCache.get(key)
     if (isCacheValid(entry, CACHE_CONFIG.MEMORY_TTL)) {
       console.log(`📦 Cache mémoire hit: ${key}`)
@@ -115,6 +119,10 @@ export const CacheService = {
    * Obtenir une valeur du cache persistant (sessionStorage)
    */
   getPersistent(key) {
+    // Désactiver temporairement le cache pour diagnostic
+    console.log(`🚫 Cache persistant désactivé pour diagnostic: ${key}`)
+    return null
+    
     try {
       const stored = sessionStorage.getItem(`cache_${key}`)
       if (!stored) return null
@@ -153,6 +161,10 @@ export const CacheService = {
    * Obtenir une valeur (mémoire puis persistant)
    */
   get(key) {
+    // Désactiver temporairement le cache pour forcer le rechargement
+    console.log(`🚫 Cache désactivé pour diagnostic: ${key}`)
+    return null
+    
     return this.getMemory(key) || this.getPersistent(key)
   },
 

@@ -2,7 +2,7 @@
  * Hook personnalisé pour la gestion des commandes avec pagination
  * Utilise les nouveaux services optimisés
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import OrdersService from '../services/ordersService.js'
 
 export const useOrders = (options = {}) => {
@@ -28,8 +28,30 @@ export const useOrders = (options = {}) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isFetching, setIsFetching] = useState(false)
 
   const fetchOrders = useCallback(async () => {
+    // Éviter les requêtes multiples
+    if (isFetching) {
+      console.log('🔄 Requête déjà en cours, ignorée')
+      return
+    }
+    
+    // Vider le cache pour forcer le rechargement
+    try {
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.includes('orders') || key.includes('cache')) {
+          localStorage.removeItem(key)
+        }
+      })
+      console.log('🗑️ Cache vidé dans useOrders')
+    } catch (e) {
+      console.log('⚠️ Erreur vidage cache:', e.message)
+    }
+    
+    console.log('🔄 Début chargement commandes...')
+    setIsFetching(true)
     setLoading(true)
     setError(null)
 
@@ -44,6 +66,8 @@ export const useOrders = (options = {}) => {
       })
 
       setData(result)
+      console.log('✅ Commandes chargées avec succès')
+      console.log('🔍 Structure des données reçues:', result)
     } catch (err) {
       console.error('Erreur chargement commandes:', err)
       setError(err)
@@ -57,12 +81,18 @@ export const useOrders = (options = {}) => {
       setData(offlineData)
     } finally {
       setLoading(false)
+      setIsFetching(false)
     }
-  }, [page, limit, status, search, sortBy, sortOrder])
+  }, [page, limit, status, search, sortBy, sortOrder, isFetching])
 
   useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
+    // Délai pour éviter les appels multiples
+    const timeoutId = setTimeout(() => {
+      fetchOrders()
+    }, 100)
+    
+    return () => clearTimeout(timeoutId)
+  }, [page, limit, status, search, sortBy, sortOrder])
 
   const refetch = useCallback(() => {
     fetchOrders()

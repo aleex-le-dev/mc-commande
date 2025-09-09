@@ -39,22 +39,25 @@ export const PERFORMANCE_CONFIG = {
 export const PerformanceDetector = {
   // Vérifier si l'appareil est lent (critères assouplis pour Render)
   isSlowDevice: () => {
-    if (typeof navigator === 'undefined') return false
-    
-    // Critères plus stricts pour éviter les faux positifs
-    if (navigator.deviceMemory && navigator.deviceMemory < 2) return true // Seuil abaissé de 4 à 2
-    
-    // Vérifier la connexion (seulement les connexions vraiment lentes)
-    if (navigator.connection) {
-      const connection = navigator.connection
-      if (connection.effectiveType === 'slow-2g') return true // Supprimé '2g'
-      if (connection.downlink < 0.5) return true // Seuil abaissé de 1 à 0.5
-    }
-    
-    // Vérifier les préférences de mouvement réduit
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
-    
+    // Désactivé temporairement pour éviter les faux positifs
     return false
+    
+    // if (typeof navigator === 'undefined') return false
+    // 
+    // // Critères extrêmement stricts pour éviter les faux positifs
+    // if (navigator.deviceMemory && navigator.deviceMemory < 0.5) return true // Seuil extrêmement bas
+    // 
+    // // Vérifier la connexion (seulement les connexions vraiment lentes)
+    // if (navigator.connection) {
+    //   const connection = navigator.connection
+    //   if (connection.effectiveType === 'slow-2g') return true
+    //   if (connection.downlink < 0.05) return true // Seuil extrêmement bas
+    // }
+    // 
+    // // Vérifier les préférences de mouvement réduit
+    // if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
+    // 
+    // return false
   },
 
   // Obtenir le niveau de performance recommandé
@@ -226,7 +229,7 @@ export const initializePerformanceOptimizations = () => {
   const performanceLevel = PerformanceDetector.getPerformanceLevel()
   const isSlowDevice = PerformanceDetector.isSlowDevice()
   
-  console.log(`🚀 Niveau de performance détecté: ${performanceLevel}`)
+  // Logs de performance réduits
   if (isSlowDevice) {
     console.log('🐌 Appareil lent détecté - optimisations activées')
   }
@@ -240,11 +243,11 @@ export const initializePerformanceOptimizations = () => {
     PERFORMANCE_CONFIG.MAX_CACHE_SIZE = 200
   }
   
-  // Désactiver les animations complexes si nécessaire
-  if (!PerformanceDetector.canUseComplexAnimations()) {
-    document.documentElement.style.setProperty('--animation-duration', '0.01ms')
-    console.log('🎨 Animations réduites activées')
-  }
+  // Désactiver les animations complexes si nécessaire (DÉSACTIVÉ POUR LE TEST)
+  // if (!PerformanceDetector.canUseComplexAnimations()) {
+  //   document.documentElement.style.setProperty('--animation-duration', '0.01ms')
+  //   console.log('🎨 Animations réduites activées')
+  // }
   
   // Surveiller la mémoire
   setInterval(() => {

@@ -1,73 +1,126 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
-import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import LoadingSpinner from './LoadingSpinner'
-import { assignmentsService } from '../services/mongodbService'
+import { useOrders } from '../hooks/useOrders'
+import { useAssignments } from '../hooks/useAssignments'
+import { useTricoteuses } from '../hooks/useTricoteuses'
 
 /**
  * Page générique pour Maille/Couture
  */
 const ProductionPage = ({ productionType, title }) => {
-  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
-  const [urgentMap, setUrgentMap] = useState({})
-  // Charger/rafraîchir la carte des urgences
-  const refreshUrgentMap = useCallback(async () => {
-    try {
-      const all = await assignmentsService.getAllAssignments()
-      const map = {}
-      ;(all || []).forEach(a => {
-        if (!a) return
-        const id = a.article_id != null ? String(a.article_id) : ''
-        if (!id) return
-        if (a.urgent) {
-          map[id] = true
-        }
-      })
-      setUrgentMap(map)
-    } catch {
-      setUrgentMap({})
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    refreshUrgentMap()
-
-    const onUrgent = () => { if (!cancelled) refreshUrgentMap() }
-    const onUrgentUnified = (ev) => { if (!cancelled) refreshUrgentMap() }
-    const onAssignmentsUpdated = () => { if (!cancelled) refreshUrgentMap() }
-    window.addEventListener('mc-mark-urgent', onUrgent)
-    window.addEventListener('mc-article-urgent-updated', onUrgentUnified)
-    window.addEventListener('mc-assignments-updated', onAssignmentsUpdated)
-    return () => {
-      cancelled = true
-      window.removeEventListener('mc-mark-urgent', onUrgent)
-      window.removeEventListener('mc-article-urgent-updated', onUrgentUnified)
-      window.removeEventListener('mc-assignments-updated', onAssignmentsUpdated)
-    }
-  }, [refreshUrgentMap])
-
-  // Synchro au chargement retirée (manuel via navbar)
-
-  const { articles, allArticles, isLoading, error } = useUnifiedArticles(productionType)
+  const [currentPage, setCurrentPage] = useState(1)
   
-  // Préchargement des images géré par SmartImageLoader dans les pages parentes
-
-  // Exposer tous les articles (tous types) globalement pour les actions de commande (ex: suppression)
-  useEffect(() => {
-    try {
-      if (Array.isArray(allArticles)) {
-        window.mcAllArticles = allArticles
+  // Utiliser les nouveaux hooks
+  const { 
+    orders, 
+    pagination, 
+    loading: ordersLoading, 
+    error: ordersError,
+    refetch: refetchOrders 
+  } = useOrders({
+    page: currentPage,
+    limit: 15,
+    status: selectedStatus,
+    search: searchTerm,
+    sortBy: 'order_date',
+    sortOrder: 'desc'
+  })
+  
+  const { 
+    assignments, 
+    loading: assignmentsLoading,
+    getAssignmentByArticleId,
+    getActiveAssignments 
+  } = useAssignments()
+  
+  const { 
+    tricoteuses, 
+    loading: tricoteusesLoading,
+    getTricoteuseById 
+  } = useTricoteuses()
+  
+  // Créer la carte des urgences
+  const urgentMap = useMemo(() => {
+    const map = {}
+    assignments.forEach(a => {
+      if (a && a.article_id && a.urgent) {
+        map[String(a.article_id)] = true
       }
-    } catch {}
-  }, [allArticles])
-  
-  // Les compteurs sont calculés instantanément côté client pour réactivité
+    })
+    return map
+  }, [assignments])
+
+  // Convertir les commandes en articles pour l'affichage
+  const articles = useMemo(() => {
+    // Gérer les deux formats : nouveau (avec pagination) et ancien (tableau direct)
+    const ordersArray = orders?.orders || orders
+    
+    if (!ordersArray || !Array.isArray(ordersArray)) {
+      console.log('❌ Pas de commandes disponibles:', orders)
+      return []
+    }
+    
+    console.log('📋 Commandes reçues:', ordersArray.length)
+    
+    // DEBUG FORCÉ: Structure complète des données
+    console.log('🚨🚨🚨 DEBUG FORCÉ - Structure des ordres:', JSON.stringify(ordersArray[0], null, 2))
+    
+    const allArticles = []
+    ordersArray.forEach(order => {
+      // Debug complet de la structure
+      console.log('🔍 Commande complète:', order)
+      console.log('🔍 Clés de la commande:', Object.keys(order))
+      console.log('🔍 order.items:', order.items)
+      console.log('🔍 order.line_items:', order.line_items)
+      
+      // Le backend retourne 'items', pas 'line_items'
+      const orderItems = order.items || order.line_items || []
+      console.log('🔍 Commande:', order.order_number, 'Items:', orderItems.length)
+      
+      if (Array.isArray(orderItems)) {
+        orderItems.forEach((item, index) => {
+          console.log(`🚨 ITEM ${index}:`, JSON.stringify(item, null, 2))
+          console.log('🔍 Item complet:', item)
+          console.log('🔍 Item:', item?.product_name, 'Type:', item?.production_status?.production_type, 'Filtre:', productionType)
+          
+          // Filtrer par type de production
+          if (productionType === 'maille' && item.production_status?.production_type !== 'maille') {
+            console.log('❌ Item filtré (maille):', item.product_name)
+            return
+          }
+          if (productionType === 'couture' && item.production_status?.production_type !== 'couture') {
+            console.log('❌ Item filtré (couture):', item.product_name)
+            return
+          }
+          
+          // Utiliser line_item_id au lieu de article_id pour la correspondance
+          const articleId = item.line_item_id || item.id
+          const assignment = getAssignmentByArticleId(articleId)
+          const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
+          
+          allArticles.push({
+            ...item,
+            article_id: articleId, // S'assurer que article_id est défini
+            orderNumber: order.order_number,
+            customer: order.customer,
+            orderDate: order.order_date,
+            status: item.production_status?.status || 'a_faire',
+            assignedTo: tricoteuse?.name || null,
+            urgent: assignment?.urgent || false,
+            assignmentId: assignment?._id || null
+          })
+        })
+      }
+    })
+    
+    console.log('📦 Articles générés:', allArticles.length, 'pour', productionType)
+    return allArticles
+  }, [orders, assignments, tricoteuses, productionType, getAssignmentByArticleId, getTricoteuseById])
   
   // Filtrage local par recherche et statut
   const filteredArticles = useMemo(() => {
@@ -76,7 +129,7 @@ const ProductionPage = ({ productionType, title }) => {
     
     // Filtrage urgent prioritaire
     if (showUrgentOnly) {
-      filtered = filtered.filter(article => article.production_status?.urgent === true)
+      filtered = filtered.filter(article => article.urgent === true)
     } else {
       // Filtrage par statut
       if (selectedStatus !== 'all') {
@@ -94,7 +147,7 @@ const ProductionPage = ({ productionType, title }) => {
     }
     
     return filtered
-  }, [articles, searchTerm, selectedStatus, showUrgentOnly, urgentMap])
+  }, [articles, searchTerm, selectedStatus, showUrgentOnly])
 
   // logs retirés
   
@@ -132,19 +185,37 @@ const ProductionPage = ({ productionType, title }) => {
 
   const statusCounts = useMemo(() => {
     const counts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
-    // Comptage instantané basé sur la liste déjà filtrée par type
-    ;(articles || []).forEach(a => {
+    articles.forEach(a => {
       if (counts[a.status] !== undefined) counts[a.status] += 1
     })
     return counts
   }, [articles])
 
   const urgentCount = useMemo(() => {
-    return (articles || []).reduce((n, article) => n + (article.production_status?.urgent === true ? 1 : 0), 0)
+    return articles.reduce((n, article) => n + (article.urgent ? 1 : 0), 0)
   }, [articles])
 
-  if (isLoading) return <LoadingSpinner />
-  if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div></div>
+  const isLoading = ordersLoading || assignmentsLoading || tricoteusesLoading
+  const error = ordersError
+
+  // Logs de debug
+  console.log('🔍 Debug ProductionPage:', {
+    ordersLoading,
+    assignmentsLoading,
+    tricoteusesLoading,
+    isLoading,
+    error,
+    orders: orders ? Object.keys(orders) : 'null',
+    articles: articles.length,
+    assignments: assignments.length,
+    tricoteuses: tricoteuses.length
+  })
+
+  if (isLoading) {
+    console.log('⏳ Affichage du spinner...')
+    return <LoadingSpinner />
+  }
+  if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement: {error.message}</div></div>
 
   return (
     <div className="w-full px-4">
@@ -245,6 +316,33 @@ const ProductionPage = ({ productionType, title }) => {
         productionType={productionType}
         prioritizeUrgent={true}
       />
+      
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="mt-6 flex justify-center items-center gap-4">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={!pagination.hasPrev}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+          >
+            ← Précédent
+          </button>
+          
+          <span className="text-sm text-gray-600">
+            Page {pagination.page} sur {pagination.totalPages} 
+            ({pagination.total} articles au total)
+          </span>
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+            disabled={!pagination.hasNext}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+          >
+            Suivant →
+          </button>
+        </div>
+      )}
+      
       {/* Toast synchro quotidienne */}
       {typeof window !== 'undefined' && window.__dailySyncToast && (
         <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">

@@ -9,14 +9,24 @@ export const useAssignments = () => {
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isFetching, setIsFetching] = useState(false)
 
   const fetchAssignments = useCallback(async () => {
+    // Éviter les requêtes multiples
+    if (isFetching) {
+      console.log('🔄 Assignations déjà en cours, ignorées')
+      return
+    }
+    
+    console.log('🔄 Début chargement assignations...')
+    setIsFetching(true)
     setLoading(true)
     setError(null)
 
     try {
       const data = await AssignmentsService.getAllAssignments()
       setAssignments(data)
+      console.log('✅ Assignations chargées avec succès')
     } catch (err) {
       console.error('Erreur chargement assignations:', err)
       setError(err)
@@ -26,12 +36,18 @@ export const useAssignments = () => {
       setAssignments(offlineData)
     } finally {
       setLoading(false)
+      setIsFetching(false)
     }
-  }, [])
+  }, [isFetching])
 
   useEffect(() => {
-    fetchAssignments()
-  }, [fetchAssignments])
+    // Délai pour éviter les appels multiples
+    const timeoutId = setTimeout(() => {
+      fetchAssignments()
+    }, 150)
+    
+    return () => clearTimeout(timeoutId)
+  }, [])
 
   const assignArticle = useCallback(async (articleId, tricoteuseId) => {
     try {

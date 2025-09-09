@@ -27,7 +27,8 @@ export const useUnifiedArticles = (selectedType = 'all') => {
     
     const articlesList = []
     allOrders.forEach(order => {
-      const orderItems = order.items || []
+      // Le backend retourne 'items', pas 'line_items'
+      const orderItems = order.items || order.line_items || []
       orderItems.forEach((item, index) => {
         const productionType = item.production_status?.production_type || 'couture'
         const status = item.production_status?.status || 'a_faire'
@@ -35,6 +36,7 @@ export const useUnifiedArticles = (selectedType = 'all') => {
         
         articlesList.push({
           ...item,
+          article_id: item.line_item_id || item.id, // S'assurer que article_id est défini
           orderId: order.order_id,
           orderNumber: order.order_number,
           orderDate: order.order_date,

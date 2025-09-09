@@ -3,7 +3,7 @@
  * Optimisé pour la performance et la synchronisation
  */
 import { getApiUrl } from '../config/api.js'
-import CacheService from './cacheService.js'
+import CacheService, { CACHE_KEYS } from './cacheService.js'
 
 const API_BASE_URL = getApiUrl()
 
@@ -15,10 +15,12 @@ export const TricoteusesService = {
    * Obtenir toutes les tricoteuses
    */
   async getAllTricoteuses() {
-    const cacheKey = CacheService.KEYS.TRICOTEUSES
+    const cacheKey = CACHE_KEYS.TRICOTEUSES
     
     // Vérifier le cache d'abord
-    const cached = CacheService.get(cacheKey)
+    // Désactiver le cache pour diagnostic
+    console.log(`🚫 Cache désactivé pour diagnostic: ${cacheKey}`)
+    const cached = null
     if (cached) {
       console.log('👥 Tricoteuses depuis le cache')
       return cached
@@ -102,7 +104,7 @@ export const TricoteusesService = {
       console.error(`Erreur récupération tricoteuse ${tricoteuseId}:`, error)
       
       // Fallback: chercher dans le cache des tricoteuses
-      const allTricoteuses = CacheService.get(CacheService.KEYS.TRICOTEUSES) || []
+      const allTricoteuses = CacheService.get(CACHE_KEYS.TRICOTEUSES) || []
       const tricoteuse = allTricoteuses.find(t => t._id === tricoteuseId)
       
       if (tricoteuse) {
@@ -255,7 +257,7 @@ export const TricoteusesService = {
       console.error('Erreur récupération stats tricoteuses:', error)
       
       // Fallback: calculer les stats depuis le cache
-      const allTricoteuses = CacheService.get(CacheService.KEYS.TRICOTEUSES) || []
+      const allTricoteuses = CacheService.get(CACHE_KEYS.TRICOTEUSES) || []
       const stats = {
         total: allTricoteuses.length,
         active: allTricoteuses.filter(t => t.status === 'active').length,
@@ -302,7 +304,7 @@ export const TricoteusesService = {
       console.error('Erreur récupération tricoteuses actives:', error)
       
       // Fallback: filtrer depuis le cache
-      const allTricoteuses = CacheService.get(CacheService.KEYS.TRICOTEUSES) || []
+      const allTricoteuses = CacheService.get(CACHE_KEYS.TRICOTEUSES) || []
       const activeTricoteuses = allTricoteuses.filter(t => t.status === 'active')
       
       return activeTricoteuses
@@ -328,7 +330,7 @@ export const TricoteusesService = {
    * Obtenir les tricoteuses en mode offline
    */
   getOfflineTricoteuses() {
-    const cached = CacheService.get(CacheService.KEYS.TRICOTEUSES)
+    const cached = CacheService.get(CACHE_KEYS.TRICOTEUSES)
     if (cached) {
       console.log('📱 Mode offline: tricoteuses depuis le cache')
       return cached

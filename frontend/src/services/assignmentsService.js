@@ -3,7 +3,7 @@
  * Optimisé pour la performance et la synchronisation
  */
 import { getApiUrl } from '../config/api.js'
-import CacheService from './cacheService.js'
+import CacheService, { CACHE_KEYS } from './cacheService.js'
 
 const API_BASE_URL = getApiUrl()
 
@@ -15,10 +15,12 @@ export const AssignmentsService = {
    * Obtenir toutes les assignations
    */
   async getAllAssignments() {
-    const cacheKey = CacheService.KEYS.ASSIGNMENTS
+    const cacheKey = CACHE_KEYS.ASSIGNMENTS
     
     // Vérifier le cache d'abord
-    const cached = CacheService.get(cacheKey)
+    // Désactiver le cache pour diagnostic
+    console.log(`🚫 Cache désactivé pour diagnostic: ${cacheKey}`)
+    const cached = null
     if (cached) {
       console.log('📋 Assignations depuis le cache')
       return cached
@@ -102,7 +104,7 @@ export const AssignmentsService = {
       console.error('Erreur récupération assignations actives:', error)
       
       // Fallback: filtrer les assignations actives depuis le cache
-      const allAssignments = CacheService.get(CacheService.KEYS.ASSIGNMENTS) || []
+      const allAssignments = CacheService.get(CACHE_KEYS.ASSIGNMENTS) || []
       const activeAssignments = allAssignments.filter(a => a.status === 'en_cours')
       
       if (activeAssignments.length > 0) {
@@ -150,7 +152,7 @@ export const AssignmentsService = {
       console.error(`Erreur récupération assignations tricoteuse ${tricoteuseId}:`, error)
       
       // Fallback: filtrer depuis le cache
-      const allAssignments = CacheService.get(CacheService.KEYS.ASSIGNMENTS) || []
+      const allAssignments = CacheService.get(CACHE_KEYS.ASSIGNMENTS) || []
       const tricoteuseAssignments = allAssignments.filter(a => a.tricoteuse_id === tricoteuseId)
       
       return tricoteuseAssignments
@@ -298,7 +300,7 @@ export const AssignmentsService = {
       console.error('Erreur récupération stats assignations:', error)
       
       // Fallback: calculer les stats depuis le cache
-      const allAssignments = CacheService.get(CacheService.KEYS.ASSIGNMENTS) || []
+      const allAssignments = CacheService.get(CACHE_KEYS.ASSIGNMENTS) || []
       const stats = {
         total: allAssignments.length,
         active: allAssignments.filter(a => a.status === 'en_cours').length,
@@ -328,7 +330,7 @@ export const AssignmentsService = {
    * Obtenir les assignations en mode offline
    */
   getOfflineAssignments() {
-    const cached = CacheService.get(CacheService.KEYS.ASSIGNMENTS)
+    const cached = CacheService.get(CACHE_KEYS.ASSIGNMENTS)
     if (cached) {
       console.log('📱 Mode offline: assignations depuis le cache')
       return cached

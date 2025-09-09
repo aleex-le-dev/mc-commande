@@ -172,7 +172,9 @@ export const useOrderData = (selectedType, propSelectedType) => {
     const articles = []
     
     dbOrders.forEach((order, orderIndex) => {
-      order.items?.forEach((item, itemIndex) => {
+      // Le backend retourne 'items', pas 'line_items'
+      const orderItems = order.items || order.line_items || []
+      orderItems.forEach((item, itemIndex) => {
         // Utiliser le type de production depuis la base de données si disponible
         let productionType = 'couture' // par défaut
         
@@ -189,6 +191,7 @@ export const useOrderData = (selectedType, propSelectedType) => {
         
         articles.push({
           ...item,
+          article_id: item.line_item_id || item.id, // S'assurer que article_id est défini
           orderId: order.order_id,
           orderNumber: order.order_number,
           orderDate: order.order_date,

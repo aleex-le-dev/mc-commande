@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import ArticleCard from './cartes/ArticleCard'
-import { tricoteusesService } from '../services/mongodbService'
-import { deleteOrderCompletely } from '../services/mongodbService'
-import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
-import { assignmentsService } from '../services/mongodbService'
+import { useOrders } from '../hooks/useOrders'
+import { useAssignments } from '../hooks/useAssignments'
+import { useTricoteuses } from '../hooks/useTricoteuses'
 import delaiService from '../services/delaiService'
 import SmartImageLoader from './SmartImageLoader'
 
@@ -20,11 +19,36 @@ const TerminePage = () => {
   const [openReadyOverlayId, setOpenReadyOverlayId] = useState(null)
   const [openPausedOverlayId, setOpenPausedOverlayId] = useState(null)
   const [openInProgressOverlayId, setOpenInProgressOverlayId] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
-  // Récupérer tous les articles (tous types) pour calculer correctement les statuts par commande
-  const { ordersByNumber, isLoading, error, totalArticles } = useUnifiedArticles('all')
-  const [tricoteuses, setTricoteuses] = useState([])
-  const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
+  // Utiliser les nouveaux hooks
+  const { 
+    orders, 
+    pagination, 
+    loading: ordersLoading, 
+    error: ordersError,
+    refetch: refetchOrders 
+  } = useOrders({
+    page: currentPage,
+    limit: 15,
+    status: 'all',
+    search: searchTerm,
+    sortBy: 'order_date',
+    sortOrder: 'desc'
+  })
+  
+  const { 
+    assignments, 
+    loading: assignmentsLoading,
+    getAssignmentByArticleId 
+  } = useAssignments()
+  
+  const { 
+    tricoteuses, 
+    loading: tricoteusesLoading,
+    getTricoteuseById 
+  } = useTricoteuses()
+  
   const [urgentByArticleId, setUrgentByArticleId] = useState({})
   const [delaiConfig, setDelaiConfig] = useState(null)
   const [holidays, setHolidays] = useState({})
@@ -172,48 +196,106 @@ const TerminePage = () => {
   }, [delaiConfig, dateLimiteStr, isHoliday])
 
   const grouped = useMemo(() => {
-    // Utiliser directement ordersByNumber du hook unifié
-    const enriched = ordersByNumber.map((order) => {
-      // Construire des clés d'articles compatibles avec les deux formats d'assignation
-      const itemsWithUrgent = order.items.map(item => {
-        const composedId = `${order.orderId}_${item.line_item_id}`
-        const simpleId = `${item.line_item_id}`
-        return {
-          ...item,
-          urgent: urgentByArticleId[composedId] === true || urgentByArticleId[simpleId] === true,
+    // Gérer les deux formats : nouveau (avec pagination) et ancien (tableau direct)
+    const ordersArray = orders?.orders || orders
+    
+    if (!ordersArray || !Array.isArray(ordersArray)) {
+      console.log('❌ Pas de commandes disponibles dans TerminePage:', orders)
+      return []
+    }
+    
+    console.log('📋 Commandes reçues dans TerminePage:', ordersArray.length)
+    
+    // Regrouper les articles par commande
+    const ordersByNumber = {}
+    ordersArray.forEach(order => {
+      // Le backend retourne 'items', pas 'line_items'
+      const orderItems = order.items || order.line_items || []
+      
+      if (Array.isArray(orderItems)) {
+        orderItems.forEach(item => {
+          const orderNumber = order.order_number
+          if (!ordersByNumber[orderNumber]) {
+            ordersByNumber[orderNumber] = {
+              order: order,
+              articles: []
+            }
+          }
+          
+          // Utiliser line_item_id au lieu de article_id pour la correspondance
+          const articleId = item.line_item_id || item.id
+          const assignment = getAssignmentByArticleId(articleId)
+          const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
+          
+          ordersByNumber[orderNumber].articles.push({
+            ...item,
+            article_id: articleId, // S'assurer que article_id est défini
+            orderNumber: order.order_number,
+            customer: order.customer,
+            orderDate: order.order_date,
+            status: item.production_status?.status || 'a_faire',
+            assignedTo: tricoteuse?.name || null,
+            urgent: assignment?.urgent || false,
+            assignmentId: assignment?._id || null
+          })
+        })
+      }
+    })
+    
+    const enriched = Object.entries(ordersByNumber).map(([orderNumber, { order, articles }]) => {
+      // Calculer les statuts pour cette commande
+      const statusCounts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
+      let totalArticles = 0
+      let urgentCount = 0
+      
+      articles.forEach(article => {
+        const status = article.status || 'a_faire'
+        if (statusCounts[status] !== undefined) {
+          statusCounts[status]++
+        }
+        totalArticles++
+        if (article.urgent === true) {
+          urgentCount++
         }
       })
-
-      const hasUrgent = itemsWithUrgent.some(i => i.urgent)
+      
+      // Déterminer le statut global de la commande
+      let globalStatus = 'a_faire'
+      let isReadyToShip = false
+      if (statusCounts.termine === totalArticles) {
+        globalStatus = 'ready'
+        isReadyToShip = true
+      } else if (statusCounts.en_cours > 0) {
+        globalStatus = 'in_progress'
+      } else if (statusCounts.en_pause > 0) {
+        globalStatus = 'paused'
+      }
+      
+      const hasUrgent = urgentCount > 0
       let isLate = false
-      if (dateLimiteStr && order.orderDate) {
-        const orderDate = new Date(order.orderDate)
+      if (dateLimiteStr && order.order_date) {
+        const orderDate = new Date(order.order_date)
         const dl = new Date(dateLimiteStr)
         const oN = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate())
         const dN = new Date(dl.getFullYear(), dl.getMonth(), dl.getDate())
-        // En retard si date de commande <= date limite et commande pas entièrement terminée
-        isLate = oN <= dN && !order.isReadyToShip
+        isLate = oN <= dN && !isReadyToShip
       }
       
-      // Marquer le retard par article avec la même règle (basée sur la date de commande)
-      const remaining = order.remaining.map(it => ({
-        ...it,
-        isLate: (() => {
-          if (!dateLimiteStr || !order.orderDate) return false
-          const orderDate = new Date(order.orderDate)
-          const dl = new Date(dateLimiteStr)
-          const oN = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate())
-          const dN = new Date(dl.getFullYear(), dl.getMonth(), dl.getDate())
-          return oN <= dN
-        })()
-      }))
-
-      return { 
-        ...order, 
-        items: itemsWithUrgent,
+      // Articles restants (non terminés)
+      const remaining = articles.filter(article => article.status !== 'termine')
+      
+      return {
+        orderNumber,
+        order,
+        articles,
         remaining,
-        hasUrgent, 
-        isLate 
+        statusCounts,
+        totalArticles,
+        urgentCount,
+        globalStatus,
+        isReadyToShip,
+        hasUrgent,
+        isLate
       }
     })
 
@@ -499,6 +581,32 @@ const TerminePage = () => {
           )}
 
           
+        </div>
+      )}
+      
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="mt-6 flex justify-center items-center gap-4">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={!pagination.hasPrev}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+          >
+            ← Précédent
+          </button>
+          
+          <span className="text-sm text-gray-600">
+            Page {pagination.page} sur {pagination.totalPages} 
+            ({pagination.total} commandes au total)
+          </span>
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+            disabled={!pagination.hasNext}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+          >
+            Suivant →
+          </button>
         </div>
       )}
     </div>
