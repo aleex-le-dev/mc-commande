@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ['nodejs', 'npm']
+nixPkgs = ['nodejs']
 
 [phases.install]
-cmds = ['npm ci --only=production']
+cmds = ['npm install --production']
 
 [phases.build]
 cmds = ['echo "Build phase completed"']
