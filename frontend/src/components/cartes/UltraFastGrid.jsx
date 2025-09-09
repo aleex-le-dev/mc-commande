@@ -136,9 +136,14 @@ const UltraFastGrid = ({
   }, [])
 
   useEffect(() => {
-    loadAssignments()
-    loadTricoteuses()
-    loadDateLimite()
+    // Paralléliser les requêtes pour améliorer les performances
+    Promise.all([
+      loadAssignments(),
+      loadTricoteuses(),
+      loadDateLimite()
+    ]).catch(error => {
+      console.error('Erreur lors du chargement initial:', error)
+    })
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
   // Écouter les mises à jour pour recharger la liste des tricoteuses sans rechargement

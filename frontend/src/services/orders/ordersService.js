@@ -10,19 +10,47 @@ import { HttpCacheService } from '../cache/httpCacheService.js'
  */
 export const OrdersService = {
   /**
-   * Récupérer toutes les commandes depuis la base de données
+   * Récupérer les commandes depuis la base de données avec pagination
+   * Évite de charger toutes les commandes d'un coup
    */
-  async getOrdersFromDatabase() {
+  async getOrdersFromDatabase(page = 1, limit = 50) {
     try {
-      const response = await HttpClientService.get('/orders')
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      })
+      
+      const response = await HttpClientService.get(`/orders?${params}`)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      return data.orders || []
+      
+      // Retourner le format attendu avec pagination
+      return {
+        orders: data.orders || data || [],
+        pagination: {
+          page: page,
+          limit: limit,
+          total: data.total || (data.orders ? data.orders.length : 0),
+          totalPages: Math.ceil((data.total || (data.orders ? data.orders.length : 0)) / limit),
+          hasNext: page < Math.ceil((data.total || (data.orders ? data.orders.length : 0)) / limit),
+          hasPrev: page > 1
+        }
+      }
     } catch (error) {
       console.error('Erreur récupération commandes:', error)
-      return []
+      return { 
+        orders: [], 
+        pagination: { 
+          page: 1, 
+          limit: limit, 
+          total: 0, 
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        } 
+      }
     }
   },
 

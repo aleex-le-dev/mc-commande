@@ -148,8 +148,8 @@ class WordPressAPI {
         headers: {
           'Accept': 'application/json',
         },
-        // Timeout plus court pour éviter les requêtes qui traînent
-        signal: AbortSignal.timeout(3000)
+        // Timeout optimisé pour Render
+        signal: AbortSignal.timeout(15000)
       })
       
       if (!response.ok) {
@@ -260,7 +260,7 @@ class WordPressAPI {
                   headers: {
                     'Accept': 'application/json',
                   },
-                  signal: AbortSignal.timeout(3000) // Timeout plus court
+                  signal: AbortSignal.timeout(15000) // Timeout optimisé pour Render
                 })
                 
                 if (productResponse.ok) {

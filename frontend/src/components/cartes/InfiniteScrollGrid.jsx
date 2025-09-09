@@ -268,11 +268,16 @@ const InfiniteScrollGrid = forwardRef(({
     }
   }, [])
 
-  // Initialiser le chargement
+  // Initialiser le chargement en parallèle
   useEffect(() => {
-    loadAssignments()
-    loadTricoteuses()
-    loadDateLimite()
+    // Paralléliser les requêtes pour améliorer les performances
+    Promise.all([
+      loadAssignments(),
+      loadTricoteuses(),
+      loadDateLimite()
+    ]).catch(error => {
+      console.error('Erreur lors du chargement initial:', error)
+    })
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
   // Rafraîchir les tricoteuses en temps réel après modifications dans l'onglet Admin

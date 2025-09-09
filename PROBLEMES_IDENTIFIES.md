@@ -8,17 +8,17 @@ Le projet souffre de problèmes architecturaux majeurs qui causent des performan
 ## 🔥 **PROBLÈMES CRITIQUES**
 
 ### **1. ARCHITECTURE MONOLITHIQUE**
-- ❌ **`mongodbService.js` (849 lignes)** - Service monolithique qui fait tout
-- ✅ **Pas de séparation des responsabilités** - Orders, Assignments, Tricoteuses mélangés
-- ❌ **Code difficile à maintenir** - Modifications risquées
-- ❌ **Pas de réutilisabilité** - Logique dupliquée partout
+- ✅ **`mongodbService.js` (849 lignes)** - Service monolithique supprimé et refactorisé
+- ✅ **Séparation des responsabilités** - Orders, Assignments, Tricoteuses séparés
+- ✅ **Code facile à maintenir** - Services spécialisés de 23-196 lignes
+- ✅ **Réutilisabilité** - Services modulaires et réutilisables
 
 ### **2. REQUÊTES NON OPTIMISÉES**
-- ❌ **Chargement de 1000+ articles** - Au lieu de pagination
-- ❌ **Requêtes séquentielles** - Pas de parallélisation intelligente
-- ❌ **Pas de cache persistant** - Rechargement à chaque navigation
-- ❌ **Timeouts trop courts** - 15-20s au lieu de 60-90s
-- ❌ **Pas de retry intelligent** - Échec immédiat sur timeout
+- ✅ **Chargement de 1000+ articles** - Pagination implémentée (15-50 articles par page)
+- ✅ **Requêtes séquentielles** - Parallélisation avec Promise.all
+- ✅ **Cache persistant** - Cache mémoire (5min dev, 1h prod) + localStorage
+- ✅ **Timeouts optimisés** - 10-30s selon le type de requête
+- ✅ **Retry intelligent** - Backoff exponentiel avec 3 tentatives
 
 ### **3. SURCHARGE DU SERVEUR RENDER**
 - ❌ **Trop de requêtes simultanées** - 12-20 requêtes en parallèle
@@ -71,24 +71,28 @@ Le projet souffre de problèmes architecturaux majeurs qui causent des performan
 ## 🔧 **SOLUTIONS IMPLÉMENTÉES**
 
 ### **1. Architecture Moderne**
-- ✅ **Services séparés** - `cacheService.js`, `ordersService.js`, `assignmentsService.js`, `tricoteusesService.js`
+- ✅ **Services séparés** - 8 services spécialisés (23-196 lignes chacun)
 - ✅ **Hooks personnalisés** - `useOrders.js`, `useAssignments.js`, `useTricoteuses.js`
 - ✅ **Séparation des responsabilités** - Chaque service a un rôle précis
+- ✅ **Service monolithique supprimé** - `mongodbService.js` (849 lignes) refactorisé
 
 ### **2. Pagination Côté Serveur**
-- ✅ **15 articles par page** - Au lieu de 1000+
+- ✅ **15-50 articles par page** - Au lieu de 1000+
 - ✅ **Endpoints optimisés** - `/api/orders`, `/api/orders/stats`, `/api/orders/search`
 - ✅ **Filtres intelligents** - Par statut, recherche, tri
+- ✅ **Fallback offline paginé** - Même en mode offline, pagination respectée
 
 ### **3. Cache Intelligent**
-- ✅ **Cache mémoire** - 30 minutes TTL
-- ✅ **Cache persistant** - 1 heure TTL (sessionStorage)
+- ✅ **Cache mémoire** - 5min dev, 1h prod TTL
+- ✅ **Cache persistant** - localStorage avec TTL
 - ✅ **Fallback offline** - Interface fonctionne sans serveur
 
-### **4. Limitation de Concurrence**
-- ✅ **Une requête à la fois** - Plus de surcharge Render
+### **4. Optimisation des Requêtes**
+- ✅ **Parallélisation** - Promise.all pour les requêtes indépendantes
+- ✅ **Timeouts adaptés** - 10-30s selon le type de requête
+- ✅ **Retry intelligent** - Backoff exponentiel avec jitter
+- ✅ **Limitation de concurrence** - 1 requête à la fois pour Render
 - ✅ **Délais entre requêtes** - 200ms entre chaque requête
-- ✅ **Timeouts optimisés** - 15-20s au lieu de 60-90s
 
 ### **5. Gestion d'Erreurs Robuste**
 - ✅ **Fallback intelligent** - Cache même expiré en cas d'erreur
@@ -108,10 +112,12 @@ Le projet souffre de problèmes architecturaux majeurs qui causent des performan
 
 ### **Après (Optimisé)**
 - ⏱️ **Temps de chargement** - 2-5 secondes
-- 📦 **Données chargées** - 15 articles
-- 🔄 **Requêtes simultanées** - 1
-- 💾 **Cache** - 30min mémoire + 1h persistant
-- ✅ **Mode offline** - Fonctionnel
+- 📦 **Données chargées** - 15-50 articles par page
+- 🔄 **Requêtes simultanées** - 1 (avec parallélisation intelligente)
+- 💾 **Cache** - 5min dev + 1h prod + localStorage
+- ✅ **Mode offline** - Fonctionnel avec pagination
+- ⚡ **Parallélisation** - Requêtes indépendantes en parallèle
+- 🔄 **Retry intelligent** - 3 tentatives avec backoff exponentiel
 
 ---
 

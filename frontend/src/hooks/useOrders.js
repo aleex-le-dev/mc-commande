@@ -59,9 +59,9 @@ export const useOrders = (options = {}) => {
       console.error('Erreur chargement commandes:', err)
       setError(err)
       
-      // Fallback: mode offline
+      // Fallback: mode offline avec pagination
       try {
-        const offlineData = await ApiService.orders.getOrdersFromDatabase()
+        const offlineData = await ApiService.orders.getOrdersFromDatabase(page, limit)
         setData(offlineData)
       } catch (offlineErr) {
         console.error('Erreur fallback offline:', offlineErr)
