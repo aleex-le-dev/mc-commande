@@ -63,7 +63,6 @@ const WOOCOMMERCE_URL = process.env.VITE_WORDPRESS_URL || 'https://maisoncleo.co
 const WOOCOMMERCE_CONSUMER_KEY = process.env.VITE_WORDPRESS_CONSUMER_KEY
 const WOOCOMMERCE_CONSUMER_SECRET = process.env.VITE_WORDPRESS_CONSUMER_SECRET
 
-console.log('🔍 URL MongoDB: protégée (masquée)')
 console.log('🔍 Variables d\'environnement:', {
   MONGO_URI: process.env.MONGO_URI ? '✅ Définie' : '❌ Manquante',
   WOOCOMMERCE_URL: WOOCOMMERCE_URL ? '✅ Définie' : '❌ Manquante',
@@ -3227,36 +3226,6 @@ async function startServer() {
 
   const server = app.listen(PORT, () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
-    console.log('📊 Endpoints disponibles:')
-    const endpoints = [
-      'POST /api/auth/verify',
-      'POST /api/sync/orders',
-      'GET  /api/orders',
-      'GET  /api/orders/search/:orderNumber',
-      'GET  /api/orders/production/:type',
-      'POST /api/production/dispatch',
-      'PUT  /api/production/redispatch',
-      'PUT  /api/production/status',
-      'GET  /api/production-status',
-      'GET  /api/production-status/stats',
-      'POST /api/production-status',
-      'GET  /api/woocommerce/products/:productId/permalink',
-      'POST /api/woocommerce/products/permalink/batch',
-      'GET  /api/sync/logs',
-      'POST /api/sync/logs/clear',
-      'GET  /api/test/connection',
-      'GET  /api/test/sync',
-      'GET  /api/tricoteuses',
-      'POST /api/tricoteuses',
-      'PUT  /api/tricoteuses/:id',
-      'DELETE /api/tricoteuses/:id',
-      'GET  /api/assignments',
-      'GET  /api/assignments/:articleId',
-      'POST /api/assignments',
-      'DELETE /api/assignments/:assignmentId',
-      'DELETE /api/assignments/by-article/:articleId',
-    ]
-    endpoints.forEach(e => console.log(`   ${e}`))
   })
   server.on('error', (err) => {
     console.error('❌ Erreur serveur:', err)
