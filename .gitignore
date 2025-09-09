@@ -26,6 +26,7 @@ dist-ssr
 # Environment variables
 .env
 .env.local
+.env.railway
 .env.render
 .env.development.local
 .env.test.local
