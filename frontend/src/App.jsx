@@ -19,8 +19,7 @@ import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
-import ImageCacheManager from './components/ImageCacheManager'
-import { useSyncImagePreloader } from './hooks/useSyncImagePreloader'
+import BackgroundImagePreloader from './components/BackgroundImagePreloader'
 import './App.css'
 
 // Configuration du client React Query (supprimé car défini dans main.jsx)
@@ -29,8 +28,6 @@ function App() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
   
-  // Précharger les images après synchronisation
-  useSyncImagePreloader()
   const [ctxVisible, setCtxVisible] = useState(false)
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
   const [ctxItems, setCtxItems] = useState([])
@@ -366,7 +363,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
         <SlowDeviceOptimizer>
-          <ImageCacheManager currentPage={activeTab} articles={unifiedArticles} />
+          <BackgroundImagePreloader currentPage={activeTab} />
           <CardStyles />
           <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}

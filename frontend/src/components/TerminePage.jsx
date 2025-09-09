@@ -6,6 +6,7 @@ import { deleteOrderCompletely } from '../services/mongodbService'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import { assignmentsService } from '../services/mongodbService'
 import delaiService from '../services/delaiService'
+import BatchImageLoader from './BatchImageLoader'
 
 /*
   Page "Terminé":
@@ -318,7 +319,13 @@ const TerminePage = () => {
   }, [])
 
   return (
-    <div className="w-full px-4">
+    <>
+      <BatchImageLoader 
+        articles={unifiedArticles || []} 
+        pageName="termine" 
+        priority={false} 
+      />
+      <div className="w-full px-4">
       <div className="mb-6">
         <OrderHeader
           selectedType="termine"
@@ -495,6 +502,7 @@ const TerminePage = () => {
         </div>
       )}
     </div>
+    </>
   )
 }
 
