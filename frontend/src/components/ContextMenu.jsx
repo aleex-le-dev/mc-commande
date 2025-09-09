@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 
 // Menu contextuel global personnalisé
@@ -9,6 +9,7 @@ import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 // - onClose: fermeture
 const ContextMenu = ({ visible, position, items = [], onClose }) => {
   const menuRef = useRef(null)
+  const [computedPos, setComputedPos] = useState({ top: 0, left: 0 })
 
   useEffect(() => {
     if (!visible) return
@@ -24,6 +25,32 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
     }
   }, [visible, onClose])
 
+  // Calculer une position qui garde le menu dans le viewport (desktop)
+  useEffect(() => {
+    if (!visible) return
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+    if (isMobile) return // centré via style mobile
+    const compute = () => {
+      const margin = 8
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const menuEl = menuRef.current
+      const mw = menuEl ? menuEl.offsetWidth : 260
+      const mh = menuEl ? menuEl.offsetHeight : 200
+      const maxLeft = Math.max(margin, vw - mw - margin)
+      const maxTop = Math.max(margin, vh - mh - margin)
+      const left = Math.min(Math.max(margin, position.x), maxLeft)
+      const top = Math.min(Math.max(margin, position.y), maxTop)
+      setComputedPos({ top, left })
+    }
+    // calcul initial puis recalcule après paint pour dimensions exactes
+    compute()
+    const id = requestAnimationFrame(compute)
+    const onResize = () => compute()
+    window.addEventListener('resize', onResize)
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', onResize) }
+  }, [visible, position])
+
   if (!visible) return null
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
@@ -36,8 +63,8 @@ const ContextMenu = ({ visible, position, items = [], onClose }) => {
         zIndex: 10000
       }
     : {
-        top: Math.max(8, position.y),
-        left: Math.max(8, position.x),
+        top: computedPos.top,
+        left: computedPos.left,
         position: 'fixed',
         zIndex: 10000
       }
