@@ -1,5 +1,8 @@
 // Service d'authentification simple contre l'API backend
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// En dev: utilise automatiquement le backend local. En prod: Render ou VITE_API_URL si fourni.
+const API_BASE = (import.meta.env.DEV
+  ? 'http://localhost:3001'
+  : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
 
 const authService = {
   async setPassword(password) {

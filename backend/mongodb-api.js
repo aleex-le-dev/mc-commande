@@ -9,12 +9,22 @@ const bcrypt = require('bcryptjs')
 const PORT = process.env.PORT || 3001
 
 // Middleware
-const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || 'http://localhost:5173'
+// Liste d'origines autorisées (CSV) pour CORS. Toujours inclure localhost en dev.
+// Exemples d'env: VITE_ALLOWED_ORIGINS="http://localhost:5173,https://fermeeutbouque.maisoncleo.fr"
+const ENV_ALLOWED_ORIGINS = (process.env.VITE_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+const DEFAULT_ALLOWED = ['http://localhost:5173']
+const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || null
+const ALLOWED_ORIGINS = Array.from(new Set([
+  ...DEFAULT_ALLOWED,
+  ...(FRONTEND_ORIGIN ? [FRONTEND_ORIGIN] : []),
+  ...ENV_ALLOWED_ORIGINS
+]))
+
 const corsOptions = {
   origin: (origin, cb) => {
     // Autoriser requêtes locales et outils (origin peut être undefined pour curl)
     if (!origin) return cb(null, true)
-    if (origin === FRONTEND_ORIGIN) return cb(null, true)
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
     return cb(null, false)
   },
   credentials: true,
@@ -26,7 +36,10 @@ app.options('*', cors(corsOptions))
 
 // Forcer les en-têtes CORS explicitement sur toutes les réponses
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+  const requestOrigin = req.headers.origin
+  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) {
+    res.header('Access-Control-Allow-Origin', requestOrigin)
+  }
   res.header('Vary', 'Origin')
   res.header('Access-Control-Allow-Credentials', 'true')
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
@@ -278,26 +291,27 @@ app.delete('/api/translations/:key', async (req, res) => {
 // GET /api/health - Vérifier la santé du serveur
 app.get('/api/health', async (req, res) => {
   try {
-    if (!db) {
-      return res.status(503).json({ 
-        status: 'error', 
-        message: 'Base de données non connectée' 
-      })
+    let dbConnected = false
+    if (db) {
+      try {
+        await db.admin().ping()
+        dbConnected = true
+      } catch (_) {
+        dbConnected = false
+      }
     }
-    
-    // Test simple de connexion
-    await db.admin().ping()
-    
-    res.json({ 
-      status: 'ok', 
+    return res.json({
+      status: 'ok',
       message: 'Serveur opérationnel',
+      dbConnected,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    res.status(503).json({ 
-      status: 'error', 
-      message: 'Erreur de connexion à la base de données',
-      error: error.message
+    return res.json({
+      status: 'ok',
+      message: 'Serveur opérationnel',
+      dbConnected: false,
+      timestamp: new Date().toISOString()
     })
   }
 })
@@ -2257,7 +2271,8 @@ app.delete('/api/tricoteuses/:id', async (req, res) => {
 app.get('/api/assignments', async (req, res) => {
   try {
     if (!db) {
-      return res.status(500).json({ error: 'Base de données non connectée' })
+      // Fallback doux: éviter l'erreur 500 au chargement quand la DB n'est pas prête
+      return res.json({ success: true, data: [] })
     }
     
     const assignmentsCollection = db.collection('article_assignments')

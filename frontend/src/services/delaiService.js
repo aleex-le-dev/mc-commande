@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:3001/api'
+// En dev: backend local; en prod: Render ou VITE_API_URL
+const API_BASE_URL = `${(import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))}/api`
 
 // Petit wrapper avec retry/backoff pour limiter les erreurs réseau au démarrage
 async function fetchWithRetry(url, options = {}, retries = 2) {
