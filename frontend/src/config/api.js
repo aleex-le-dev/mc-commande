@@ -11,7 +11,7 @@ const API_CONFIG = {
   },
   production: {
     // Backend principal (Railway - recommandé)
-    backend: import.meta.env.VITE_API_URL || 'https://maisoncleo-backend-production.up.railway.app',
+    backend: import.meta.env.VITE_API_URL || 'https://maisoncleo-commande-production.up.railway.app',
     description: 'Backend Railway (rapide)'
   },
   fallback: {
