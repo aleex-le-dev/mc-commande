@@ -10,7 +10,7 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   const timeout = setTimeout(() => {
     /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 30000)) // 10s local, 30s prod
+  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 10000)) // 10s local, 10s prod
   
   try {
     const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
@@ -56,7 +56,7 @@ class DelaiService {
   async getDelai() {
     try {
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 30000 // 30 secondes pour la config
+        timeoutMs: 10000 // 10 secondes pour la config
       })
       const data = await response.json()
       return data
@@ -156,7 +156,7 @@ class DelaiService {
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 30000) // 10s local, 30s prod
+      const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 10000) // 10s local, 10s prod
       
       const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
         credentials: 'include',

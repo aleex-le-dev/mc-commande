@@ -68,9 +68,9 @@ const ProductImage = ({ productId, productName, permalink }) => {
     setErrorDetails('')
     
     try {
-      // Timeout ultra-rapide pour les images (2 secondes)
+      // Timeout ultra-rapide pour les images (3 secondes)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 2000)
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
       
       const resp = await fetch(backendUrl, { 
         method: 'GET', 
