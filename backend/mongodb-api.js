@@ -3236,7 +3236,13 @@ app.post('/api/sync/images', async (req, res) => {
       try {
         // Récupérer l'image depuis Render
         const renderUrl = `https://maisoncleo-commande.onrender.com/api/images/${productId}`
-        const response = await fetch(renderUrl)
+        const response = await fetch(renderUrl, {
+          headers: {
+            'User-Agent': 'Railway-Sync/1.0',
+            'Accept': 'image/*'
+          },
+          timeout: 10000
+        })
         
         if (response.ok) {
           const imageBuffer = await response.buffer()

@@ -10,7 +10,7 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   const timeout = setTimeout(() => {
     /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 10000)) // 10s local, 10s prod
+  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 60000)) // 10s local, 60s prod (Railway lent)
   
   try {
     const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
@@ -56,7 +56,7 @@ class DelaiService {
   async getDelai() {
     try {
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 10000 // 10 secondes pour la config
+        timeoutMs: 60000 // 60 secondes pour la config (Railway lent)
       })
       const data = await response.json()
       return data
