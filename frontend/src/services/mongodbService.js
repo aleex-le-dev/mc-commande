@@ -6,13 +6,14 @@ const API_BASE_URL = getApiUrl()
 
 // Limiteur optimisé + retry/backoff pour réduire les erreurs réseau
 let concurrentRequests = 0
-const MAX_CONCURRENT = 12  // Augmenté pour plus de parallélisme
+const MAX_CONCURRENT = 1  // Une seule requête à la fois pour Render très lent
 const waitQueue = []
 
 const acquireSlot = () => new Promise((resolve) => {
   if (concurrentRequests < MAX_CONCURRENT) {
     concurrentRequests += 1
-    resolve()
+    // Délai entre les requêtes pour éviter de surcharger Render
+    setTimeout(resolve, 200)
   } else {
     waitQueue.push(resolve)
   }
@@ -28,7 +29,7 @@ const releaseSlot = () => {
 }
 
 // Cache mémoire global avec TTL pour données partagées (augmenté pour Render)
-const GLOBAL_CACHE_TTL_MS = import.meta.env.DEV ? 5 * 60 * 1000 : 30 * 60 * 1000 // 5min dev, 30min prod
+const GLOBAL_CACHE_TTL_MS = import.meta.env.DEV ? 5 * 60 * 1000 : 60 * 60 * 1000 // 5min dev, 60min prod (1 heure)
 const globalCache = {
   tricoteuses: { data: null, at: 0 },
   assignments: { data: null, at: 0 },
@@ -736,6 +737,8 @@ export const assignmentsService = {
         return fallback
       }
       console.error('Erreur récupération assignations:', error)
+      // Fallback final : retourner un tableau vide pour éviter le blocage
+      console.warn('⚠️ Mode dégradé - assignations vides')
       return []
     }
   },

@@ -15,7 +15,7 @@ const API_CONFIG = {
     // Backend Render (stable) avec optimisations
     backend: 'https://maisoncleo-commande.onrender.com',
     description: 'Backend Render (optimisé)',
-    timeout: 60000, // Augmenté pour Render très lent
+    timeout: 60000, // Augmenté pour Render lent
     retryAttempts: 3
   }
 }
