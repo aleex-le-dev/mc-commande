@@ -65,7 +65,7 @@ const ProductionPage = ({ productionType, title }) => {
       return []
     }
     
-    console.log('📋 Commandes reçues:', ordersArray.length)
+    console.log('📋 Commandes reçues:', ordersArray.length, 'TIMESTAMP:', Date.now())
     
     // DEBUG FORCÉ: Structure complète des données
     console.log('🚨🚨🚨 DEBUG FORCÉ - Structure des ordres:', JSON.stringify(ordersArray[0], null, 2))

@@ -65,7 +65,10 @@ export const OrdersService = {
       // Ajouter un paramètre de cache-busting
       params.append('_t', Date.now().toString())
       
-      const response = await fetch(`${API_BASE_URL}/orders?${params}`, {
+      const fullUrl = `${API_BASE_URL}/orders?${params}`
+      console.log('🔗 URL complète:', fullUrl)
+      
+      const response = await fetch(fullUrl, {
         credentials: 'include',
         mode: 'cors',
         headers: {
