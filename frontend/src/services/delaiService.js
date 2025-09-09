@@ -7,7 +7,7 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   const timeout = setTimeout(() => {
     /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 1000)) // 10s local, 1s prod
+  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 3000)) // 10s local, 3s prod
   
   try {
     const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
@@ -53,16 +53,20 @@ class DelaiService {
   async getDelai() {
     try {
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 8000 // Réduit à 8 secondes
+        timeoutMs: 5000 // 5 secondes pour la config
       })
       const data = await response.json()
       return data
     } catch (error) {
       if (error.name === 'AbortError') {
-        /* log désactivé */
+        console.warn('[DELAI] Timeout configuration délai')
         return { success: false, error: 'Timeout - serveur trop lent' }
       }
-      /* log désactivé */
+      if (error.message.includes('502')) {
+        console.warn('[DELAI] Service indisponible (502)')
+        return { success: false, error: 'Service temporairement indisponible' }
+      }
+      console.warn('[DELAI] Erreur configuration:', error.message)
       return { success: false, error: error.message }
     }
   }

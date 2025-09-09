@@ -26,7 +26,7 @@ const releaseSlot = () => {
 }
 
 // Cache mémoire global avec TTL pour données partagées
-const GLOBAL_CACHE_TTL_MS = 60 * 60 * 1000 // 60 minutes pour éviter les rechargements
+const GLOBAL_CACHE_TTL_MS = import.meta.env.DEV ? 5 * 60 * 1000 : 10 * 60 * 1000 // 5min dev, 10min prod
 const globalCache = {
   tricoteuses: { data: null, at: 0 },
   assignments: { data: null, at: 0 },
@@ -48,13 +48,42 @@ function cacheDelete(key) {
   globalCache[key] = { data: null, at: 0 }
 }
 
+// Cache persistant pour les données critiques en production
+function persistentCacheGet(key) {
+  if (import.meta.env.DEV) return null
+  try {
+    const cached = localStorage.getItem(`mc_${key}`)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      if (parsed && Date.now() - parsed.timestamp < GLOBAL_CACHE_TTL_MS) {
+        return parsed.data
+      }
+    }
+  } catch (e) {
+    // Ignorer les erreurs de localStorage
+  }
+  return null
+}
+
+function persistentCacheSet(key, data) {
+  if (import.meta.env.DEV) return
+  try {
+    localStorage.setItem(`mc_${key}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    // Ignorer les erreurs de localStorage
+  }
+}
+
 
 
 async function requestWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 15000 : 1000)) // 15s local, 1s prod
+  }, options.timeoutMs || (import.meta.env.DEV ? 15000 : 5000)) // 15s local, 5s prod
   
   try {
     await acquireSlot()
@@ -67,11 +96,16 @@ async function requestWithRetry(url, options = {}, retries = 0) {
       signal: controller.signal 
     })
     if (!res.ok) {
-      if (retries > 0 && (res.status >= 500 || res.status === 429)) {
-        // Backoff exponentiel avec jitter
+      if (retries > 0 && (res.status >= 500 || res.status === 429 || res.status === 502)) {
+        // Backoff exponentiel avec jitter pour les erreurs serveur
         const delay = Math.min(1000 * Math.pow(2, 2 - retries) + Math.random() * 1000, 5000)
+        console.warn(`Erreur ${res.status} - retry dans ${delay}ms`)
         await new Promise(r => setTimeout(r, delay))
         return requestWithRetry(url, options, retries - 1)
+      }
+      // Pour les erreurs 502, essayer de retourner des données du cache
+      if (res.status === 502) {
+        throw new Error('Service temporairement indisponible (502)')
       }
     }
     return res
@@ -551,18 +585,34 @@ export const tricoteusesService = {
   // Récupérer toutes les tricoteuses
   async getAllTricoteuses() {
     try {
+      // Vérifier d'abord le cache mémoire
       const cached = cacheGet('tricoteuses')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 1000 })
+      
+      // En production, vérifier le cache persistant
+      const persistentCached = persistentCacheGet('tricoteuses')
+      if (persistentCached) {
+        cacheSet('tricoteuses', persistentCached)
+        return persistentCached
+      }
+      
+      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 3000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
       cacheSet('tricoteuses', data)
+      persistentCacheSet('tricoteuses', data)
       return data
     } catch (error) {
       if (error.name === 'AbortError') {
         console.warn('Tricoteuses timeout - utilisation du cache')
-        return cacheGet('tricoteuses') || []
+        const fallback = cacheGet('tricoteuses') || persistentCacheGet('tricoteuses') || []
+        return fallback
+      }
+      if (error.message.includes('502')) {
+        console.warn('Service indisponible (502) - utilisation du cache')
+        const fallback = cacheGet('tricoteuses') || persistentCacheGet('tricoteuses') || []
+        return fallback
       }
       console.error('Erreur récupération tricoteuses:', error)
       return []
@@ -637,18 +687,34 @@ export const assignmentsService = {
   // Récupérer toutes les assignations
   async getAllAssignments() {
     try {
+      // Vérifier d'abord le cache mémoire
       const cached = cacheGet('assignments')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 1000 })
+      
+      // En production, vérifier le cache persistant
+      const persistentCached = persistentCacheGet('assignments')
+      if (persistentCached) {
+        cacheSet('assignments', persistentCached)
+        return persistentCached
+      }
+      
+      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 3000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
       cacheSet('assignments', data)
+      persistentCacheSet('assignments', data)
       return data
     } catch (error) {
       if (error.name === 'AbortError') {
         console.warn('Assignations timeout - utilisation du cache')
-        return cacheGet('assignments') || []
+        const fallback = cacheGet('assignments') || persistentCacheGet('assignments') || []
+        return fallback
+      }
+      if (error.message.includes('502')) {
+        console.warn('Service indisponible (502) - utilisation du cache')
+        const fallback = cacheGet('assignments') || persistentCacheGet('assignments') || []
+        return fallback
       }
       console.error('Erreur récupération assignations:', error)
       return []
