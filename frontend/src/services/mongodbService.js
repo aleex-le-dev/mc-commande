@@ -78,7 +78,7 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   } catch (e) {
     if (e && e.name === 'AbortError') {
       // Ne pas relancer les requêtes annulées
-      return
+      throw e
     }
     if (retries > 0) {
       // Backoff exponentiel avec jitter pour les erreurs réseau
@@ -636,7 +636,7 @@ export const assignmentsService = {
       const cached = cacheGet('assignments')
       if (cached) return cached
       const response = await requestWithRetry(`${API_BASE_URL}/assignments`)
-      if (!response.ok) throw new Error('Erreur lors de la récupération des assignations')
+      if (!response || !response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
       cacheSet('assignments', data)

@@ -42,11 +42,15 @@ const Root = () => {
     const base = (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com')
     const url = `${base}/api/health`
     const ctrl = new AbortController()
-    const timeout = setTimeout(() => ctrl.abort(), 8000)
+    const timeout = setTimeout(() => ctrl.abort(), 15000) // Augmenté à 15s
     ;(async () => {
       try {
         console.log('[BOOT] Healthcheck →', url)
-        const res = await fetch(url, { signal: ctrl.signal })
+        const res = await fetch(url, { 
+          signal: ctrl.signal,
+          credentials: 'include',
+          mode: 'cors'
+        })
         const t = Math.round(performance.now() - t0)
         if (!res.ok) {
           console.error(`[BOOT] Healthcheck HTTP ${res.status} en ${t}ms`)
