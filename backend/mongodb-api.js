@@ -2897,19 +2897,18 @@ app.get('/api/delais/jours-feries/:annee', async (req, res) => {
         }
       })
       
-      return joursFeries
+      res.json({
+        success: true,
+        data: joursFeries
+      })
     } catch (error) {
       console.error(`Erreur lors de la récupération des jours fériés pour ${annee}:`, error)
       // En cas d'erreur, retourner une liste vide
-      return {}
+      res.json({
+        success: true,
+        data: {}
+      })
     }
-    
-    const joursFeries = getJoursFeries(parseInt(annee))
-    
-    res.json({
-      success: true,
-      data: joursFeries
-    })
   } catch (error) {
     console.error('Erreur récupération jours fériés:', error)
     res.status(500).json({ 

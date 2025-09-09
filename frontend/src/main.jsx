@@ -34,6 +34,35 @@ const Root = () => {
       }
     } catch {}
   }, [])
+
+  // Diagnostic production: healthcheck backend et timings
+  useEffect(() => {
+    if (!import.meta.env.PROD) return
+    const t0 = performance.now()
+    const base = (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com')
+    const url = `${base}/api/health`
+    const ctrl = new AbortController()
+    const timeout = setTimeout(() => ctrl.abort(), 8000)
+    ;(async () => {
+      try {
+        console.log('[BOOT] Healthcheck →', url)
+        const res = await fetch(url, { signal: ctrl.signal })
+        const t = Math.round(performance.now() - t0)
+        if (!res.ok) {
+          console.error(`[BOOT] Healthcheck HTTP ${res.status} en ${t}ms`)
+          return
+        }
+        const data = await res.json()
+        console.log(`[BOOT] Backend OK en ${t}ms`, data)
+      } catch (e) {
+        const t = Math.round(performance.now() - t0)
+        console.error(`[BOOT] Healthcheck échec en ${t}ms →`, e?.name || e?.message || e)
+      } finally {
+        clearTimeout(timeout)
+      }
+    })()
+    return () => clearTimeout(timeout)
+  }, [])
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGate>

@@ -148,7 +148,15 @@ class DelaiService {
     
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
-      const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { credentials: 'include' })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+      
+      const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
+        credentials: 'include',
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
       
       if (response.ok) {
         const result = await response.json()
@@ -165,7 +173,9 @@ class DelaiService {
         this.lastFailureAt[annee] = Date.now()
       }
     } catch (error) {
-      /* log désactivé */
+      if (error.name === 'AbortError') {
+        console.warn(`[DELAI] Timeout jours fériés ${annee}`)
+      }
       this.lastFailureAt[annee] = Date.now()
     } finally {
       this.isLoadingJoursFeries = false
