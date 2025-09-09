@@ -10,21 +10,16 @@ const API_CONFIG = {
     description: 'Backend local'
   },
   production: {
-    // Backend principal (Railway - recommandé)
-    backend: import.meta.env.VITE_API_URL || 'https://maisoncleo-commande-production.up.railway.app',
+    // Backend Railway uniquement
+    backend: 'https://maisoncleo-commande-production.up.railway.app',
     description: 'Backend Railway (rapide)'
-  },
-  fallback: {
-    // Backend de secours (Render - stable)
-    backend: 'https://maisoncleo-commande.onrender.com',
-    description: 'Backend Render (fallback stable)'
   }
 }
 
 // Fonction pour obtenir l'URL du backend
-export const getBackendUrl = (useFallback = false) => {
+export const getBackendUrl = () => {
   const env = import.meta.env.DEV ? 'development' : 'production'
-  const config = useFallback ? API_CONFIG.fallback : API_CONFIG[env]
+  const config = API_CONFIG[env]
   
   console.log(`🔗 Backend: ${config.description} (${config.backend})`)
   return config.backend
@@ -42,10 +37,10 @@ export const getApiUrl = (endpoint = '') => {
   return `${baseUrl}/api${endpoint ? `/${endpoint}` : ''}`
 }
 
-// Fonction pour tester la connectivité avec fallback automatique
-export const testBackendConnection = async (useFallback = false) => {
+// Fonction pour tester la connectivité Railway
+export const testBackendConnection = async () => {
   try {
-    const backendUrl = getBackendUrl(useFallback)
+    const backendUrl = getBackendUrl()
     const response = await fetch(`${backendUrl}/api/health`, {
       method: 'GET',
       credentials: 'include',
@@ -53,36 +48,15 @@ export const testBackendConnection = async (useFallback = false) => {
     })
     
     if (response.ok) {
-      console.log(`✅ Backend ${useFallback ? 'fallback' : 'principal'} connecté`)
-      return { success: true, backend: backendUrl, fallback: useFallback }
+      console.log('✅ Backend Railway connecté')
+      return { success: true, backend: backendUrl }
     } else {
-      console.warn(`⚠️ Backend ${useFallback ? 'fallback' : 'principal'} répond mais avec erreur:`, response.status)
-      return { success: false, backend: backendUrl, fallback: useFallback }
+      console.warn('⚠️ Backend Railway répond mais avec erreur:', response.status)
+      return { success: false, backend: backendUrl }
     }
   } catch (error) {
-    console.error(`❌ Backend ${useFallback ? 'fallback' : 'principal'} non accessible:`, error.message)
-    return { success: false, backend: getBackendUrl(useFallback), fallback: useFallback }
-  }
-}
-
-// Fonction pour tester les deux backends et choisir le meilleur
-export const testBothBackends = async () => {
-  console.log('🧪 Test des deux backends...')
-  
-  const [primaryResult, fallbackResult] = await Promise.all([
-    testBackendConnection(false), // Railway
-    testBackendConnection(true)   // Render
-  ])
-  
-  if (primaryResult.success) {
-    console.log('🚀 Utilisation du backend Railway (principal)')
-    return { backend: primaryResult.backend, fallback: false }
-  } else if (fallbackResult.success) {
-    console.log('⚠️ Railway indisponible, utilisation de Render (fallback)')
-    return { backend: fallbackResult.backend, fallback: true }
-  } else {
-    console.error('❌ Aucun backend disponible')
-    return { backend: primaryResult.backend, fallback: false }
+    console.error('❌ Backend Railway non accessible:', error.message)
+    return { success: false, backend: getBackendUrl() }
   }
 }
 
@@ -92,6 +66,5 @@ export default {
   getApiUrl,
   getApiUrlWithFallback,
   testBackendConnection,
-  testBothBackends,
   config: API_CONFIG
 }

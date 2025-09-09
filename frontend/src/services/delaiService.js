@@ -66,8 +66,8 @@ class DelaiService {
         return { success: false, error: 'Timeout - serveur trop lent' }
       }
       if (error.message.includes('502')) {
-        console.warn('[DELAI] Service indisponible (502)')
-        return { success: false, error: 'Service temporairement indisponible' }
+        console.warn('[DELAI] Service Railway indisponible (502)')
+        return { success: false, error: 'Service Railway temporairement indisponible' }
       }
       console.warn('[DELAI] Erreur configuration:', error.message)
       return { success: false, error: error.message }

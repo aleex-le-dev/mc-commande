@@ -612,7 +612,7 @@ export const tricoteusesService = {
         return fallback
       }
       if (error.message.includes('502')) {
-        console.warn('Service indisponible (502) - utilisation du cache')
+        console.warn('Service Railway indisponible (502) - utilisation du cache')
         const fallback = cacheGet('tricoteuses') || persistentCacheGet('tricoteuses') || []
         return fallback
       }
@@ -714,7 +714,7 @@ export const assignmentsService = {
         return fallback
       }
       if (error.message.includes('502')) {
-        console.warn('Service indisponible (502) - utilisation du cache')
+        console.warn('Service Railway indisponible (502) - utilisation du cache')
         const fallback = cacheGet('assignments') || persistentCacheGet('assignments') || []
         return fallback
       }
