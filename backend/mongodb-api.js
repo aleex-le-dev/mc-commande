@@ -1825,8 +1825,8 @@ app.get('/api/images/:productId', async (req, res) => {
       return res.end(out)
     } catch (e) {
       // Fallback: renvoyer l'original si sharp indisponible/erreur
-      res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+    res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
       res.setHeader('X-Resized', 'false')
       return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
     }

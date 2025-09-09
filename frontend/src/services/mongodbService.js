@@ -282,31 +282,7 @@ export const getOrdersFromDatabase = async () => {
       }
     } catch {}
 
-    // D'abord synchroniser depuis WordPress
-    const syncResponse = await requestWithRetry(`${API_BASE_URL}/sync-orders`, {
-      method: 'POST',
-      timeoutMs: 30000 // 30 secondes pour la synchronisation
-    })
-    
-    if (!syncResponse.ok) {
-      console.warn('Erreur lors de la synchronisation:', syncResponse.status)
-    }
-
-    // Synchroniser automatiquement les assignations avec les statuts
-    try {
-      const syncAssignmentsResponse = await requestWithRetry(`${API_BASE_URL}/sync-assignments-status`, {
-        method: 'POST',
-        timeoutMs: 10000 // 10 secondes pour la synchronisation des assignations
-      })
-      
-      if (syncAssignmentsResponse.ok) {
-        await syncAssignmentsResponse.json()
-      }
-    } catch (error) {
-      console.warn('Erreur lors de la synchronisation des assignations:', error)
-    }
-
-    // Puis récupérer toutes les commandes depuis la BDD
+    // Récupérer toutes les commandes depuis la BDD (sans lancer de synchronisation)
     const response = await requestWithRetry(`${API_BASE_URL}/orders`, {
       timeoutMs: 15000 // 15 secondes optimisé
     })
@@ -765,13 +741,11 @@ export const assignmentsService = {
 // Préchargement des données à l'ouverture de l'app
 export async function prefetchAppData() {
   try {
-    try { sessionStorage.removeItem('mc-prefetch-ok-v1') } catch {}
+    // Préchargement léger sans synchronisation backend
     await Promise.all([
       tricoteusesService.getAllTricoteuses(),
       assignmentsService.getAllAssignments(),
-      // Lancer une synchronisation en arrière-plan
-      (async () => { try { await syncOrders([]) } catch (e) {} })(),
-      // Charger un premier lot de commandes pour amorcer le cache
+      // Charger un premier lot de commandes depuis la BDD uniquement
       (async () => { try { await getOrdersFromDatabase() } catch (e) {} })()
     ])
     try { sessionStorage.setItem('mc-prefetch-ok-v1', '1') } catch {}

@@ -6,7 +6,7 @@ import { prefetchAppData } from './services/mongodbService.js'
 import AuthGate from './components/AuthGate.jsx'
 
 const Root = () => {
-  // Démarrer le préchargement immédiatement en arrière-plan, avant l'authentification
+  // Démarrer le préchargement (sans synchronisation) en arrière-plan, avant l'authentification
   useEffect(() => {
     const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
     if (!already) {
