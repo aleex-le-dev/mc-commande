@@ -3221,6 +3221,15 @@ app.get('/api/debug/articles-couture', async (req, res) => {
   }
 })
 
+// Endpoint de test simple pour vérifier la performance
+app.get('/api/test/simple', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    message: 'Test simple réussi'
+  })
+})
+
 // Endpoint pour synchroniser les images depuis Render vers Railway
 app.post('/api/sync/images', async (req, res) => {
   try {
@@ -3283,6 +3292,17 @@ app.post('/api/sync/images', async (req, res) => {
   }
 })
 
+// Ping automatique pour garder Railway "chaud"
+function keepAlive() {
+  if (process.env.NODE_ENV === 'production') {
+    setInterval(() => {
+      fetch('https://maisoncleo-commande-production.up.railway.app/api/health')
+        .then(() => console.log('🔥 Ping Railway - service chaud'))
+        .catch(() => console.log('❌ Ping Railway échoué'))
+    }, 300000) // Ping toutes les 5 minutes
+  }
+}
+
 // Démarrage du serveur
 async function startServer() {
   // Attendre la connexion Mongo pour garantir le démarrage correct
@@ -3291,6 +3311,9 @@ async function startServer() {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
     console.log(`🌍 Environnement: ${process.env.NODE_ENV || 'development'}`)
+    
+    // Démarrer le ping automatique
+    keepAlive()
   })
   server.on('error', (err) => {
     console.error('❌ Erreur serveur:', err)
