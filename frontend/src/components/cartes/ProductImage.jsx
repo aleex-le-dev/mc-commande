@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 
 // Cache global pour les images déjà chargées
 const imageCache = new Map()
@@ -10,9 +10,16 @@ const ProductImage = ({ productId, productName, permalink }) => {
   const [hasError, setHasError] = useState(false)
   const [errorDetails, setErrorDetails] = useState('')
   const abortControllerRef = useRef(null)
+  
+  // URL mémorisée pour éviter les re-calculs
+  const backendUrl = useMemo(() => {
+    if (!productId) return null
+    const baseUrl = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+    return `${baseUrl}/api/images/${productId}`
+  }, [productId])
 
   useEffect(() => {
-    if (productId) {
+    if (productId && backendUrl) {
       // Vérifier d'abord le cache
       if (imageCache.has(productId)) {
         setImageUrl(imageCache.get(productId))
@@ -43,10 +50,10 @@ const ProductImage = ({ productId, productName, permalink }) => {
         abortControllerRef.current.abort()
       }
     }
-  }, [productId])
+  }, [productId, backendUrl, fetchProductImage])
 
-  const fetchProductImage = async (id, signal) => {
-    if (!id) {
+  const fetchProductImage = useCallback(async (id, signal) => {
+    if (!id || !backendUrl) {
       setHasError(true)
       setErrorDetails('Pas d\'ID')
       return
@@ -57,9 +64,6 @@ const ProductImage = ({ productId, productName, permalink }) => {
     setErrorDetails('')
     
     try {
-      const baseUrl = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const backendUrl = `${baseUrl}/api/images/${id}`
-      
       // Timeout ultra-rapide pour les images
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 2000)
@@ -80,6 +84,9 @@ const ProductImage = ({ productId, productName, permalink }) => {
         // Mettre en cache l'URL
         imageCache.set(id, backendUrl)
         setImageUrl(backendUrl)
+      } else if (resp.status === 502) {
+        setHasError(true)
+        setErrorDetails('Service indisponible')
       } else {
         setHasError(true)
         setErrorDetails('Image non trouvée')
@@ -96,7 +103,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [backendUrl])
 
   if (isLoading) {
     return (

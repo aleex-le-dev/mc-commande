@@ -1780,6 +1780,7 @@ async function syncOrderItem(orderId, item) {
 app.get('/api/images/:productId', async (req, res) => {
   try {
     const { productId } = req.params
+    // Ignorer les paramètres de timestamp (t=) et autres paramètres non reconnus
     const width = Math.max(16, Math.min(1024, parseInt(req.query.w) || 256))
     const quality = Math.max(40, Math.min(92, parseInt(req.query.q) || 75))
     const imagesCollection = db.collection('product_images')
@@ -1824,14 +1825,16 @@ app.get('/api/images/:productId', async (req, res) => {
       return res.end(out)
     } catch (e) {
       // Fallback: renvoyer l'original si sharp indisponible/erreur
-    res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+      console.warn('Sharp non disponible, fallback vers image originale:', e.message)
+      res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
       res.setHeader('X-Resized', 'false')
       return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
     }
   } catch (error) {
     console.error('Erreur GET /api/images/:productId:', error)
-    return res.status(500).json({ error: 'Erreur serveur' })
+    // Retourner 502 Bad Gateway pour les erreurs de service
+    return res.status(502).json({ error: 'Service temporairement indisponible' })
   }
 })
 

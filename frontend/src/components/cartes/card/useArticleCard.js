@@ -157,8 +157,9 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
 
   useEffect(() => {
     if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:') && displayImageUrl.includes('/api/images/')) {
-      // Ajouter un timestamp pour éviter le cache persistant (uniquement proxy backend)
-      const cacheBustedUrl = `${displayImageUrl}${displayImageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`
+      // Nettoyer l'URL des timestamps existants et ajouter un seul timestamp
+      const cleanUrl = displayImageUrl.split('?')[0]
+      const cacheBustedUrl = `${cleanUrl}?t=${Date.now()}`
       try { localStorage.setItem(`image_${memoizedProductId}`, cacheBustedUrl) } catch {}
     }
   }, [displayImageUrl, memoizedProductId])
