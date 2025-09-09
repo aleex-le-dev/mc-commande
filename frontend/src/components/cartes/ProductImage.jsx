@@ -48,7 +48,7 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
   const [errorDetails, setErrorDetails] = useState('')
   const abortControllerRef = useRef(null)
   
-  // URL optimisée avec cache intelligent
+  // URL optimisée avec cache intelligent et persistance
   const backendUrl = useMemo(() => {
     if (!productId) return null
     const baseUrl = getBackendUrl()

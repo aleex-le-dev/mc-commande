@@ -19,6 +19,7 @@ import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
+import ImageCacheManager from './components/ImageCacheManager'
 import './App.css'
 
 // Configuration du client React Query (supprimé car défini dans main.jsx)
@@ -361,6 +362,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
         <SlowDeviceOptimizer>
+          <ImageCacheManager currentPage={activeTab} />
           <CardStyles />
           <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}

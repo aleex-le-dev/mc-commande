@@ -5,10 +5,47 @@
 
 import { useState, useEffect } from 'react'
 
-// Cache global optimisé
+// Cache global persistant entre les pages
 const imageCache = new Map()
 const preloadQueue = new Set()
 const loadingPromises = new Map()
+
+// Cache persistant dans sessionStorage pour éviter les rechargements
+const PERSISTENT_CACHE_KEY = 'mc-image-cache'
+const CACHE_VERSION = '1.0'
+
+// Charger le cache depuis sessionStorage au démarrage
+const loadPersistentCache = () => {
+  try {
+    const cached = sessionStorage.getItem(PERSISTENT_CACHE_KEY)
+    if (cached) {
+      const { version, data } = JSON.parse(cached)
+      if (version === CACHE_VERSION && data) {
+        data.forEach(([key, value]) => imageCache.set(key, value))
+        console.log(`🖼️ Cache images restauré: ${imageCache.size} images`)
+      }
+    }
+  } catch (error) {
+    console.warn('Erreur chargement cache images:', error)
+  }
+}
+
+// Sauvegarder le cache dans sessionStorage
+const savePersistentCache = () => {
+  try {
+    const data = Array.from(imageCache.entries())
+    sessionStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify({
+      version: CACHE_VERSION,
+      data,
+      timestamp: Date.now()
+    }))
+  } catch (error) {
+    console.warn('Erreur sauvegarde cache images:', error)
+  }
+}
+
+// Initialiser le cache persistant
+loadPersistentCache()
 
 // Configuration optimisée pour Render (adaptative)
 const RENDER_CONFIG = {
@@ -69,6 +106,8 @@ export const ImageOptimizationService = {
         imageCache.set(url, url)
         preloadQueue.delete(url)
         loadingPromises.delete(url)
+        // Sauvegarder le cache après chaque image chargée
+        savePersistentCache()
         resolve(url)
       }
 
@@ -137,6 +176,8 @@ export const ImageOptimizationService = {
       const entries = Array.from(imageCache.entries())
       const toDelete = entries.slice(0, Math.floor(config.cacheSize * 0.3))
       toDelete.forEach(([key]) => imageCache.delete(key))
+      // Sauvegarder après nettoyage
+      savePersistentCache()
     }
   },
 
@@ -156,6 +197,12 @@ export const ImageOptimizationService = {
     imageCache.clear()
     preloadQueue.clear()
     loadingPromises.clear()
+    // Nettoyer aussi le cache persistant
+    try {
+      sessionStorage.removeItem(PERSISTENT_CACHE_KEY)
+    } catch (error) {
+      console.warn('Erreur suppression cache persistant:', error)
+    }
   }
 }
 
