@@ -1,4 +1,4 @@
-import { updateArticleStatus as updateArticleStatusAPI } from './mongodbService'
+import { ApiService } from './apiService'
 
 /**
  * Service simplifié pour les mises à jour de statuts
@@ -13,7 +13,7 @@ class StatusService {
 
     // Synchronisation avec la base de données
     try {
-      await updateArticleStatusAPI(orderId, lineItemId, newStatus)
+      await ApiService.production.updateArticleStatus(orderId, lineItemId, newStatus)
     } catch (error) {
       console.error('Erreur mise à jour statut:', error)
     }

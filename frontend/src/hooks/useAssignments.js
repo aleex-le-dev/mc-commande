@@ -3,7 +3,7 @@
  * Utilise le nouveau service optimisé
  */
 import { useState, useEffect, useCallback } from 'react'
-import AssignmentsService from '../services/assignmentsService.js'
+import { ApiService } from '../services/apiService.js'
 
 export const useAssignments = () => {
   const [assignments, setAssignments] = useState([])
@@ -24,7 +24,7 @@ export const useAssignments = () => {
     setError(null)
 
     try {
-      const data = await AssignmentsService.getAllAssignments()
+      const data = await ApiService.assignments.getAssignments()
       setAssignments(data)
       console.log('✅ Assignations chargées avec succès')
     } catch (err) {
@@ -32,7 +32,7 @@ export const useAssignments = () => {
       setError(err)
       
       // Fallback: mode offline
-      const offlineData = AssignmentsService.getOfflineAssignments()
+      const offlineData = await ApiService.assignments.getAssignments()
       setAssignments(offlineData)
     } finally {
       setLoading(false)
@@ -51,7 +51,11 @@ export const useAssignments = () => {
 
   const assignArticle = useCallback(async (articleId, tricoteuseId) => {
     try {
-      const result = await AssignmentsService.assignArticle(articleId, tricoteuseId)
+      const result = await ApiService.assignments.createAssignment({
+        article_id: articleId,
+        tricoteuse_id: tricoteuseId,
+        status: 'en_cours'
+      })
       
       // Rafraîchir les assignations
       await fetchAssignments()
@@ -65,7 +69,11 @@ export const useAssignments = () => {
 
   const unassignArticle = useCallback(async (articleId) => {
     try {
-      await AssignmentsService.unassignArticle(articleId)
+      // Trouver l'assignation à supprimer
+      const assignment = assignments.find(a => a.article_id === articleId)
+      if (assignment) {
+        await ApiService.assignments.deleteAssignment(assignment._id)
+      }
       
       // Rafraîchir les assignations
       await fetchAssignments()

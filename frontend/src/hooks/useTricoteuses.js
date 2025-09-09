@@ -3,7 +3,7 @@
  * Utilise le nouveau service optimisé
  */
 import { useState, useEffect, useCallback } from 'react'
-import TricoteusesService from '../services/tricoteusesService.js'
+import { ApiService } from '../services/apiService.js'
 
 export const useTricoteuses = () => {
   const [tricoteuses, setTricoteuses] = useState([])
@@ -24,7 +24,7 @@ export const useTricoteuses = () => {
     setError(null)
 
     try {
-      const data = await TricoteusesService.getAllTricoteuses()
+      const data = await ApiService.tricoteuses.getTricoteuses()
       setTricoteuses(data)
       console.log('✅ Tricoteuses chargées avec succès')
     } catch (err) {
@@ -32,7 +32,7 @@ export const useTricoteuses = () => {
       setError(err)
       
       // Fallback: mode offline
-      const offlineData = TricoteusesService.getOfflineTricoteuses()
+      const offlineData = await ApiService.tricoteuses.getTricoteuses()
       setTricoteuses(offlineData)
     } finally {
       setLoading(false)
@@ -59,7 +59,7 @@ export const useTricoteuses = () => {
 
   const createTricoteuse = useCallback(async (tricoteuseData) => {
     try {
-      const result = await TricoteusesService.createTricoteuse(tricoteuseData)
+      const result = await ApiService.tricoteuses.createTricoteuse(tricoteuseData)
       
       // Rafraîchir les tricoteuses
       await fetchTricoteuses()
@@ -73,7 +73,7 @@ export const useTricoteuses = () => {
 
   const updateTricoteuse = useCallback(async (tricoteuseId, updates) => {
     try {
-      const result = await TricoteusesService.updateTricoteuse(tricoteuseId, updates)
+      const result = await ApiService.tricoteuses.updateTricoteuse(tricoteuseId, updates)
       
       // Rafraîchir les tricoteuses
       await fetchTricoteuses()
@@ -87,7 +87,7 @@ export const useTricoteuses = () => {
 
   const deleteTricoteuse = useCallback(async (tricoteuseId) => {
     try {
-      await TricoteusesService.deleteTricoteuse(tricoteuseId)
+      await ApiService.tricoteuses.deleteTricoteuse(tricoteuseId)
       
       // Rafraîchir les tricoteuses
       await fetchTricoteuses()

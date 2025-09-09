@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle, forwardRef } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
-import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import delaiService from '../../services/delaiService'
 
 // Composant avec chargement progressif par lots de 30 articles
@@ -137,7 +137,7 @@ const InfiniteScrollGrid = forwardRef(({
   const loadAssignments = useCallback(async () => {
     try {
       setAssignmentsLoading(true)
-      const response = await assignmentsService.getAllAssignments()
+      const response = await ApiService.assignments.getAssignments()
       const assignmentsMap = {}
       response.forEach(assignment => {
         assignmentsMap[assignment.article_id] = assignment
@@ -180,7 +180,7 @@ const InfiniteScrollGrid = forwardRef(({
   const loadTricoteuses = useCallback(async () => {
     try {
       setTricoteusesLoading(true)
-      const data = await tricoteusesService.getAllTricoteuses()
+      const data = await ApiService.tricoteuses.getTricoteuses()
       setTricoteuses(data || [])
     } catch (error) {
       console.error('Erreur chargement tricoteuses:', error)

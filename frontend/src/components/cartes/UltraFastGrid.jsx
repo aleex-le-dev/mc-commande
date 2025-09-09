@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import { FixedSizeGrid as Grid } from 'react-window'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
-import { assignmentsService, tricoteusesService } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import delaiService from '../../services/delaiService'
 
 // Composant de grille ultra-rapide avec virtualisation optimisée
@@ -30,7 +30,7 @@ const UltraFastGrid = ({
   const loadAssignments = useCallback(async () => {
     try {
       setAssignmentsLoading(true)
-      const response = await assignmentsService.getAllAssignments()
+      const response = await ApiService.assignments.getAssignments()
       const assignmentsMap = {}
       response.forEach(assignment => {
         assignmentsMap[assignment.article_id] = assignment
@@ -47,7 +47,7 @@ const UltraFastGrid = ({
   const loadTricoteuses = useCallback(async () => {
     try {
       setTricoteusesLoading(true)
-      const data = await tricoteusesService.getAllTricoteuses()
+      const data = await ApiService.tricoteuses.getTricoteuses()
       setTricoteuses(data || [])
     } catch (error) {
       console.error('Erreur chargement tricoteuses:', error)

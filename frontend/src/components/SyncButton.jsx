@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { IoRefreshOutline } from 'react-icons/io5'
 import { useQueryClient } from '@tanstack/react-query'
-import { syncOrders, getSyncLogs } from '../services/mongodbService'
+import { ApiService } from '../services/apiService'
 import { ImageOptimizationService } from '../services/imageOptimizationService'
 
 // Bouton de synchronisation réutilisable (desktop et mobile)
@@ -23,7 +23,7 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       console.log('🔄 Début de la synchronisation...')
       
       // Timeout spécifique pour la synchronisation
-      const syncPromise = syncOrders({})
+      const syncPromise = ApiService.sync.syncOrders({})
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout synchronisation (2 minutes)')), 120000)
       })

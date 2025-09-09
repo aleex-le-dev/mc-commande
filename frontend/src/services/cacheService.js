@@ -161,10 +161,6 @@ export const CacheService = {
    * Obtenir une valeur (mémoire puis persistant)
    */
   get(key) {
-    // Désactiver temporairement le cache pour forcer le rechargement
-    console.log(`🚫 Cache désactivé pour diagnostic: ${key}`)
-    return null
-    
     return this.getMemory(key) || this.getPersistent(key)
   },
 

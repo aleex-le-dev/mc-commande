@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import authService from '../services/authService'
-import { prefetchAppData } from '../services/mongodbService'
+import { ApiService } from '../services/apiService'
 
 // Composant portail d'authentification minimaliste en plein écran.
 // Bloque totalement l'accès à l'application tant que le mot de passe n'est pas validé.
@@ -42,7 +42,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
   useEffect(() => {
     const prefetchDone = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
     if (!prefetchDone) {
-      try { prefetchAppData() } catch {}
+      try { ApiService.prefetchAppData() } catch {}
     }
     // Ne plus pinger les logs côté non-authentifié pour éviter 401
   }, [])

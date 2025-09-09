@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { assignmentsService } from './components/../services/mongodbService'
+import { ApiService } from './services/apiService'
 import ContextMenu from './components/ContextMenu'
 import ConfirmationToast from './components/ConfirmationToast'
 import { IoSettingsOutline, IoLockClosedOutline, IoMenuOutline, IoCloseOutline } from 'react-icons/io5'
@@ -7,7 +7,7 @@ import SyncButton from './components/SyncButton'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
-import { syncOrders } from './services/mongodbService'
+// syncOrders est maintenant dans ApiService
 
 import TerminePage from './components/TerminePage'
 import FourniturePage from './components/FourniturePage'
@@ -54,7 +54,7 @@ function App() {
       timeoutId = setTimeout(async () => {
         try {
           setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne…' })
-          await syncOrders({})
+          await ApiService.sync.syncOrders({})
           // Invalidate caches comme le bouton
           queryClient.invalidateQueries(['db-orders'])
           queryClient.invalidateQueries(['production-statuses'])

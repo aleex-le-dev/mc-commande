@@ -1,5 +1,5 @@
 import React from 'react'
-import { getArchivedOrders } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import LoadingSpinner from '../LoadingSpinner'
 
 // Tableau des commandes archivées
@@ -14,7 +14,7 @@ const ArchivedTab = () => {
   const load = React.useCallback(async (p) => {
     try {
       setLoading(true)
-      const res = await getArchivedOrders(p, limit)
+      const res = await ApiService.getArchivedOrders(p, limit)
       if (res.success) {
         setRows(res.data || [])
         setTotal(res.pagination?.total || 0)

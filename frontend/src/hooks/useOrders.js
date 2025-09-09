@@ -3,7 +3,7 @@
  * Utilise les nouveaux services optimisés
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
-import OrdersService from '../services/ordersService.js'
+import { ApiService } from '../services/apiService.js'
 
 export const useOrders = (options = {}) => {
   const {
@@ -37,33 +37,20 @@ export const useOrders = (options = {}) => {
       return
     }
     
-    // Vider le cache pour forcer le rechargement
-    try {
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.includes('orders') || key.includes('cache')) {
-          localStorage.removeItem(key)
-        }
-      })
-      console.log('🗑️ Cache vidé dans useOrders')
-    } catch (e) {
-      console.log('⚠️ Erreur vidage cache:', e.message)
-    }
-    
     console.log('🔄 Début chargement commandes...')
     setIsFetching(true)
     setLoading(true)
     setError(null)
 
     try {
-      const result = await OrdersService.getOrders({
+      const result = await ApiService.orders.getOrdersPaginated(
         page,
         limit,
         status,
         search,
         sortBy,
         sortOrder
-      })
+      )
 
       setData(result)
       console.log('✅ Commandes chargées avec succès')
@@ -73,12 +60,12 @@ export const useOrders = (options = {}) => {
       setError(err)
       
       // Fallback: mode offline
-      const offlineData = OrdersService.getOfflineOrders({
-        page,
-        limit,
-        status
-      })
-      setData(offlineData)
+      try {
+        const offlineData = await ApiService.orders.getOrdersFromDatabase()
+        setData(offlineData)
+      } catch (offlineErr) {
+        console.error('Erreur fallback offline:', offlineErr)
+      }
     } finally {
       setLoading(false)
       setIsFetching(false)

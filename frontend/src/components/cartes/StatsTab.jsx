@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getProductionStats } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import LoadingSpinner from '../LoadingSpinner'
 
 // Onglet Statistiques: affiche les nombres d'articles terminés par semaine et par mois,
@@ -14,7 +14,7 @@ const StatsTab = () => {
     ;(async () => {
       try {
         setLoading(true)
-        const data = await getProductionStats()
+        const data = await ApiService.getProductionStats()
         if (!cancelled) setStats(data || {})
       } catch (e) {
         if (!cancelled) setError('Erreur de récupération des statistiques')

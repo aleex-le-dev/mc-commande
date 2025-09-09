@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { testConnection, testSync, getProductionStats } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import imageService from '../../services/imageService'
 
 const StatusTab = () => {
@@ -17,7 +17,7 @@ const StatusTab = () => {
   const testWordPressConnection = async () => {
     setLoadingStates(prev => ({ ...prev, wordpress: true }))
     try {
-      const result = await testConnection()
+      const result = await ApiService.testConnection()
       setTestResults(prev => ({ ...prev, wordpress: result }))
       setStatus('Connexion WordPress testée avec succès')
     } catch (error) {
@@ -51,7 +51,7 @@ const StatusTab = () => {
   const testDatabaseConnection = async () => {
     setLoadingStates(prev => ({ ...prev, database: true }))
     try {
-      const result = await testSync()
+      const result = await ApiService.testSync()
       setTestResults(prev => ({ ...prev, database: result }))
       setStatus('Connexion base de données testée avec succès')
     } catch (error) {
@@ -64,7 +64,7 @@ const StatusTab = () => {
   const testDatabaseStats = async () => {
     setLoadingStates(prev => ({ ...prev, stats: true }))
     try {
-      const result = await getProductionStats()
+      const result = await ApiService.getProductionStats()
       setTestResults(prev => ({ ...prev, stats: { success: true, data: result } }))
       setStatus('Statistiques de la base récupérées avec succès')
     } catch (error) {

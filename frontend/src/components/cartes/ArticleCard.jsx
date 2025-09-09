@@ -13,7 +13,7 @@ import InfoSection from './InfoSection'
 import useArticleCard from './card/useArticleCard'
 import { highlightText, renderFormattedAddress } from '../../utils/textUtils.jsx'
 import imageService from '../../services/imageService'
-import { tricoteusesService, assignmentsService, updateArticleStatus, updateOrderNote, setArticleUrgent } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 import statusService from '../../services/statusService'
 // Icônes utilisées dans BottomBar uniquement; ArticleCard n'en a plus besoin
 import delaiService from '../../services/delaiService'
@@ -154,7 +154,7 @@ const ArticleCard = forwardRef(({
       const { uniqueAssignmentId: targetId, urgent } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
       try {
-        await setArticleUrgent(article.orderId, article.line_item_id, urgent)
+        await ApiService.production.setArticleUrgent(article.orderId, article.line_item_id, urgent)
         setLocalUrgent(Boolean(urgent))
         // notifier tri + mise à jour locale des données unifiées
         window.dispatchEvent(new Event('mc-mark-urgent'))
@@ -214,12 +214,12 @@ const ArticleCard = forwardRef(({
           
           // Synchroniser le status avec production_status en BDD
           try { 
-            await updateArticleStatus(article.orderId, article.line_item_id, newStatus) 
+            await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, newStatus) 
           } catch (error) {
             console.error('❌ Erreur synchronisation status en BDD:', error)
           }
           
-          await assignmentsService.createOrUpdateAssignment(updated)
+          await ApiService.assignments.createAssignment(updated)
           setLocalAssignment(updated)
           if (onAssignmentUpdate) { onAssignmentUpdate(uniqueAssignmentId, updated) }
           
@@ -435,7 +435,7 @@ const ArticleCard = forwardRef(({
                 onSave={async (content) => {
                   try {
                     setIsSavingNote(true)
-                    const ok = await updateOrderNote(article.orderId, content)
+                    const ok = await ApiService.orders.updateOrderNote(article.orderId, content)
                     if (ok) {
                       article.customerNote = content
                       setIsNoteOpen(false)
@@ -469,11 +469,11 @@ const ArticleCard = forwardRef(({
             urgent: currentUrgent
           }
           try {
-            await assignmentsService.createOrUpdateAssignment(assignmentData)
+            await ApiService.assignments.createAssignment(assignmentData)
             
             // Synchroniser le status initial avec production_status en BDD
             try { 
-              await updateArticleStatus(article.orderId, article.line_item_id, 'en_cours') 
+              await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, 'en_cours') 
             } catch (error) {
               console.error('❌ Erreur synchronisation status initial en BDD:', error)
             }
@@ -511,7 +511,7 @@ const ArticleCard = forwardRef(({
           }
           
           try {
-            await assignmentsService.createOrUpdateAssignment(updatedAssignment)
+            await ApiService.assignments.updateAssignment(updatedAssignment._id, updatedAssignment)
             setLocalAssignment(updatedAssignment)
             if (onAssignmentUpdate) { onAssignmentUpdate() }
             closeTricoteuseModal()

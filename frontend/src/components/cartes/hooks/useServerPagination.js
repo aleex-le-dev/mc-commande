@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getOrdersPaginated } from '../../../services/mongodbService'
+import { ApiService } from '../../../services/apiService'
 import { transformItemToArticle } from '../../../services/articleTransformationService'
 
 export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
@@ -20,7 +20,7 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
     refetch 
   } = useQuery({
     queryKey,
-    queryFn: () => getOrdersPaginated(currentPage, itemsPerPage, selectedType, searchTerm),
+    queryFn: () => ApiService.orders.getOrdersPaginated(currentPage, itemsPerPage, selectedType, searchTerm),
     staleTime: 10000, // 10 secondes
     cacheTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
@@ -85,7 +85,7 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
       const nextPage = currentPage + 1
       queryClient.prefetchQuery({
         queryKey: ['orders-paginated', selectedType, searchTerm, nextPage, itemsPerPage],
-        queryFn: () => getOrdersPaginated(nextPage, itemsPerPage, selectedType, searchTerm),
+        queryFn: () => ApiService.orders.getOrdersPaginated(nextPage, itemsPerPage, selectedType, searchTerm),
         staleTime: 10000
       })
     }
@@ -97,7 +97,7 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
       const prevPage = currentPage - 1
       queryClient.prefetchQuery({
         queryKey: ['orders-paginated', selectedType, searchTerm, prevPage, itemsPerPage],
-        queryFn: () => getOrdersPaginated(prevPage, itemsPerPage, selectedType, searchTerm),
+        queryFn: () => ApiService.orders.getOrdersPaginated(prevPage, itemsPerPage, selectedType, searchTerm),
         staleTime: 10000
       })
     }

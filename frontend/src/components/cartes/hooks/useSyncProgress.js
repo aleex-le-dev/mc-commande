@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getSyncLogs } from '../../../services/mongodbService'
+import { ApiService } from '../../../services/apiService'
 
 // Hook personnalisé pour gérer la progression de synchronisation
 export const useSyncProgress = (performSync) => {
@@ -38,7 +38,7 @@ export const useSyncProgress = (performSync) => {
       // Récupérer le dernier log en temps réel pendant la synchronisation
       const logsInterval = setInterval(async () => {
         try {
-          const logs = await getSyncLogs()
+          const logs = await ApiService.getSyncLogs()
           // Prendre seulement le dernier log au lieu de tous
           if (logs && logs.log) {
             setSyncLogs(prev => {
@@ -120,7 +120,7 @@ export const useSyncProgress = (performSync) => {
   useEffect(() => {
     const fetchInitialLogs = async () => {
       try {
-        const logs = await getSyncLogs()
+        const logs = await ApiService.getSyncLogs()
         if (logs && logs.log) {
           setSyncLogs([logs.log])
           const msg = logs.log.message || ''

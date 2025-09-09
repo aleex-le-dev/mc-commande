@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import imageService from '../../../services/imageService'
 import delaiService from '../../../services/delaiService'
-import { assignmentsService, updateArticleStatus } from '../../../services/mongodbService'
+import { ApiService } from '../../../services/apiService'
 
 // Hook: encapsule les états, effets et helpers d'ArticleCard
 const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite }) => {
@@ -243,10 +243,10 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
 
   const removeAssignment = useCallback(async () => {
     try {
-      await assignmentsService.deleteAssignment(uniqueAssignmentId)
+      await ApiService.assignments.deleteAssignment(uniqueAssignmentId)
       // Mettre immédiatement le statut à "a_faire" côté BDD et UI
       try {
-        await updateArticleStatus(article.orderId, article.line_item_id, 'a_faire')
+        await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, 'a_faire')
       } catch {}
       setLocalAssignment(null)
       if (onAssignmentUpdate) {

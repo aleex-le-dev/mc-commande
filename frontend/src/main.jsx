@@ -2,7 +2,7 @@ import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './App.css'
 import App from './App.jsx'
-import { prefetchAppData } from './services/mongodbService.js'
+import { ApiService } from './services/apiService.js'
 import AuthGate from './components/AuthGate.jsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -22,7 +22,7 @@ const Root = () => {
   useEffect(() => {
     const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
     if (!already) {
-      prefetchAppData()
+      ApiService.prefetchAppData()
     }
   }, [])
 

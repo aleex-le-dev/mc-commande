@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { tricoteusesService } from '../../services/mongodbService'
+import { ApiService } from '../../services/apiService'
 
 const TricoteusesTab = () => {
   const [knitters, setKnitters] = useState([])
@@ -28,7 +28,7 @@ const TricoteusesTab = () => {
   const loadTricoteuses = async () => {
     try {
       setLoading(true)
-      const data = await tricoteusesService.getAllTricoteuses()
+      const data = await ApiService.tricoteuses.getTricoteuses()
       setKnitters(data)
     } catch (error) {
       console.error('Erreur chargement couturières:', error)
@@ -151,7 +151,7 @@ const TricoteusesTab = () => {
           photoUrl: photoUrl,
           gender: formData.gender
         }
-        await tricoteusesService.updateTricoteuse(editingKnitter._id, updateData)
+        await ApiService.tricoteuses.updateTricoteuse(editingKnitter._id, updateData)
       } else {
         // Ajout
         const createData = {
@@ -160,7 +160,7 @@ const TricoteusesTab = () => {
           photoUrl: photoUrl,
           gender: formData.gender
         }
-        await tricoteusesService.createTricoteuse(createData)
+        await ApiService.tricoteuses.createTricoteuse(createData)
       }
       
       // Recharger la liste
@@ -183,7 +183,7 @@ const TricoteusesTab = () => {
 
     try {
       setLoading(true)
-      await tricoteusesService.deleteTricoteuse(id)
+      await ApiService.tricoteuses.deleteTricoteuse(id)
       await loadTricoteuses()
       // Notifier les autres vues de la mise à jour
       window.dispatchEvent(new Event('mc-tricoteuses-updated'))
