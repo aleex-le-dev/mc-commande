@@ -3221,6 +3221,62 @@ app.get('/api/debug/articles-couture', async (req, res) => {
   }
 })
 
+// Endpoint pour synchroniser les images depuis Render vers Railway
+app.post('/api/sync/images', async (req, res) => {
+  try {
+    const { productIds } = req.body
+    if (!productIds || !Array.isArray(productIds)) {
+      return res.status(400).json({ error: 'Liste de productIds requise' })
+    }
+
+    const imagesCollection = db.collection('product_images')
+    const results = []
+    
+    for (const productId of productIds) {
+      try {
+        // Récupérer l'image depuis Render
+        const renderUrl = `https://maisoncleo-commande.onrender.com/api/images/${productId}`
+        const response = await fetch(renderUrl)
+        
+        if (response.ok) {
+          const imageBuffer = await response.buffer()
+          const contentType = response.headers.get('content-type') || 'image/jpeg'
+          
+          // Sauvegarder dans Railway
+          await imagesCollection.updateOne(
+            { product_id: parseInt(productId) },
+            { 
+              $set: {
+                product_id: parseInt(productId),
+                data: imageBuffer,
+                content_type: contentType,
+                synced_at: new Date()
+              }
+            },
+            { upsert: true }
+          )
+          
+          results.push({ productId, status: 'synced' })
+        } else {
+          results.push({ productId, status: 'not_found', error: response.status })
+        }
+      } catch (error) {
+        results.push({ productId, status: 'error', error: error.message })
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      synced: results.filter(r => r.status === 'synced').length,
+      total: productIds.length,
+      results 
+    })
+  } catch (error) {
+    console.error('Erreur sync images:', error)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
 // Démarrage du serveur
 async function startServer() {
   // Attendre la connexion Mongo pour garantir le démarrage correct
