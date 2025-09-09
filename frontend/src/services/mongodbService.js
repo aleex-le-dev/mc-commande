@@ -54,7 +54,7 @@ async function requestWithRetry(url, options = {}, retries = 2) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || 15000) // 15s optimisé
+  }, options.timeoutMs || 30000) // 30s pour production lente
   
   try {
     await acquireSlot()

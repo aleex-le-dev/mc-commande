@@ -149,7 +149,7 @@ class DelaiService {
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout pour production lente
       
       const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
         credentials: 'include',
