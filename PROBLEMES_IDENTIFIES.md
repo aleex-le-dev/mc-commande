@@ -9,7 +9,7 @@ Le projet souffre de problèmes architecturaux majeurs qui causent des performan
 
 ### **1. ARCHITECTURE MONOLITHIQUE**
 - ❌ **`mongodbService.js` (849 lignes)** - Service monolithique qui fait tout
-- ❌ **Pas de séparation des responsabilités** - Orders, Assignments, Tricoteuses mélangés
+- ✅ **Pas de séparation des responsabilités** - Orders, Assignments, Tricoteuses mélangés
 - ❌ **Code difficile à maintenir** - Modifications risquées
 - ❌ **Pas de réutilisabilité** - Logique dupliquée partout
 
