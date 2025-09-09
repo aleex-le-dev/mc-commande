@@ -18,7 +18,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
     const baseUrl = getBackendUrl()
     // Forcer le rechargement avec un timestamp pour éviter le cache
     const timestamp = Date.now()
-    return `${baseUrl}/api/images/${productId}?t=${timestamp}`
+    return `${baseUrl}/api/images/${productId}?t=${timestamp}&w=256&q=75`
   }, [productId])
 
   useEffect(() => {
@@ -62,12 +62,13 @@ const ProductImage = ({ productId, productName, permalink }) => {
       return
     }
 
+    console.log(`🖼️ Chargement image ${id}: ${backendUrl}`)
     setIsLoading(true)
     setHasError(false)
     setErrorDetails('')
     
     try {
-      // Timeout ultra-rapide pour les images
+      // Timeout ultra-rapide pour les images (2 secondes)
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 2000)
       
