@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { getBackendUrl } from '../../config/api.js'
 
 // Cache global pour les images déjà chargées
 const imageCache = new Map()
@@ -14,7 +15,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
   // URL mémorisée pour éviter les re-calculs
   const backendUrl = useMemo(() => {
     if (!productId) return null
-    const baseUrl = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+    const baseUrl = getBackendUrl()
     return `${baseUrl}/api/images/${productId}`
   }, [productId])
 

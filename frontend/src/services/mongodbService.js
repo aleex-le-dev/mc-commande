@@ -1,6 +1,8 @@
 // Service pour l'API MongoDB
-// En dev: backend local; en prod: Render ou VITE_API_URL
-const API_BASE_URL = `${(import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))}/api`
+import { getApiUrl } from '../config/api.js'
+
+// URL de base de l'API
+const API_BASE_URL = getApiUrl()
 
 // Limiteur optimisé + retry/backoff pour réduire les erreurs réseau
 let concurrentRequests = 0

@@ -3,10 +3,12 @@
  * Affichage direct depuis MongoDB - code ultra-propre
  */
 
+import { getBackendUrl } from '../config/api.js'
+
 class ImageService {
   constructor() {
-    // En dev: backend local; en prod: Render ou VITE_API_URL
-    const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+    // Utiliser la configuration centralisée
+    const base = getBackendUrl()
     this.backendUrl = `${base}/api/images`
   }
 

@@ -1826,8 +1826,8 @@ app.get('/api/images/:productId', async (req, res) => {
     } catch (e) {
       // Fallback: renvoyer l'original si sharp indisponible/erreur
       console.warn('Sharp non disponible, fallback vers image originale:', e.message)
-      res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+    res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
       res.setHeader('X-Resized', 'false')
       return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
     }
@@ -3226,8 +3226,9 @@ async function startServer() {
   // Attendre la connexion Mongo pour garantir le démarrage correct
   await connectToMongo()
 
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
+    console.log(`🌍 Environnement: ${process.env.NODE_ENV || 'development'}`)
   })
   server.on('error', (err) => {
     console.error('❌ Erreur serveur:', err)
