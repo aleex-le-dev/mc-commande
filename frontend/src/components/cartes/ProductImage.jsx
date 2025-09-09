@@ -34,9 +34,40 @@ const ImagePreloader = {
     return promise
   },
   
-  // Précharger plusieurs images en parallèle
+  // Précharger plusieurs images en parallèle (optimisé pour chargement en lot)
   preloadBatch: (urls) => {
+    console.log(`🖼️ Préchargement en lot: ${urls.length} images`)
     return Promise.allSettled(urls.map(url => ImagePreloader.preload(url)))
+  },
+  
+  // Précharger toutes les images d'un coup (nouveau)
+  preloadAll: async (urls) => {
+    if (!Array.isArray(urls) || urls.length === 0) return []
+    
+    console.log(`🚀 Chargement en lot: ${urls.length} images simultanément`)
+    
+    // Diviser en lots de 20 pour éviter la surcharge
+    const batchSize = 20
+    const results = []
+    
+    for (let i = 0; i < urls.length; i += batchSize) {
+      const batch = urls.slice(i, i + batchSize)
+      const batchPromises = batch.map(url => ImagePreloader.preload(url))
+      
+      try {
+        const batchResults = await Promise.allSettled(batchPromises)
+        results.push(...batchResults.map(result => 
+          result.status === 'fulfilled' ? result.value : null
+        ).filter(Boolean))
+        
+        console.log(`✅ Lot ${Math.floor(i/batchSize) + 1} terminé: ${batch.length} images`)
+      } catch (error) {
+        console.warn(`⚠️ Erreur lot ${Math.floor(i/batchSize) + 1}:`, error)
+      }
+    }
+    
+    console.log(`🎉 Chargement en lot terminé: ${results.length}/${urls.length} images`)
+    return results
   }
 }
 
@@ -225,5 +256,26 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
 
 // Export du service de préchargement pour utilisation externe
 export { ImagePreloader }
+
+// Fonction utilitaire pour charger toutes les images d'une page
+export const preloadAllImages = async (articles) => {
+  if (!Array.isArray(articles) || articles.length === 0) return []
+  
+  // Extraire toutes les URLs d'images
+  const imageUrls = articles
+    .map(article => {
+      if (article.productId) {
+        const base = getBackendUrl()
+        return `${base}/api/woocommerce/products/${article.productId}/image?f=webp`
+      }
+      return null
+    })
+    .filter(Boolean)
+  
+  if (imageUrls.length === 0) return []
+  
+  console.log(`🖼️ Chargement en lot de ${imageUrls.length} images pour la page`)
+  return await ImagePreloader.preloadAll(imageUrls)
+}
 
 export default ProductImage

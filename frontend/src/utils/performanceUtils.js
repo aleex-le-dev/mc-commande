@@ -23,13 +23,13 @@ export const PERFORMANCE_CONFIG = {
   MEMORY_WARNING_THRESHOLD: 0.8,
   PERFORMANCE_DEGRADATION_THRESHOLD: 0.6,
   
-  // Configuration pour appareils lents
+  // Configuration pour appareils lents (optimisée pour Render)
   SLOW_DEVICE_CONFIG: {
-    MAX_CONCURRENT_IMAGES: 3,
-    MAX_CACHE_SIZE: 50,
-    API_CALL_TIMEOUT: 5000,
-    IMAGE_LOAD_TIMEOUT: 2000,
-    PRELOAD_TIMEOUT: 3000
+    MAX_CONCURRENT_IMAGES: 4, // Augmenté de 3 à 4
+    MAX_CACHE_SIZE: 60, // Augmenté de 50 à 60
+    API_CALL_TIMEOUT: 15000, // Augmenté de 5s à 15s pour Render
+    IMAGE_LOAD_TIMEOUT: 5000, // Augmenté de 2s à 5s
+    PRELOAD_TIMEOUT: 8000 // Augmenté de 3s à 8s
   }
 }
 
@@ -37,18 +37,18 @@ export const PERFORMANCE_CONFIG = {
  * Détecteur de performance du navigateur
  */
 export const PerformanceDetector = {
-  // Vérifier si l'appareil est lent
+  // Vérifier si l'appareil est lent (critères assouplis pour Render)
   isSlowDevice: () => {
     if (typeof navigator === 'undefined') return false
     
-    // Vérifier la mémoire disponible
-    if (navigator.deviceMemory && navigator.deviceMemory < 4) return true
+    // Critères plus stricts pour éviter les faux positifs
+    if (navigator.deviceMemory && navigator.deviceMemory < 2) return true // Seuil abaissé de 4 à 2
     
-    // Vérifier la connexion
+    // Vérifier la connexion (seulement les connexions vraiment lentes)
     if (navigator.connection) {
       const connection = navigator.connection
-      if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') return true
-      if (connection.downlink < 1) return true
+      if (connection.effectiveType === 'slow-2g') return true // Supprimé '2g'
+      if (connection.downlink < 0.5) return true // Seuil abaissé de 1 à 0.5
     }
     
     // Vérifier les préférences de mouvement réduit

@@ -47,28 +47,30 @@ const savePersistentCache = () => {
 // Initialiser le cache persistant
 loadPersistentCache()
 
-// Configuration optimisée pour Render (adaptative)
+// Configuration optimisée pour Render (chargement en lot)
 const RENDER_CONFIG = {
-  maxConcurrentPreloads: 6,
-  preloadTimeout: 5000,
-  cacheSize: 100,
-  priorityThreshold: 0.8
+  maxConcurrentPreloads: 20, // Augmenté pour chargement en lot
+  preloadTimeout: 15000, // Timeout augmenté
+  cacheSize: 200, // Cache plus grand
+  priorityThreshold: 0.8,
+  batchSize: 50 // Nouveau: taille des lots
 }
 
 // Détecter les appareils lents et ajuster la config
 const isSlowDevice = () => {
   if (typeof navigator === 'undefined') return false
-  return navigator.deviceMemory && navigator.deviceMemory < 4
+  return navigator.deviceMemory && navigator.deviceMemory < 2 // Seuil abaissé pour Render
 }
 
-// Configuration adaptative
+// Configuration adaptative (optimisée pour chargement en lot)
 const getAdaptiveConfig = () => {
   if (isSlowDevice()) {
     return {
-      maxConcurrentPreloads: 3,
-      preloadTimeout: 3000,
-      cacheSize: 50,
-      priorityThreshold: 0.9
+      maxConcurrentPreloads: 12, // Augmenté même pour appareils lents
+      preloadTimeout: 20000, // Timeout plus long
+      cacheSize: 100, // Cache plus grand
+      priorityThreshold: 0.9,
+      batchSize: 30 // Taille de lot pour appareils lents
     }
   }
   return RENDER_CONFIG
@@ -129,9 +131,42 @@ export const ImageOptimizationService = {
   },
 
   /**
-   * Précharger plusieurs images en parallèle avec limite adaptative
+   * Précharger un lot d'images simultanément (nouveau)
    */
-  preloadBatch: async (urls, priority = false) => {
+  preloadBatch: async (imageUrls, priority = false) => {
+    if (!Array.isArray(imageUrls) || imageUrls.length === 0) return []
+    
+    const config = getAdaptiveConfig()
+    const batchSize = config.batchSize || 50
+    const results = []
+    
+    console.log(`🖼️ Préchargement en lot: ${imageUrls.length} images`)
+    
+    // Traiter par lots pour éviter de surcharger
+    for (let i = 0; i < imageUrls.length; i += batchSize) {
+      const batch = imageUrls.slice(i, i + batchSize)
+      const batchPromises = batch.map(url => this.preloadImage(url, priority))
+      
+      try {
+        const batchResults = await Promise.allSettled(batchPromises)
+        results.push(...batchResults.map(result => 
+          result.status === 'fulfilled' ? result.value : null
+        ).filter(Boolean))
+        
+        console.log(`✅ Lot ${Math.floor(i/batchSize) + 1} terminé: ${batch.length} images`)
+      } catch (error) {
+        console.warn(`⚠️ Erreur lot ${Math.floor(i/batchSize) + 1}:`, error)
+      }
+    }
+    
+    console.log(`🎉 Préchargement en lot terminé: ${results.length}/${imageUrls.length} images`)
+    return results
+  },
+
+  /**
+   * Précharger plusieurs images en parallèle avec limite adaptative (ancienne méthode)
+   */
+  preloadMultiple: async (urls, priority = false) => {
     const config = getAdaptiveConfig()
     const chunks = []
     for (let i = 0; i < urls.length; i += config.maxConcurrentPreloads) {

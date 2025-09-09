@@ -366,7 +366,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
         <SlowDeviceOptimizer>
-          <ImageCacheManager currentPage={activeTab} />
+          <ImageCacheManager currentPage={activeTab} articles={unifiedArticles} />
           <CardStyles />
           <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}

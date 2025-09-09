@@ -1,12 +1,19 @@
 import React, { useEffect } from 'react'
 import { ImageOptimizationService } from '../services/imageOptimizationService'
+import { preloadAllImages } from './cartes/ProductImage.jsx'
 
 /**
  * Gestionnaire de cache d'images pour la persistance entre pages
  * Précharge les images des pages non visitées en arrière-plan
  */
-const ImageCacheManager = ({ currentPage, allPages = ['couture', 'maille', 'termine', 'fourniture'] }) => {
+const ImageCacheManager = ({ currentPage, articles = [], allPages = ['couture', 'maille', 'termine', 'fourniture'] }) => {
   useEffect(() => {
+    // Précharger toutes les images de la page actuelle en lot
+    if (articles && articles.length > 0) {
+      console.log(`🚀 Chargement en lot de ${articles.length} images pour ${currentPage}`)
+      preloadAllImages(articles)
+    }
+    
     // Précharger les images des autres pages en arrière-plan
     const preloadOtherPages = async () => {
       const otherPages = allPages.filter(page => page !== currentPage)
@@ -42,7 +49,7 @@ const ImageCacheManager = ({ currentPage, allPages = ['couture', 'maille', 'term
     const timeoutId = setTimeout(preloadOtherPages, 2000)
     
     return () => clearTimeout(timeoutId)
-  }, [currentPage, allPages])
+  }, [currentPage, articles, allPages])
 
   // Nettoyer le cache périodiquement
   useEffect(() => {

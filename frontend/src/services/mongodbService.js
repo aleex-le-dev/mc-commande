@@ -84,10 +84,10 @@ function persistentCacheSet(key, data) {
 async function requestWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
   
-  // Timeout adaptatif selon le type de requête
+  // Timeout adaptatif selon le type de requête (optimisé pour Render)
   const isSyncRequest = url.includes('/sync/orders')
-  const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 4
-  const baseTimeout = isSyncRequest ? 120000 : (isSlowDevice ? 10000 : 20000) // 2min pour sync, 10-20s pour autres
+  const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 2 // Seuil abaissé
+  const baseTimeout = isSyncRequest ? 120000 : (isSlowDevice ? 15000 : 25000) // 2min pour sync, 15-25s pour autres
   
   const timeout = setTimeout(() => {
     console.warn(`⏰ Timeout requête après ${baseTimeout}ms: ${url}`)
