@@ -320,10 +320,11 @@ const TerminePage = () => {
 
   return (
     <>
-      <SmartImageLoader 
+      {/* Temporairement désactivé - erreurs 502 sur Render */}
+      {/* <SmartImageLoader 
         pageName="termine" 
         priority={false} 
-      />
+      /> */}
       <div className="w-full px-4">
       <div className="mb-6">
         <OrderHeader

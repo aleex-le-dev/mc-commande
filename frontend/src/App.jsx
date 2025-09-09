@@ -363,7 +363,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
         <SlowDeviceOptimizer>
-          <BackgroundImagePreloader currentPage={activeTab} />
+          {/* Temporairement désactivé - erreurs 502 sur Render */}
+          {/* <BackgroundImagePreloader currentPage={activeTab} /> */}
           <CardStyles />
           <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}

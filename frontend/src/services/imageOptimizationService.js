@@ -47,13 +47,13 @@ const savePersistentCache = () => {
 // Initialiser le cache persistant
 loadPersistentCache()
 
-// Configuration optimisée pour Render (chargement en lot)
+// Configuration optimisée pour Render (chargement progressif)
 const RENDER_CONFIG = {
-  maxConcurrentPreloads: 20, // Augmenté pour chargement en lot
-  preloadTimeout: 15000, // Timeout augmenté
-  cacheSize: 200, // Cache plus grand
+  maxConcurrentPreloads: 3, // Réduit pour éviter la surcharge
+  preloadTimeout: 5000, // Timeout réduit
+  cacheSize: 50, // Cache réduit
   priorityThreshold: 0.8,
-  batchSize: 50 // Nouveau: taille des lots
+  batchSize: 10 // Taille de lot réduite
 }
 
 // Détecter les appareils lents et ajuster la config
@@ -62,15 +62,15 @@ const isSlowDevice = () => {
   return navigator.deviceMemory && navigator.deviceMemory < 2 // Seuil abaissé pour Render
 }
 
-// Configuration adaptative (optimisée pour chargement en lot)
+// Configuration adaptative (optimisée pour Render)
 const getAdaptiveConfig = () => {
   if (isSlowDevice()) {
     return {
-      maxConcurrentPreloads: 12, // Augmenté même pour appareils lents
-      preloadTimeout: 20000, // Timeout plus long
-      cacheSize: 100, // Cache plus grand
+      maxConcurrentPreloads: 2, // Très réduit pour appareils lents
+      preloadTimeout: 3000, // Timeout court
+      cacheSize: 25, // Cache petit
       priorityThreshold: 0.9,
-      batchSize: 30 // Taille de lot pour appareils lents
+      batchSize: 5 // Très petit lot
     }
   }
   return RENDER_CONFIG

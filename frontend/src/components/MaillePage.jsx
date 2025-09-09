@@ -10,10 +10,11 @@ const MaillePage = () => {
   return (
     <>
       <ProductionPage productionType="maille" title="Maille" />
-      <SmartImageLoader 
+      {/* Temporairement désactivé - erreurs 502 sur Render */}
+      {/* <SmartImageLoader 
         pageName="maille" 
         priority={false} 
-      />
+      /> */}
     </>
   )
 }
