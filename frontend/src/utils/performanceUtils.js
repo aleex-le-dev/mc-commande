@@ -3,14 +3,14 @@
  * Gestion intelligente des ressources et du cache
  */
 
-// Configuration des performances
+// Configuration des performances adaptative
 export const PERFORMANCE_CONFIG = {
-  // Limites de ressources
+  // Limites de ressources (adaptatives)
   MAX_CONCURRENT_IMAGES: 6,
   MAX_CACHE_SIZE: 100,
   PRELOAD_BATCH_SIZE: 10,
   
-  // Timeouts optimisés pour Render
+  // Timeouts optimisés pour Render (adaptatifs)
   IMAGE_LOAD_TIMEOUT: 3000,
   API_CALL_TIMEOUT: 8000,
   PRELOAD_TIMEOUT: 5000,
@@ -21,7 +21,16 @@ export const PERFORMANCE_CONFIG = {
   
   // Seuils de performance
   MEMORY_WARNING_THRESHOLD: 0.8,
-  PERFORMANCE_DEGRADATION_THRESHOLD: 0.6
+  PERFORMANCE_DEGRADATION_THRESHOLD: 0.6,
+  
+  // Configuration pour appareils lents
+  SLOW_DEVICE_CONFIG: {
+    MAX_CONCURRENT_IMAGES: 3,
+    MAX_CACHE_SIZE: 50,
+    API_CALL_TIMEOUT: 5000,
+    IMAGE_LOAD_TIMEOUT: 2000,
+    PRELOAD_TIMEOUT: 3000
+  }
 }
 
 /**
@@ -215,12 +224,17 @@ export const initializePerformanceOptimizations = () => {
   
   // Détecter le niveau de performance
   const performanceLevel = PerformanceDetector.getPerformanceLevel()
+  const isSlowDevice = PerformanceDetector.isSlowDevice()
+  
   console.log(`🚀 Niveau de performance détecté: ${performanceLevel}`)
+  if (isSlowDevice) {
+    console.log('🐌 Appareil lent détecté - optimisations activées')
+  }
   
   // Ajuster les configurations selon le niveau
-  if (performanceLevel === 'low') {
-    PERFORMANCE_CONFIG.MAX_CONCURRENT_IMAGES = 3
-    PERFORMANCE_CONFIG.MAX_CACHE_SIZE = 50
+  if (performanceLevel === 'low' || isSlowDevice) {
+    Object.assign(PERFORMANCE_CONFIG, PERFORMANCE_CONFIG.SLOW_DEVICE_CONFIG)
+    console.log('⚡ Configuration optimisée pour appareil lent')
   } else if (performanceLevel === 'high') {
     PERFORMANCE_CONFIG.MAX_CONCURRENT_IMAGES = 10
     PERFORMANCE_CONFIG.MAX_CACHE_SIZE = 200
@@ -229,6 +243,7 @@ export const initializePerformanceOptimizations = () => {
   // Désactiver les animations complexes si nécessaire
   if (!PerformanceDetector.canUseComplexAnimations()) {
     document.documentElement.style.setProperty('--animation-duration', '0.01ms')
+    console.log('🎨 Animations réduites activées')
   }
   
   // Surveiller la mémoire
@@ -239,6 +254,15 @@ export const initializePerformanceOptimizations = () => {
       SmartCache.cleanup('api')
     })
   }, PERFORMANCE_CONFIG.MEMORY_CHECK_INTERVAL)
+  
+  // Optimisations spécifiques pour appareils lents
+  if (isSlowDevice) {
+    // Réduire la fréquence de nettoyage
+    setInterval(() => {
+      SmartCache.cleanup('images')
+      SmartCache.cleanup('api')
+    }, 15000) // Toutes les 15 secondes au lieu de 30
+  }
 }
 
 export default {

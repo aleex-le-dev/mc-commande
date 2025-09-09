@@ -18,6 +18,7 @@ import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
+import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
 import './App.css'
 
 // Configuration du client React Query (supprimé car défini dans main.jsx)
@@ -359,8 +360,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
-        <CardStyles />
-        <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <SlowDeviceOptimizer>
+          <CardStyles />
+          <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}
         <nav className="shadow-lg border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}>
           <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -511,7 +513,8 @@ function App() {
           articles={deleteOrderInfo?.articles || []}
           isDeleting={isDeleting}
         />
-        </div>
+          </div>
+        </SlowDeviceOptimizer>
       </PerformanceOptimizer>
     </QueryClientProvider>
   )

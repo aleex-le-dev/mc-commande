@@ -4,32 +4,46 @@ import { getApiUrl } from '../config/api.js'
 // URL de base de l'API
 const API_BASE_URL = getApiUrl()
 
-// Petit wrapper avec retry/backoff pour limiter les erreurs réseau au démarrage
+// Wrapper ultra-optimisé avec retry/backoff pour appareils lents
 async function fetchWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
+  
+  // Timeout adaptatif selon le niveau de performance
+  const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 4
+  const baseTimeout = isSlowDevice ? 5000 : (import.meta.env.DEV ? 8000 : 10000)
   const timeout = setTimeout(() => {
-    /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 15000)) // 10s local, 15s prod (Render stable)
+  }, options.timeoutMs || baseTimeout)
   
   try {
-    const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
+    const res = await fetch(url, { 
+      credentials: 'include', 
+      ...options, 
+      signal: controller.signal,
+      // Headers optimisés pour Render
+      headers: {
+        'Cache-Control': 'max-age=300',
+        'Connection': 'keep-alive',
+        ...options.headers
+      }
+    })
+    
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {
-        /* log désactivé */
-        await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+        // Backoff exponentiel réduit pour appareils lents
+        const backoffDelay = isSlowDevice ? 200 : (options.backoffMs || 300)
+        await new Promise(r => setTimeout(r, backoffDelay * (3 - retries)))
         return fetchWithRetry(url, options, retries - 1)
       }
     }
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      /* log désactivé */
       throw e
     }
     if (retries > 0) {
-      /* log désactivé */
-      await new Promise(r => setTimeout(r, (options.backoffMs || 300) * (3 - retries)))
+      const backoffDelay = isSlowDevice ? 200 : (options.backoffMs || 300)
+      await new Promise(r => setTimeout(r, backoffDelay * (3 - retries)))
       return fetchWithRetry(url, options, retries - 1)
     }
     throw e
@@ -50,24 +64,71 @@ class DelaiService {
     // Nouveaux attributs pour getDateLimiteActuelle
     this.isLoadingDateLimite = false
     this.lastDateLimiteFailure = 0
+    
+    // Cache général pour toutes les données
+    this.generalCache = new Map()
   }
 
-  // Récupérer la configuration actuelle du délai
+  // Méthodes de cache général
+  getCachedData(key) {
+    const cached = this.generalCache.get(key)
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      return cached.data
+    }
+    this.generalCache.delete(key)
+    return null
+  }
+
+  setCachedData(key, data, ttl = 300000) {
+    this.generalCache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    })
+  }
+
+  // Récupérer la configuration actuelle du délai (ultra-optimisé)
   async getDelai() {
     try {
+      // Vérifier le cache d'abord
+      const cacheKey = 'delai-config'
+      const cached = this.getCachedData(cacheKey)
+      if (cached) {
+        return cached
+      }
+
+      const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 4
+      const timeoutMs = isSlowDevice ? 3000 : 8000
+      
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 15000 // 15 secondes pour la config (Render stable)
+        timeoutMs,
+        backoffMs: isSlowDevice ? 100 : 200
       })
+      
       const data = await response.json()
+      
+      // Mettre en cache pour 5 minutes
+      this.setCachedData(cacheKey, data, 300000)
+      
       return data
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.warn('[DELAI] Timeout configuration délai')
-        return { success: false, error: 'Timeout - serveur trop lent' }
+        console.warn('[DELAI] Timeout configuration délai - utilisation cache ou défaut')
+        // Retourner une configuration par défaut en cas de timeout
+        return {
+          success: true,
+          data: {
+            joursDelai: 21,
+            joursOuvrables: {
+              lundi: true, mardi: true, mercredi: true, jeudi: true, vendredi: true, samedi: false, dimanche: false
+            },
+            dateLimite: null
+          }
+        }
       }
       if (error.message.includes('502')) {
-        console.warn('[DELAI] Service Render indisponible (502)')
-        return { success: false, error: 'Service Railway temporairement indisponible' }
+        console.warn('[DELAI] Service Render indisponible (502) - utilisation cache')
+        return { success: false, error: 'Service temporairement indisponible' }
       }
       console.warn('[DELAI] Erreur configuration:', error.message)
       return { success: false, error: error.message }

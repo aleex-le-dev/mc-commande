@@ -10,12 +10,31 @@ const imageCache = new Map()
 const preloadQueue = new Set()
 const loadingPromises = new Map()
 
-// Configuration optimisée pour Render
+// Configuration optimisée pour Render (adaptative)
 const RENDER_CONFIG = {
   maxConcurrentPreloads: 6,
   preloadTimeout: 5000,
   cacheSize: 100,
   priorityThreshold: 0.8
+}
+
+// Détecter les appareils lents et ajuster la config
+const isSlowDevice = () => {
+  if (typeof navigator === 'undefined') return false
+  return navigator.deviceMemory && navigator.deviceMemory < 4
+}
+
+// Configuration adaptative
+const getAdaptiveConfig = () => {
+  if (isSlowDevice()) {
+    return {
+      maxConcurrentPreloads: 3,
+      preloadTimeout: 3000,
+      cacheSize: 50,
+      priorityThreshold: 0.9
+    }
+  }
+  return RENDER_CONFIG
 }
 
 /**
@@ -36,13 +55,14 @@ export const ImageOptimizationService = {
 
     preloadQueue.add(url)
     
+    const config = getAdaptiveConfig()
     const promise = new Promise((resolve, reject) => {
       const img = new Image()
       const timeout = setTimeout(() => {
         preloadQueue.delete(url)
         loadingPromises.delete(url)
         reject(new Error('Preload timeout'))
-      }, RENDER_CONFIG.preloadTimeout)
+      }, config.preloadTimeout)
 
       img.onload = () => {
         clearTimeout(timeout)
@@ -70,12 +90,13 @@ export const ImageOptimizationService = {
   },
 
   /**
-   * Précharger plusieurs images en parallèle avec limite
+   * Précharger plusieurs images en parallèle avec limite adaptative
    */
   preloadBatch: async (urls, priority = false) => {
+    const config = getAdaptiveConfig()
     const chunks = []
-    for (let i = 0; i < urls.length; i += RENDER_CONFIG.maxConcurrentPreloads) {
-      chunks.push(urls.slice(i, i + RENDER_CONFIG.maxConcurrentPreloads))
+    for (let i = 0; i < urls.length; i += config.maxConcurrentPreloads) {
+      chunks.push(urls.slice(i, i + config.maxConcurrentPreloads))
     }
 
     const results = []
@@ -108,12 +129,13 @@ export const ImageOptimizationService = {
   },
 
   /**
-   * Nettoyer le cache si nécessaire
+   * Nettoyer le cache si nécessaire (adaptatif)
    */
   cleanupCache: () => {
-    if (imageCache.size > RENDER_CONFIG.cacheSize) {
+    const config = getAdaptiveConfig()
+    if (imageCache.size > config.cacheSize) {
       const entries = Array.from(imageCache.entries())
-      const toDelete = entries.slice(0, Math.floor(RENDER_CONFIG.cacheSize * 0.3))
+      const toDelete = entries.slice(0, Math.floor(config.cacheSize * 0.3))
       toDelete.forEach(([key]) => imageCache.delete(key))
     }
   },
