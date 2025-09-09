@@ -54,7 +54,16 @@ const ProductionPage = ({ productionType, title }) => {
 
   // Synchro au chargement retirée (manuel via navbar)
 
-  const { articles, isLoading, error } = useUnifiedArticles(productionType)
+  const { articles, allArticles, isLoading, error } = useUnifiedArticles(productionType)
+
+  // Exposer tous les articles (tous types) globalement pour les actions de commande (ex: suppression)
+  useEffect(() => {
+    try {
+      if (Array.isArray(allArticles)) {
+        window.mcAllArticles = allArticles
+      }
+    } catch {}
+  }, [allArticles])
   
   // Les compteurs sont calculés instantanément côté client pour réactivité
   

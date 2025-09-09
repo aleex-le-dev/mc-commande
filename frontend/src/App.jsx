@@ -9,6 +9,7 @@ import authService from './components/../services/authService'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import TerminePage from './components/TerminePage'
+import FourniturePage from './components/FourniturePage'
 import MaillePage from './components/MaillePage'
 import CouturePage from './components/CouturePage'
 
@@ -260,6 +261,8 @@ function App() {
           return 'Maille - Maisoncléo'
         case 'termine':
           return 'Terminé - Maisoncléo'
+        case 'fourniture':
+          return 'Fournitures - Maisoncléo'
         case 'parametres':
           return 'Paramètres - Maisoncléo'
         default:
@@ -275,6 +278,8 @@ function App() {
           return '🪡'
         case 'termine':
           return '✅'
+        case 'fourniture':
+          return '📝'
         case 'parametres':
           return '👑'
         default:
@@ -295,6 +300,7 @@ function App() {
     { id: 'couture', label: 'Couture', icon: '🧵' },
     { id: 'maille', label: 'Maille', icon: '🪡' },
     { id: 'termine', label: 'Terminé', icon: '✅' },
+    { id: 'fourniture', label: 'Fourniture', icon: '📝' },
     { id: 'parametres', label: 'Paramètres', icon: '⚙️' }
   ]
 
@@ -306,6 +312,8 @@ function App() {
         return <MaillePage />
       case 'termine':
         return <TerminePage />
+      case 'fourniture':
+        return <FourniturePage />
       case 'parametres':
         return <ParametresPanel />
       default:

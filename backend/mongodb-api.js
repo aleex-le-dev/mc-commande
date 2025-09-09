@@ -1777,10 +1777,12 @@ async function syncOrderItem(orderId, item) {
   return { created, updated }
 }
 
-// Endpoint pour servir les images stockées (évite les CORS)
+// Endpoint pour servir les images stockées avec redimensionnement / qualité
 app.get('/api/images/:productId', async (req, res) => {
   try {
     const { productId } = req.params
+    const width = Math.max(16, Math.min(1024, parseInt(req.query.w) || 256))
+    const quality = Math.max(40, Math.min(92, parseInt(req.query.q) || 75))
     const imagesCollection = db.collection('product_images')
     const doc = await imagesCollection.findOne({ product_id: parseInt(productId) })
 
@@ -1788,9 +1790,46 @@ app.get('/api/images/:productId', async (req, res) => {
       return res.status(404).json({ error: 'Image non trouvée' })
     }
 
-    res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
-    return res.end(doc.data.buffer)
+    // Redimensionner/comprimer via sharp si possible
+    try {
+      const sharp = require('sharp')
+      const input = (doc.data && Buffer.isBuffer(doc.data))
+        ? doc.data
+        : (doc.data && doc.data.buffer)
+          ? Buffer.from(doc.data.buffer)
+          : Buffer.from(doc.data || [])
+      let pipeline = sharp(input).resize({ width, withoutEnlargement: true, fit: 'inside' })
+      // Si l'image a un canal alpha, l'aplatir sur fond blanc pour JPEG/WEBP
+      const meta = await pipeline.metadata()
+      if (meta.hasAlpha) {
+        pipeline = pipeline.flatten({ background: '#ffffff' })
+      }
+      // Négociation de format: avif > webp > jpeg
+      const accept = String(req.headers['accept'] || '')
+      let contentType = 'image/jpeg'
+      if (accept.includes('image/avif')) {
+        pipeline = pipeline.avif({ quality })
+        contentType = 'image/avif'
+      } else if (accept.includes('image/webp')) {
+        pipeline = pipeline.webp({ quality })
+        contentType = 'image/webp'
+      } else {
+        pipeline = pipeline.jpeg({ quality, mozjpeg: true })
+        contentType = 'image/jpeg'
+      }
+      const out = await pipeline.toBuffer()
+      res.setHeader('Content-Type', contentType)
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+      res.setHeader('X-Resized', 'true')
+      res.setHeader('X-Requested-Width', String(width))
+      return res.end(out)
+    } catch (e) {
+      // Fallback: renvoyer l'original si sharp indisponible/erreur
+      res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+      res.setHeader('X-Resized', 'false')
+      return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
+    }
   } catch (error) {
     console.error('Erreur GET /api/images/:productId:', error)
     return res.status(500).json({ error: 'Erreur serveur' })

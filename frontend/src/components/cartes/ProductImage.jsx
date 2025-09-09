@@ -57,8 +57,8 @@ const ProductImage = ({ productId, productName, permalink }) => {
     setErrorDetails('')
     
     try {
-      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const backendUrl = `${base}/api/images/` + id
+      const baseUrl = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+      const backendUrl = `${baseUrl}/api/images/${id}?w=256&q=75`
       const resp = await fetch(backendUrl, { 
         method: 'GET', 
         signal: signal,

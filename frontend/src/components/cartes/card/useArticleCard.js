@@ -79,24 +79,29 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   }, [article.line_item_id, article.product_id, article.orderNumber, article.customer])
 
   useEffect(() => {
+    // Priorité absolue: miniatures via backend par productId
     if (memoizedProductId) {
-      // Vérifier le cache localStorage mais forcer le rechargement si nécessaire
+      // Vérifier le cache localStorage mais purger les URL WordPress non compressées
       const cachedImageUrl = localStorage.getItem(`image_${memoizedProductId}`)
-      if (cachedImageUrl && !cachedImageUrl.includes('cache-bust')) {
+      if (cachedImageUrl && cachedImageUrl.includes('wp-content')) {
+        try { localStorage.removeItem(`image_${memoizedProductId}`) } catch {}
+      }
+      if (cachedImageUrl && !cachedImageUrl.includes('cache-bust') && cachedImageUrl.includes('/api/images/')) {
         setImageUrl(cachedImageUrl)
         setIsImageLoading(false)
         setIsFromCache(true)
         return
       }
-    }
-
-    if (memoizedImageUrl) {
-      setImageUrl(memoizedImageUrl)
-      setIsImageLoading(false)
-    } else if (memoizedProductId) {
       setIsImageLoading(true)
       const url = imageService.getImage(memoizedProductId)
       setImageUrl(url)
+      setIsImageLoading(false)
+      return
+    }
+
+    // Fallback uniquement si pas de productId: utiliser l'URL existante
+    if (memoizedImageUrl) {
+      setImageUrl(memoizedImageUrl)
       setIsImageLoading(false)
     }
   }, [memoizedImageUrl, memoizedProductId, productionType])
@@ -141,7 +146,7 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     if (imageUrl) return imageUrl
     if (memoizedProductId) {
       const cachedUrl = localStorage.getItem(`image_${memoizedProductId}`)
-      if (cachedUrl && !cachedUrl.includes('cache-bust')) {
+      if (cachedUrl && !cachedUrl.includes('cache-bust') && cachedUrl.includes('/api/images/')) {
         return cachedUrl
       }
     }
@@ -151,10 +156,10 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const displayImageUrl = getImageUrl()
 
   useEffect(() => {
-    if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:')) {
-      // Ajouter un timestamp pour éviter le cache persistant
-      const cacheBustedUrl = `${displayImageUrl}?t=${Date.now()}`
-      localStorage.setItem(`image_${memoizedProductId}`, cacheBustedUrl)
+    if (displayImageUrl && memoizedProductId && !displayImageUrl.startsWith('data:') && displayImageUrl.includes('/api/images/')) {
+      // Ajouter un timestamp pour éviter le cache persistant (uniquement proxy backend)
+      const cacheBustedUrl = `${displayImageUrl}${displayImageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`
+      try { localStorage.setItem(`image_${memoizedProductId}`, cacheBustedUrl) } catch {}
     }
   }, [displayImageUrl, memoizedProductId])
 

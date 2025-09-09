@@ -26,7 +26,7 @@ const HeaderMedia = ({
       {displayImageUrl ? (
         <div className="relative">
           <ImageLoader 
-            src={displayImageUrl} 
+            src={displayImageUrl}
             alt={article.product_name}
             className="w-full h-full object-cover"
             fallback="📦"

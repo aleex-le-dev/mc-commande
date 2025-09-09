@@ -16,8 +16,9 @@ class ImageService {
   getImage(productId) {
     if (!productId) return this.getDefaultPlaceholder()
     
-    // Retour direct de l'URL MongoDB - pas de cache !
-    return `${this.backendUrl}/${productId}`
+    // Retour d'une miniature optimisée (lazy côté client)
+    // Par défaut: 256px de large, qualité 75
+    return `${this.backendUrl}/${productId}?w=256&q=75`
   }
 
   /**
