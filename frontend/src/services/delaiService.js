@@ -16,17 +16,18 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   }, options.timeoutMs || baseTimeout)
   
   try {
-    const res = await fetch(url, { 
-      credentials: 'include', 
-      ...options, 
-      signal: controller.signal,
-      // Headers optimisés pour Render
-      headers: {
-        'Cache-Control': 'max-age=300',
-        'Connection': 'keep-alive',
-        ...options.headers
-      }
-    })
+      const res = await fetch(url, { 
+        credentials: 'include', 
+        ...options, 
+        signal: controller.signal,
+        // Headers optimisés pour Render (maintenant autorisés par CORS)
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'max-age=300',
+          'Connection': 'keep-alive',
+          ...options.headers
+        }
+      })
     
     if (!res.ok) {
       if (retries > 0 && res.status >= 500) {

@@ -141,15 +141,12 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
       const resp = await fetch(backendUrl, { 
         method: 'GET', 
         signal: controller.signal,
-        // Headers optimisés pour Render
+        // Headers optimisés pour Render (maintenant autorisés par CORS)
         headers: {
           'Accept': 'image/avif,image/webp,image/jpeg,image/png,*/*',
           'Cache-Control': 'max-age=86400',
           'Connection': 'keep-alive'
-        },
-        // Optimisations pour Render
-        keepalive: true,
-        priority: 'high'
+        }
       })
       
       clearTimeout(timeoutId)

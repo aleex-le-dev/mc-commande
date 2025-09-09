@@ -63,6 +63,7 @@ export const testBackendConnection = async () => {
         mode: 'cors',
         signal: controller.signal,
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive'
         }
@@ -107,6 +108,7 @@ export const apiCallWithRetry = async (endpoint, options = {}) => {
         ...options,
         signal: controller.signal,
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
           ...options.headers
