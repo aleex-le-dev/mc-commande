@@ -10,7 +10,7 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   const timeout = setTimeout(() => {
     /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 60000)) // 10s local, 60s prod (Railway lent)
+  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 15000)) // 10s local, 15s prod (Render stable)
   
   try {
     const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
@@ -56,7 +56,7 @@ class DelaiService {
   async getDelai() {
     try {
       const response = await fetchWithRetry(`${API_BASE_URL}/delais/configuration`, {
-        timeoutMs: 60000 // 60 secondes pour la config (Railway lent)
+        timeoutMs: 15000 // 15 secondes pour la config (Render stable)
       })
       const data = await response.json()
       return data
@@ -66,7 +66,7 @@ class DelaiService {
         return { success: false, error: 'Timeout - serveur trop lent' }
       }
       if (error.message.includes('502')) {
-        console.warn('[DELAI] Service Railway indisponible (502)')
+        console.warn('[DELAI] Service Render indisponible (502)')
         return { success: false, error: 'Service Railway temporairement indisponible' }
       }
       console.warn('[DELAI] Erreur configuration:', error.message)
@@ -156,7 +156,7 @@ class DelaiService {
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 10000) // 10s local, 10s prod
+      const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 15000) // 10s local, 15s prod
       
       const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
         credentials: 'include',

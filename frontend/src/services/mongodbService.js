@@ -598,7 +598,7 @@ export const tricoteusesService = {
         return persistentCached
       }
       
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 10000 })
+      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 15000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
@@ -612,7 +612,7 @@ export const tricoteusesService = {
         return fallback
       }
       if (error.message.includes('502')) {
-        console.warn('Service Railway indisponible (502) - utilisation du cache')
+        console.warn('Service Render indisponible (502) - utilisation du cache')
         const fallback = cacheGet('tricoteuses') || persistentCacheGet('tricoteuses') || []
         return fallback
       }
@@ -700,7 +700,7 @@ export const assignmentsService = {
         return persistentCached
       }
       
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 10000 })
+      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 15000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
@@ -714,7 +714,7 @@ export const assignmentsService = {
         return fallback
       }
       if (error.message.includes('502')) {
-        console.warn('Service Railway indisponible (502) - utilisation du cache')
+        console.warn('Service Render indisponible (502) - utilisation du cache')
         const fallback = cacheGet('assignments') || persistentCacheGet('assignments') || []
         return fallback
       }

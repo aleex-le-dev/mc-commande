@@ -10,9 +10,9 @@ const API_CONFIG = {
     description: 'Backend local'
   },
   production: {
-    // Backend Railway uniquement
-    backend: 'https://maisoncleo-commande-production.up.railway.app',
-    description: 'Backend Railway (rapide)'
+    // Backend Render (stable)
+    backend: 'https://maisoncleo-commande.onrender.com',
+    description: 'Backend Render (stable)'
   }
 }
 
