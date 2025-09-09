@@ -22,7 +22,11 @@ export default defineConfig({
           // Séparer les dépendances externes
           vendor: ['react', 'react-dom'],
           icons: ['react-icons']
-        }
+        },
+        // Cache-busting pour forcer le rechargement
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
       }
     }
   },
