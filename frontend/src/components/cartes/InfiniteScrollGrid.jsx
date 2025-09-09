@@ -27,7 +27,7 @@ const InfiniteScrollGrid = forwardRef(({
   const [currentBatch, setCurrentBatch] = useState(0)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const BATCH_SIZE = 30
+  const BATCH_SIZE = 15
   const bottomSentinelRef = useRef(null)
 
   // Filtrer les articles en fonction du terme de recherche

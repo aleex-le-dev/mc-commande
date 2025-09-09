@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 
-export const usePagination = (items, defaultItemsPerPage = 50) => {
+export const usePagination = (items, defaultItemsPerPage = 15) => {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(defaultItemsPerPage)
   

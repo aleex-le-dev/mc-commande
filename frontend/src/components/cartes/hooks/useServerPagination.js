@@ -4,7 +4,7 @@ import { getOrdersPaginated } from '../../../services/mongodbService'
 
 export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
   const queryClient = useQueryClient()
   
   // Clé de requête unique pour chaque combinaison de filtres
@@ -28,7 +28,7 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
   
   // Extraire les données
   const orders = data?.orders || []
-  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 }
+  const pagination = data?.pagination || { page: 1, limit: 15, total: 0, pages: 1 }
   
   // Préparer les articles avec statuts
   const articles = useMemo(() => {

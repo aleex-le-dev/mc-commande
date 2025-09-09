@@ -10,7 +10,7 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
   
   // Timeout adaptatif selon le niveau de performance
   const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 2 // Seuil abaissé
-  const baseTimeout = isSlowDevice ? 30000 : (import.meta.env.DEV ? 15000 : 40000) // Timeouts augmentés pour Render
+  const baseTimeout = isSlowDevice ? 60000 : (import.meta.env.DEV ? 30000 : 80000) // Timeouts augmentés pour Render très lent
   const timeout = setTimeout(() => {
     controller.abort()
   }, options.timeoutMs || baseTimeout)
