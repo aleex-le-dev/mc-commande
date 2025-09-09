@@ -203,6 +203,39 @@ export const ImageOptimizationService = {
     } catch (error) {
       console.warn('Erreur suppression cache persistant:', error)
     }
+  },
+
+  /**
+   * Précharger les images des nouvelles commandes après sync
+   */
+  preloadNewOrders: async (newOrders = []) => {
+    if (!newOrders || newOrders.length === 0) return
+
+    console.log(`🔄 Préchargement images pour ${newOrders.length} nouvelles commandes`)
+    
+    const imageUrls = []
+    newOrders.forEach(order => {
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          if (item.product_id) {
+            const baseUrl = import.meta.env.DEV 
+              ? 'http://localhost:3001' 
+              : 'https://maisoncleo-commande.onrender.com'
+            const imageUrl = `${baseUrl}/api/images/${item.product_id}?w=256&q=75&f=webp`
+            imageUrls.push(imageUrl)
+          }
+        })
+      }
+    })
+
+    if (imageUrls.length > 0) {
+      try {
+        await ImageOptimizationService.preloadBatch(imageUrls, true) // Priorité haute
+        console.log(`✅ Préchargement terminé: ${imageUrls.length} images`)
+      } catch (error) {
+        console.warn('Erreur préchargement nouvelles commandes:', error)
+      }
+    }
   }
 }
 
