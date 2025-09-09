@@ -1,33 +1,84 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { getBackendUrl } from '../../config/api.js'
+import LazyImage from '../LazyImage.jsx'
 
-// Cache global pour les images déjà chargées
+// Cache global ultra-optimisé pour les images
 const imageCache = new Map()
+const preloadQueue = new Set()
+const loadingPromises = new Map()
 
-// Composant pour afficher l'image du produit
-const ProductImage = ({ productId, productName, permalink }) => {
+// Service de préchargement intelligent
+const ImagePreloader = {
+  // Précharger une image en arrière-plan
+  preload: (url) => {
+    if (imageCache.has(url) || preloadQueue.has(url)) return Promise.resolve()
+    
+    preloadQueue.add(url)
+    const promise = new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        imageCache.set(url, url)
+        preloadQueue.delete(url)
+        loadingPromises.delete(url)
+        resolve(url)
+      }
+      img.onerror = () => {
+        preloadQueue.delete(url)
+        loadingPromises.delete(url)
+        reject(new Error('Failed to preload image'))
+      }
+      img.src = url
+    })
+    
+    loadingPromises.set(url, promise)
+    return promise
+  },
+  
+  // Précharger plusieurs images en parallèle
+  preloadBatch: (urls) => {
+    return Promise.allSettled(urls.map(url => ImagePreloader.preload(url)))
+  }
+}
+
+// Composant ultra-optimisé pour afficher l'image du produit
+const ProductImage = ({ productId, productName, permalink, priority = false }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [errorDetails, setErrorDetails] = useState('')
   const abortControllerRef = useRef(null)
   
-  // URL mémorisée pour éviter les re-calculs
+  // URL optimisée avec cache intelligent
   const backendUrl = useMemo(() => {
     if (!productId) return null
     const baseUrl = getBackendUrl()
-    // Forcer le rechargement avec un timestamp pour éviter le cache
-    const timestamp = Date.now()
-    return `${baseUrl}/api/images/${productId}?t=${timestamp}&w=256&q=75`
+    // Cache intelligent - pas de timestamp pour les images déjà chargées
+    const cacheKey = `${baseUrl}/api/images/${productId}?w=256&q=75&f=webp`
+    return cacheKey
   }, [productId])
 
   useEffect(() => {
     if (productId && backendUrl) {
-      // Vérifier d'abord le cache
-      if (imageCache.has(productId)) {
-        setImageUrl(imageCache.get(productId))
+      // Vérifier d'abord le cache global
+      if (imageCache.has(backendUrl)) {
+        setImageUrl(imageCache.get(backendUrl))
         setHasError(false)
         setErrorDetails('')
+        return
+      }
+
+      // Si l'image est en cours de chargement, attendre
+      if (loadingPromises.has(backendUrl)) {
+        loadingPromises.get(backendUrl).then(() => {
+          if (imageCache.has(backendUrl)) {
+            setImageUrl(imageCache.get(backendUrl))
+            setHasError(false)
+            setErrorDetails('')
+          }
+        }).catch(() => {
+          setHasError(true)
+          setErrorDetails('Erreur de chargement')
+        })
         return
       }
 
@@ -44,7 +95,22 @@ const ProductImage = ({ productId, productName, permalink }) => {
       // Créer un nouveau contrôleur d'annulation
       abortControllerRef.current = new AbortController()
       
-      fetchProductImage(productId, abortControllerRef.current.signal)
+      // Chargement immédiat pour les images prioritaires
+      if (priority) {
+        fetchProductImage(productId, abortControllerRef.current.signal)
+      } else {
+        // Préchargement en arrière-plan pour les autres
+        ImagePreloader.preload(backendUrl).then(() => {
+          if (imageCache.has(backendUrl)) {
+            setImageUrl(imageCache.get(backendUrl))
+            setHasError(false)
+            setErrorDetails('')
+          }
+        }).catch(() => {
+          setHasError(true)
+          setErrorDetails('Erreur de préchargement')
+        })
+      }
     }
 
     // Cleanup function
@@ -53,7 +119,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
         abortControllerRef.current.abort()
       }
     }
-  }, [productId, backendUrl, fetchProductImage])
+  }, [productId, backendUrl, priority])
 
   const fetchProductImage = useCallback(async (id, signal) => {
     if (!id || !backendUrl) {
@@ -62,31 +128,35 @@ const ProductImage = ({ productId, productName, permalink }) => {
       return
     }
 
-    console.log(`🖼️ Chargement image ${id}: ${backendUrl}`)
+    console.log(`🖼️ Chargement prioritaire image ${id}: ${backendUrl}`)
     setIsLoading(true)
     setHasError(false)
     setErrorDetails('')
     
     try {
-      // Timeout ultra-rapide pour les images (3 secondes)
+      // Timeout ultra-rapide pour les images (2 secondes)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 3000)
+      const timeoutId = setTimeout(() => controller.abort(), 2000)
       
       const resp = await fetch(backendUrl, { 
         method: 'GET', 
         signal: controller.signal,
-        // Headers pour optimiser le chargement
+        // Headers optimisés pour Render
         headers: {
           'Accept': 'image/avif,image/webp,image/jpeg,image/png,*/*',
-          'Cache-Control': 'max-age=86400'
-        }
+          'Cache-Control': 'max-age=86400',
+          'Connection': 'keep-alive'
+        },
+        // Optimisations pour Render
+        keepalive: true,
+        priority: 'high'
       })
       
       clearTimeout(timeoutId)
       
       if (resp.ok) {
         // Mettre en cache l'URL
-        imageCache.set(id, backendUrl)
+        imageCache.set(backendUrl, backendUrl)
         setImageUrl(backendUrl)
       } else if (resp.status === 502) {
         setHasError(true)
@@ -111,8 +181,8 @@ const ProductImage = ({ productId, productName, permalink }) => {
 
   if (isLoading) {
     return (
-      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-        <div className="w-3 h-3 bg-gray-300 rounded"></div>
+      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center animate-pulse">
+        <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
       </div>
     )
   }
@@ -136,19 +206,17 @@ const ProductImage = ({ productId, productName, permalink }) => {
       href={permalink || '#'}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-block"
+      className="inline-block group"
       title="Voir l'image du produit"
     >
-      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-200 transition-colors">
-        <img 
-          src={imageUrl} 
+      <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-200 transition-all duration-150 hover:scale-105">
+        <LazyImage
+          src={imageUrl}
           alt={productName}
-          className="w-full h-full object-cover"
-          loading="eager"
-          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-150 group-hover:scale-110"
+          priority={priority}
           onError={() => {
-            // En cas d'erreur de chargement, retirer du cache et afficher l'erreur
-            imageCache.delete(productId)
+            imageCache.delete(backendUrl)
             setHasError(true)
             setErrorDetails('Erreur de chargement')
           }}
@@ -157,5 +225,8 @@ const ProductImage = ({ productId, productName, permalink }) => {
     </a>
   )
 }
+
+// Export du service de préchargement pour utilisation externe
+export { ImagePreloader }
 
 export default ProductImage
