@@ -57,7 +57,28 @@ export const useUnifiedArticles = (selectedType = 'all') => {
         })
       })
     })
-    
+    // Trier par date croissante pour afficher les plus récentes à la fin
+    articlesList.sort((a, b) => new Date(a.orderDate || 0) - new Date(b.orderDate || 0))
+    try {
+      if (articlesList.length > 0) {
+        const min = articlesList[articlesList.length - 1]?.orderDate
+        const max = articlesList[0]?.orderDate
+        const types = articlesList.reduce((acc, a) => { acc[a.productionType] = (acc[a.productionType]||0)+1; return acc }, {})
+        const latestByType = Object.fromEntries(
+          Object.entries(
+            articlesList.reduce((acc, a) => {
+              const prev = acc[a.productionType]
+              const curTime = new Date(a.orderDate || 0).getTime()
+              if (!prev || curTime > new Date(prev.orderDate||0).getTime()) acc[a.productionType] = { orderNumber: a.orderNumber, orderDate: a.orderDate }
+              return acc
+            }, {})
+          ).map(([k,v]) => [k, `${v.orderNumber} @ ${v.orderDate}`])
+        )
+        console.log(`[UNIFIED] Articles=${articlesList.length} | maxDate=${max} | minDate=${min} | types=${JSON.stringify(types)} | latestByType=${JSON.stringify(latestByType)}`)
+      } else {
+        console.log('[UNIFIED] Articles=0')
+      }
+    } catch {}
     return articlesList
   }, [allOrders])
 

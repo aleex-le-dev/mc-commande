@@ -84,6 +84,15 @@ const ProductionPage = ({ productionType, title }) => {
     
     return filtered
   }, [articles, searchTerm, selectedStatus, showUrgentOnly, urgentMap])
+
+  // Logs de diagnostic: aperçu des 5 premiers articles affichés
+  useEffect(() => {
+    try {
+      const top = (filteredArticles || []).slice(0, 5).map(a => `#${a.orderNumber}@${a.orderDate} [${a.productionType}/${a.status}]`)
+      const latest = filteredArticles?.[0]?.orderDate
+      console.log(`[PROD:${productionType}] visibles=${filteredArticles.length} | top5=${JSON.stringify(top)} | latest=${latest}`)
+    } catch {}
+  }, [filteredArticles, productionType])
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
@@ -175,7 +184,16 @@ const ProductionPage = ({ productionType, title }) => {
             🚨 Urgentes: <strong>{urgentCount}</strong>
           </button>
           
-          {/* Filtre "À faire" retiré */}
+          <button
+            onClick={() => { setSelectedStatus('a_faire'); setShowUrgentOnly(false) }}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              selectedStatus === 'a_faire' 
+                ? 'bg-gray-100 border-gray-300 text-gray-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            🆕 À faire: <strong>{statusCounts.a_faire}</strong>
+          </button>
           
           <button
             onClick={() => { setSelectedStatus('en_cours'); setShowUrgentOnly(false) }}

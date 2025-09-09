@@ -24,7 +24,10 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       // Invalidation ciblée pour recharger depuis la BDD
       queryClient.invalidateQueries(['db-orders'])
       queryClient.invalidateQueries(['production-statuses'])
-      console.log('🗂️ [SYNC] Invalidation des caches React Query: [\'db-orders\'], [\'production-statuses\']')
+      queryClient.invalidateQueries(['unified-orders'])
+      try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = true } catch {}
+      await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
+      console.log('🗂️ [SYNC] Invalidation des caches React Query: [\'db-orders\'], [\'production-statuses\'], [\'unified-orders\'] + bypass cache')
       try {
         // Log de la dernière commande présente en BDD
         const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
@@ -33,8 +36,8 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
           const data = await res.json()
           const orders = Array.isArray(data?.orders) ? data.orders : []
           if (orders.length > 0) {
-            const last = orders[orders.length - 1]
-            console.log(`📌 [SYNC] Dernière commande en BDD → #${last.order_number} (${last.order_id}) du ${last.order_date}`)
+            const lastByDate = [...orders].sort((a,b) => new Date(a.order_date) - new Date(b.order_date)).pop()
+            console.log(`📌 [SYNC] Dernière commande en BDD → #${lastByDate.order_number} (${lastByDate.order_id}) du ${lastByDate.order_date}`)
           } else {
             console.log('📌 [SYNC] Aucune commande en BDD')
           }
