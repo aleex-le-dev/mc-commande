@@ -87,7 +87,7 @@ async function requestWithRetry(url, options = {}, retries = 0) {
   // Timeout adaptatif selon le type de requête (optimisé pour Render)
   const isSyncRequest = url.includes('/sync/orders')
   const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 2 // Seuil abaissé
-  const baseTimeout = isSyncRequest ? 120000 : (isSlowDevice ? 15000 : 25000) // 2min pour sync, 15-25s pour autres
+  const baseTimeout = isSyncRequest ? 120000 : (isSlowDevice ? 30000 : 45000) // 2min pour sync, 30-45s pour autres (augmenté pour Render)
   
   const timeout = setTimeout(() => {
     console.warn(`⏰ Timeout requête après ${baseTimeout}ms: ${url}`)
