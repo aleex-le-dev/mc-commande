@@ -20,7 +20,16 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
     
     try {
       setIsSyncing(true)
-      const result = await syncOrders({})
+      console.log('🔄 Début de la synchronisation...')
+      
+      // Timeout spécifique pour la synchronisation
+      const syncPromise = syncOrders({})
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout synchronisation (2 minutes)')), 120000)
+      })
+      
+      const result = await Promise.race([syncPromise, timeoutPromise])
+      console.log('✅ Synchronisation terminée:', result)
       
       // Invalidation ciblée pour recharger depuis la BDD
       queryClient.invalidateQueries(['db-orders'])
@@ -65,7 +74,18 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       setTimeout(() => setToast({ visible: false, message: '', variant: 'success' }), 5000)
     } catch (e) {
       console.error('❌ [SYNC] Échec de la synchronisation:', e)
-      setToast({ visible: true, message: 'Erreur de synchronisation ❌', variant: 'error' })
+      
+      // Message d'erreur plus informatif
+      let errorMessage = 'Erreur de synchronisation ❌'
+      if (e.message.includes('Timeout')) {
+        errorMessage = 'Synchronisation trop longue (2min) ⏰'
+      } else if (e.message.includes('Requête annulée')) {
+        errorMessage = 'Connexion interrompue 🔌'
+      } else if (e.message.includes('502')) {
+        errorMessage = 'Service temporairement indisponible 🔧'
+      }
+      
+      setToast({ visible: true, message: errorMessage, variant: 'error' })
       setTimeout(() => setToast({ visible: false, message: '', variant: 'error' }), 5000)
     } finally {
       setIsSyncing(false)

@@ -83,9 +83,16 @@ function persistentCacheSet(key, data) {
 
 async function requestWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
+  
+  // Timeout adaptatif selon le type de requête
+  const isSyncRequest = url.includes('/sync/orders')
+  const isSlowDevice = navigator.deviceMemory && navigator.deviceMemory < 4
+  const baseTimeout = isSyncRequest ? 120000 : (isSlowDevice ? 10000 : 20000) // 2min pour sync, 10-20s pour autres
+  
   const timeout = setTimeout(() => {
+    console.warn(`⏰ Timeout requête après ${baseTimeout}ms: ${url}`)
     controller.abort()
-  }, options.timeoutMs || (import.meta.env.DEV ? 15000 : 5000)) // 15s local, 5s prod
+  }, options.timeoutMs || baseTimeout)
   
   try {
     await acquireSlot()
@@ -94,6 +101,13 @@ async function requestWithRetry(url, options = {}, retries = 0) {
       credentials: 'include',
       // Activer CORS explicite
       mode: 'cors',
+      // Headers optimisés pour Render
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        ...options.headers
+      },
       ...options, 
       signal: controller.signal 
     })
@@ -113,12 +127,13 @@ async function requestWithRetry(url, options = {}, retries = 0) {
     return res
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      // Ne pas relancer les requêtes annulées
-      throw e
+      console.warn(`❌ Requête annulée: ${url}`)
+      throw new Error(`Requête annulée après ${baseTimeout}ms`)
     }
     if (retries > 0) {
       // Backoff exponentiel avec jitter pour les erreurs réseau
       const delay = Math.min(1000 * Math.pow(2, 2 - retries) + Math.random() * 1000, 5000)
+      console.warn(`⚠️ Erreur réseau, retry ${retries} dans ${delay}ms: ${e.message}`)
       await new Promise(r => setTimeout(r, delay))
       return requestWithRetry(url, options, retries - 1)
     }
