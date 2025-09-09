@@ -14,13 +14,13 @@ const ImagePreloader = ({ articles, onPreloadComplete }) => {
       setIsPreloading(true)
       hasShownRef.current = true
       
-      // Simuler un chargement rapide
+      // Chargement instantané
       setTimeout(() => {
         setIsPreloading(false)
         if (onPreloadComplete) {
           onPreloadComplete()
         }
-      }, 500)
+      }, 100)
     }
   }, [articles, onPreloadComplete])
 

@@ -2,12 +2,12 @@
 const API_BASE_URL = `${(import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))}/api`
 
 // Petit wrapper avec retry/backoff pour limiter les erreurs réseau au démarrage
-async function fetchWithRetry(url, options = {}, retries = 1) {
+async function fetchWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     /* log désactivé */
     controller.abort()
-  }, options.timeoutMs || 10000) // 10s pour local
+  }, options.timeoutMs || (import.meta.env.DEV ? 10000 : 1000)) // 10s local, 1s prod
   
   try {
     const res = await fetch(url, { credentials: 'include', ...options, signal: controller.signal })
@@ -149,7 +149,7 @@ class DelaiService {
     try {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout pour local
+      const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 2000) // 10s local, 2s prod
       
       const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
         credentials: 'include',

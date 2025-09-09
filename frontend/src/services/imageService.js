@@ -16,9 +16,8 @@ class ImageService {
   getImage(productId) {
     if (!productId) return this.getDefaultPlaceholder()
     
-    // Retour d'une miniature optimisée (lazy côté client)
-    // Par défaut: 256px de large, qualité 75
-    return `${this.backendUrl}/${productId}?w=256&q=75`
+    // Image complète sans compression
+    return `${this.backendUrl}/${productId}`
   }
 
   /**

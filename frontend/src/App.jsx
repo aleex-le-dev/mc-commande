@@ -19,15 +19,7 @@ import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import './App.css'
 
-// Configuration du client React Query
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
+// Configuration du client React Query (supprimé car défini dans main.jsx)
 
 function App() {
   const queryClient = useQueryClient()
@@ -44,10 +36,9 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [dailySyncToast, setDailySyncToast] = useState({ visible: false, message: '' })
 
-  // Planifier une synchro quotidienne à 12:00 locale (manuelle programmée)
+  // Planifier une synchro quotidienne à 12:00 locale (optimisée)
   useEffect(() => {
     let timeoutId
-    let nextTimerId
     const scheduleNext = () => {
       const now = new Date()
       const next = new Date()
@@ -59,7 +50,6 @@ function App() {
       timeoutId = setTimeout(async () => {
         try {
           setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne…' })
-          try { window.__dailySyncToast = 'Synchronisation quotidienne…' } catch {}
           await syncOrders({})
           // Invalidate caches comme le bouton
           queryClient.invalidateQueries(['db-orders'])
@@ -67,14 +57,11 @@ function App() {
           queryClient.invalidateQueries(['unified-orders'])
           await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
           setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne terminée ✅' })
-          try { window.__dailySyncToast = 'Synchronisation quotidienne terminée ✅' } catch {}
         } catch (e) {
           setDailySyncToast({ visible: true, message: "Erreur de synchronisation quotidienne" })
-          try { window.__dailySyncToast = 'Erreur de synchronisation quotidienne' } catch {}
         } finally {
           // masquer après 6s
           setTimeout(() => setDailySyncToast({ visible: false, message: '' }), 6000)
-          try { setTimeout(() => { window.__dailySyncToast = '' }, 6000) } catch {}
           // replanifier pour le lendemain
           scheduleNext()
         }
@@ -83,7 +70,6 @@ function App() {
     scheduleNext()
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
-      if (nextTimerId) clearTimeout(nextTimerId)
     }
   }, [queryClient])
 

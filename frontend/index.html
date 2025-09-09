@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="preconnect" href="https://maisoncleo.com" crossorigin />
     <link rel="dns-prefetch" href="https://maisoncleo.com" />
+    <link rel="preconnect" href="https://maisoncleo-commande.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://maisoncleo-commande.onrender.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
@@ -14,26 +16,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
-      // Déprioriser les images en dehors du viewport
-      (function(){
-        try {
-          if ('loading' in HTMLImageElement.prototype) return
-          const observer = new IntersectionObserver((entries, obs) => {
-            entries.forEach(e => {
-              if (e.isIntersecting) {
-                const img = e.target
-                const src = img.getAttribute('data-src')
-                if (src) { img.src = src; img.removeAttribute('data-src') }
-                obs.unobserve(img)
-              }
-            })
-          }, { rootMargin: '400px' })
-          document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img))
-          })
-        } catch {}
-      })()
-    </script>
   </body>
 </html>

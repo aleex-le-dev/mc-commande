@@ -4,7 +4,7 @@ const API_BASE_URL = `${(import.meta.env.DEV ? 'http://localhost:3001' : (import
 
 // Limiteur optimisé + retry/backoff pour réduire les erreurs réseau
 let concurrentRequests = 0
-const MAX_CONCURRENT = 8  // Optimisé pour éviter la surcharge
+const MAX_CONCURRENT = 12  // Augmenté pour plus de parallélisme
 const waitQueue = []
 
 const acquireSlot = () => new Promise((resolve) => {
@@ -26,7 +26,7 @@ const releaseSlot = () => {
 }
 
 // Cache mémoire global avec TTL pour données partagées
-const GLOBAL_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes (augmenté)
+const GLOBAL_CACHE_TTL_MS = 60 * 60 * 1000 // 60 minutes pour éviter les rechargements
 const globalCache = {
   tricoteuses: { data: null, at: 0 },
   assignments: { data: null, at: 0 },
@@ -50,11 +50,11 @@ function cacheDelete(key) {
 
 
 
-async function requestWithRetry(url, options = {}, retries = 1) {
+async function requestWithRetry(url, options = {}, retries = 0) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || 15000) // 15s pour local
+  }, options.timeoutMs || (import.meta.env.DEV ? 15000 : 1000)) // 15s local, 1s prod
   
   try {
     await acquireSlot()
@@ -553,13 +553,17 @@ export const tricoteusesService = {
     try {
       const cached = cacheGet('tricoteuses')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`)
+      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 1000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
       cacheSet('tricoteuses', data)
       return data
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.warn('Tricoteuses timeout - utilisation du cache')
+        return cacheGet('tricoteuses') || []
+      }
       console.error('Erreur récupération tricoteuses:', error)
       return []
     }
@@ -635,13 +639,17 @@ export const assignmentsService = {
     try {
       const cached = cacheGet('assignments')
       if (cached) return cached
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`)
+      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 1000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
       cacheSet('assignments', data)
       return data
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.warn('Assignations timeout - utilisation du cache')
+        return cacheGet('assignments') || []
+      }
       console.error('Erreur récupération assignations:', error)
       return []
     }
@@ -741,7 +749,7 @@ export const assignmentsService = {
 // Préchargement des données à l'ouverture de l'app (désactivé pour accélérer le chargement)
 export async function prefetchAppData() {
   try {
-    // Préchargement désactivé - les données se chargeront à la demande
+    // Préchargement complètement désactivé - pas de chargement au démarrage
     try { sessionStorage.setItem('mc-prefetch-ok-v1', '1') } catch {}
     try { window.dispatchEvent(new Event('mc-prefetch-done')) } catch {}
   } catch {

@@ -8,15 +8,15 @@ import { useMemo, useEffect } from 'react'
 export const useUnifiedArticles = (selectedType = 'all') => {
   const queryClient = useQueryClient()
 
-  // Récupérer TOUTES les commandes depuis la BDD (avec synchronisation automatique)
+  // Récupérer TOUTES les commandes depuis la BDD (ultra-rapide)
   const { data: allOrders, isLoading, error, refetch } = useQuery({
     queryKey: ['unified-orders'],
     queryFn: getOrdersFromDatabase,
-    staleTime: 30000,
-    refetchOnWindowFocus: true, // Rafraîchir quand on revient sur la page
-    refetchOnMount: true, // Rafraîchir à chaque montage
-    refetchInterval: 60000, // Rafraîchir automatiquement toutes les minutes
-    retry: 2
+    staleTime: 60 * 60 * 1000, // 60 minutes de cache
+    refetchOnWindowFocus: false, // Pas de rafraîchissement automatique
+    refetchOnMount: false, // Pas de rafraîchissement au montage
+    refetchInterval: false, // Pas de rafraîchissement automatique
+    retry: 0 // Pas de retry
   })
 
 

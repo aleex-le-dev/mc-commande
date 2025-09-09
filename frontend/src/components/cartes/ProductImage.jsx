@@ -58,16 +58,23 @@ const ProductImage = ({ productId, productName, permalink }) => {
     
     try {
       const baseUrl = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const backendUrl = `${baseUrl}/api/images/${id}?w=256&q=75`
+      const backendUrl = `${baseUrl}/api/images/${id}`
+      
+      // Timeout ultra-rapide pour les images
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 2000)
+      
       const resp = await fetch(backendUrl, { 
         method: 'GET', 
-        signal: signal,
-        // Ajouter des headers pour éviter le cache navigateur
+        signal: controller.signal,
+        // Headers pour optimiser le chargement
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Accept': 'image/avif,image/webp,image/jpeg,image/png,*/*',
+          'Cache-Control': 'max-age=86400'
         }
       })
+      
+      clearTimeout(timeoutId)
       
       if (resp.ok) {
         // Mettre en cache l'URL
@@ -79,7 +86,9 @@ const ProductImage = ({ productId, productName, permalink }) => {
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        // Requête annulée, ne rien faire
+        // Timeout - afficher une image par défaut
+        setHasError(true)
+        setErrorDetails('Timeout')
         return
       }
       setHasError(true)
@@ -92,7 +101,7 @@ const ProductImage = ({ productId, productName, permalink }) => {
   if (isLoading) {
     return (
       <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+        <div className="w-3 h-3 bg-gray-300 rounded"></div>
       </div>
     )
   }
@@ -124,6 +133,8 @@ const ProductImage = ({ productId, productName, permalink }) => {
           src={imageUrl} 
           alt={productName}
           className="w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
           onError={() => {
             // En cas d'erreur de chargement, retirer du cache et afficher l'erreur
             imageCache.delete(productId)
