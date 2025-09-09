@@ -3230,78 +3230,7 @@ app.get('/api/test/simple', (req, res) => {
   })
 })
 
-// Endpoint pour synchroniser les images depuis Render vers Railway
-app.post('/api/sync/images', async (req, res) => {
-  try {
-    const { productIds } = req.body
-    if (!productIds || !Array.isArray(productIds)) {
-      return res.status(400).json({ error: 'Liste de productIds requise' })
-    }
 
-    const imagesCollection = db.collection('product_images')
-    const results = []
-    
-    for (const productId of productIds) {
-      try {
-        // Récupérer l'image depuis Render
-        const renderUrl = `https://maisoncleo-commande.onrender.com/api/images/${productId}`
-        const response = await fetch(renderUrl, {
-          headers: {
-            'User-Agent': 'Railway-Sync/1.0',
-            'Accept': 'image/*'
-          },
-          timeout: 10000
-        })
-        
-        if (response.ok) {
-          const imageBuffer = await response.buffer()
-          const contentType = response.headers.get('content-type') || 'image/jpeg'
-          
-          // Sauvegarder dans Railway
-          await imagesCollection.updateOne(
-            { product_id: parseInt(productId) },
-            { 
-              $set: {
-                product_id: parseInt(productId),
-                data: imageBuffer,
-                content_type: contentType,
-                synced_at: new Date()
-              }
-            },
-            { upsert: true }
-          )
-          
-          results.push({ productId, status: 'synced' })
-        } else {
-          results.push({ productId, status: 'not_found', error: response.status })
-        }
-      } catch (error) {
-        results.push({ productId, status: 'error', error: error.message })
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      synced: results.filter(r => r.status === 'synced').length,
-      total: productIds.length,
-      results 
-    })
-  } catch (error) {
-    console.error('Erreur sync images:', error)
-    res.status(500).json({ error: 'Erreur serveur' })
-  }
-})
-
-// Ping automatique pour garder Railway "chaud"
-function keepAlive() {
-  if (process.env.NODE_ENV === 'production') {
-    setInterval(() => {
-      fetch('https://maisoncleo-commande-production.up.railway.app/api/health')
-        .then(() => console.log('🔥 Ping Railway - service chaud'))
-        .catch(() => console.log('❌ Ping Railway échoué'))
-    }, 300000) // Ping toutes les 5 minutes
-  }
-}
 
 // Démarrage du serveur
 async function startServer() {
@@ -3311,9 +3240,6 @@ async function startServer() {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
     console.log(`🌍 Environnement: ${process.env.NODE_ENV || 'development'}`)
-    
-    // Démarrer le ping automatique
-    keepAlive()
   })
   server.on('error', (err) => {
     console.error('❌ Erreur serveur:', err)
