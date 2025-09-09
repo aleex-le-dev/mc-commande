@@ -853,14 +853,56 @@ app.get('/api/orders', async (req, res) => {
     const itemsCollection = db.collection('order_items')
     const statusCollection = db.collection('production_status')
     
-    // Récupérer toutes les commandes avec un timeout plus long
-    const orders = await ordersCollection.find({})
-      .sort({ order_date: 1 })
+    // Paramètres de pagination
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 15
+    const status = req.query.status || 'all'
+    const search = req.query.search || ''
+    const sortBy = req.query.sortBy || 'order_date'
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1
+    
+    // Construire le filtre
+    let filter = {}
+    
+    // Filtre par statut
+    if (status !== 'all') {
+      filter['items.production_status.status'] = status
+    }
+    
+    // Filtre de recherche
+    if (search) {
+      filter.$or = [
+        { order_number: { $regex: search, $options: 'i' } },
+        { customer: { $regex: search, $options: 'i' } },
+        { 'items.product_name': { $regex: search, $options: 'i' } }
+      ]
+    }
+    
+    // Compter le total
+    const total = await ordersCollection.countDocuments(filter)
+    const totalPages = Math.ceil(total / limit)
+    const skip = (page - 1) * limit
+    
+    // Récupérer les commandes avec pagination
+    const orders = await ordersCollection.find(filter)
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(limit)
       .maxTimeMS(30000) // 30 secondes max
       .toArray()
     
     if (orders.length === 0) {
-      return res.json({ orders: [] })
+      return res.json({ 
+        orders: [],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      })
     }
     
     // Traiter les commandes par lots pour éviter les timeouts
@@ -928,7 +970,18 @@ app.get('/api/orders', async (req, res) => {
     
     // Garantir un tri croissant par date dans la réponse (ou ajuster selon besoin UI)
     ordersWithDetails.sort((a, b) => new Date(a.order_date || 0) - new Date(b.order_date || 0))
-    res.json({ orders: ordersWithDetails })
+    
+    res.json({ 
+      orders: ordersWithDetails,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    })
   } catch (error) {
     console.error('❌ Erreur GET /orders:', error)
     res.status(500).json({ 
@@ -1126,6 +1179,111 @@ app.delete('/api/orders/:orderId/items/:lineItemId', async (req, res) => {
   } catch (error) {
     console.error('Erreur DELETE /orders/:orderId/items/:lineItemId:', error)
     res.status(500).json({ success: false, error: 'Erreur serveur' })
+  }
+})
+
+// GET /api/orders/stats - Statistiques des commandes
+app.get('/api/orders/stats', async (req, res) => {
+  try {
+    const ordersCollection = db.collection('orders_sync')
+    const statusCollection = db.collection('production_status')
+    
+    // Statistiques générales
+    const totalOrders = await ordersCollection.countDocuments()
+    
+    // Statistiques par statut
+    const stats = await statusCollection.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray()
+    
+    const statusStats = stats.reduce((acc, stat) => {
+      acc[stat._id] = stat.count
+      return acc
+    }, {})
+    
+    res.json({
+      totalOrders,
+      statusStats,
+      lastUpdate: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('❌ Erreur GET /orders/stats:', error)
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      message: error.message
+    })
+  }
+})
+
+// GET /api/orders/search - Recherche de commandes
+app.get('/api/orders/search', async (req, res) => {
+  try {
+    const ordersCollection = db.collection('orders_sync')
+    const itemsCollection = db.collection('order_items')
+    const statusCollection = db.collection('production_status')
+    
+    const { q: query, page = 1, limit = 15, status = 'all' } = req.query
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Paramètre de recherche requis' })
+    }
+    
+    // Construire le filtre de recherche
+    const filter = {
+      $or: [
+        { order_number: { $regex: query, $options: 'i' } },
+        { customer: { $regex: query, $options: 'i' } },
+        { 'items.product_name': { $regex: query, $options: 'i' } }
+      ]
+    }
+    
+    // Filtre par statut
+    if (status !== 'all') {
+      filter['items.production_status.status'] = status
+    }
+    
+    // Pagination
+    const pageNum = parseInt(page)
+    const limitNum = parseInt(limit)
+    const skip = (pageNum - 1) * limitNum
+    
+    // Compter le total
+    const total = await ordersCollection.countDocuments(filter)
+    const totalPages = Math.ceil(total / limitNum)
+    
+    // Récupérer les résultats
+    const orders = await ordersCollection.find(filter)
+      .sort({ order_date: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .maxTimeMS(30000)
+      .toArray()
+    
+    res.json({
+      orders,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
+      },
+      query
+    })
+    
+  } catch (error) {
+    console.error('❌ Erreur GET /orders/search:', error)
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      message: error.message
+    })
   }
 })
 
