@@ -28,10 +28,8 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const [isLoadingAssignment, setIsLoadingAssignment] = useState(true)
 
   const [dateLimite, setDateLimite] = useState(null)
-  const [translatedData, setTranslatedData] = useState(null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 })
-  const [isRemoved, setIsRemoved] = useState(false)
   const [localUrgent, setLocalUrgent] = useState(false)
 
   const noteBtnRef = useRef(null)
@@ -280,10 +278,8 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     localAssignment, setLocalAssignment,
     isLoadingAssignment,
     dateLimite,
-    translatedData, setTranslatedData,
     showConfetti, setShowConfetti,
     confettiPosition, setConfettiPosition,
-    isRemoved, setIsRemoved,
     localUrgent, setLocalUrgent,
     noteBtnRef, notePopoverRef,
     memoizedImageUrl, memoizedProductId, uniqueAssignmentId,

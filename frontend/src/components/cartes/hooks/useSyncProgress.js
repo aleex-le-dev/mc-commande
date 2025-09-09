@@ -148,49 +148,6 @@ export const useSyncProgress = (performSync) => {
     }
   }, [performManualSync]) // Dépendance sur performManualSync pour la synchronisation
 
-  // Synchronisation automatique désactivée - uniquement au rafraîchissement de la page
-  // useEffect(() => {
-  //   const performAutoSync = async () => {
-  //     try {
-  //       // Attendre un peu que la page soit chargée
-  //       await new Promise(resolve => setTimeout(resolve, 1000))
-  //       
-  //       // Lancer la synchronisation automatique
-  //       await performManualSync()
-  //     } catch (error) {
-  //       console.error('Erreur lors de la synchronisation automatique:', error)
-  //     }
-  //   }
-
-  //   performAutoSync()
-  // }, [performManualSync])
-
-  // Récupérer les logs en temps réel désactivé - uniquement lors de la synchronisation manuelle
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     try {
-  //       const logs = await getSyncLogs()
-  //       if (logs && logs.log) {
-  //         setSyncLogs(prev => {
-  //           // Éviter les mises à jour si le log est identique
-  //           if (prev.length > 0 && prev[0]?.message === logs.log.message) {
-  //             return prev
-  //           }
-  //           return [logs.log]
-  //         })
-  //         const msg = logs.log.message || ''
-  //         const finished = msg.includes('Synchronisation terminée') || msg.includes('Aucune nouvelle commande') || msg.includes('vérification rapide')
-  //         if (finished) {
-  //           setSyncProgress(prev => ({ ...prev, isRunning: false, progress: 100, message: 'Tout est à jour' }))
-  //         }
-  //       }
-  //     } catch (error) {
-  //       // Erreur silencieuse lors de la récupération des logs
-  //     }
-  //   }, 5000) // Ralenti à 5 secondes pour éviter les appels en boucle
-
-  //   return () => clearInterval(interval)
-  // }, [])
 
   return {
     syncProgress,
