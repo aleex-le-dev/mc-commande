@@ -30,7 +30,11 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
           ]
           
           // Préchargement en arrière-plan (sans bloquer l'UI)
+          console.log(`🖼️ Préchargement ${sampleImageUrls.length} images pour ${page}`)
           ImageOptimizationService.preloadBatch(sampleImageUrls, false)
+            .then(results => {
+              console.log(`✅ Préchargement ${page} terminé: ${results.length} images`)
+            })
             .catch(error => {
               console.log(`Préchargement page ${page} ignoré:`, error.message)
             })

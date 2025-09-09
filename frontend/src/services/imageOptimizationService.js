@@ -164,9 +164,9 @@ export const ImageOptimizationService = {
   },
 
   /**
-   * Précharger plusieurs images en parallèle avec limite adaptative (ancienne méthode)
+   * Précharger plusieurs images en parallèle avec limite adaptative
    */
-  preloadMultiple: async (urls, priority = false) => {
+  preloadBatch: async (urls, priority = false) => {
     const config = getAdaptiveConfig()
     const chunks = []
     for (let i = 0; i < urls.length; i += config.maxConcurrentPreloads) {
