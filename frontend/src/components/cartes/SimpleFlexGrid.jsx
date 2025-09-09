@@ -233,7 +233,9 @@ const SimpleFlexGrid = ({
           return 0
         })
       : source
-    const subset = arranged.slice(0, visibleCount)
+    // Afficher la fin de la liste (les plus récentes en bas si tri croissant)
+    const subsetStart = Math.max(0, arranged.length - visibleCount)
+    const subset = arranged.slice(subsetStart)
     const cards = []
     
     // Helper: déterminer si l'article est en retard par rapport à la date limite

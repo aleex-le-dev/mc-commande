@@ -15,19 +15,18 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
   const handleManualSync = useCallback(async () => {
     if (isSyncing) return
     const t0 = performance.now()
-    console.log('🔄 [SYNC] Démarrage de la synchronisation manuelle (incrémentale depuis BDD)…')
+    // logs retirés
     try {
       setIsSyncing(true)
-      console.time('[SYNC] Durée')
       const result = await syncOrders({})
-      console.log('✅ [SYNC] Réponse backend:', result)
+      
       // Invalidation ciblée pour recharger depuis la BDD
       queryClient.invalidateQueries(['db-orders'])
       queryClient.invalidateQueries(['production-statuses'])
       queryClient.invalidateQueries(['unified-orders'])
       try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = true } catch {}
       await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
-      console.log('🗂️ [SYNC] Invalidation des caches React Query: [\'db-orders\'], [\'production-statuses\'], [\'unified-orders\'] + bypass cache')
+      
       try {
         // Log de la dernière commande présente en BDD
         const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
@@ -37,9 +36,9 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
           const orders = Array.isArray(data?.orders) ? data.orders : []
           if (orders.length > 0) {
             const lastByDate = [...orders].sort((a,b) => new Date(a.order_date) - new Date(b.order_date)).pop()
-            console.log(`📌 [SYNC] Dernière commande en BDD → #${lastByDate.order_number} (${lastByDate.order_id}) du ${lastByDate.order_date}`)
+            
           } else {
-            console.log('📌 [SYNC] Aucune commande en BDD')
+            
           }
         }
       } catch {}
@@ -50,8 +49,7 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
         console.warn('⚠️ [SYNC] Impossible de récupérer le log backend:', e)
       }
       const dt = Math.round(performance.now() - t0)
-      console.timeEnd('[SYNC] Durée')
-      console.log(`🎉 [SYNC] Terminé en ${dt}ms`)
+      
     } catch (e) {
       console.error('❌ [SYNC] Échec de la synchronisation:', e)
     } finally {

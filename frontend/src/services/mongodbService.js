@@ -315,15 +315,8 @@ export const getOrdersFromDatabase = async () => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
-    const t0 = performance.now()
     const data = await response.json()
     const orders = data.orders || []
-    try {
-      const dates = orders.map(o => new Date(o.order_date)).filter(d => !isNaN(+d))
-      const min = dates.length ? new Date(Math.min(...dates)).toISOString() : 'n/a'
-      const max = dates.length ? new Date(Math.max(...dates)).toISOString() : 'n/a'
-      console.log(`[ORDERS][FE] Reçues=${orders.length} | min=${min} | max=${max} | fetch=${Math.round(performance.now()-t0)}ms`)
-    } catch {}
     
     // Mettre en cache
     cacheSet('orders', orders)

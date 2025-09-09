@@ -85,14 +85,7 @@ const ProductionPage = ({ productionType, title }) => {
     return filtered
   }, [articles, searchTerm, selectedStatus, showUrgentOnly, urgentMap])
 
-  // Logs de diagnostic: aperçu des 5 premiers articles affichés
-  useEffect(() => {
-    try {
-      const top = (filteredArticles || []).slice(0, 5).map(a => `#${a.orderNumber}@${a.orderDate} [${a.productionType}/${a.status}]`)
-      const latest = filteredArticles?.[0]?.orderDate
-      console.log(`[PROD:${productionType}] visibles=${filteredArticles.length} | top5=${JSON.stringify(top)} | latest=${latest}`)
-    } catch {}
-  }, [filteredArticles, productionType])
+  // logs retirés
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)

@@ -860,14 +860,6 @@ app.get('/api/orders', async (req, res) => {
       .maxTimeMS(30000) // 30 secondes max
       .toArray()
     
-    // Logs diagnostic: volume et bornes de dates brutes
-    try {
-      const rawCount = orders.length
-      const rawFirst = rawCount > 0 ? orders[0].order_date : null
-      const rawLast = rawCount > 0 ? orders[rawCount - 1].order_date : null
-      console.log(`[ORDERS] Brutes: ${rawCount} | min=${rawFirst} | max=${rawLast}`)
-    } catch {}
-    
     if (orders.length === 0) {
       return res.json({ orders: [] })
     }
@@ -937,13 +929,6 @@ app.get('/api/orders', async (req, res) => {
     
     // Garantir un tri croissant par date dans la réponse (ou ajuster selon besoin UI)
     ordersWithDetails.sort((a, b) => new Date(a.order_date || 0) - new Date(b.order_date || 0))
-    try {
-      const cnt = ordersWithDetails.length
-      const first = cnt > 0 ? ordersWithDetails[0].order_date : null
-      const last = cnt > 0 ? ordersWithDetails[cnt - 1].order_date : null
-      const lastOrderNumber = cnt > 0 ? ordersWithDetails[cnt - 1].order_number : null
-      console.log(`[ORDERS] Enrichies: ${cnt} | min=${first} | max=${last} | lastOrder=#${lastOrderNumber}`)
-    } catch {}
     res.json({ orders: ordersWithDetails })
   } catch (error) {
     console.error('❌ Erreur GET /orders:', error)
