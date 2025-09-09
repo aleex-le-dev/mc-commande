@@ -16,7 +16,7 @@ class ImageService {
   getImage(productId) {
     if (!productId) return this.getDefaultPlaceholder()
     
-    // Image complète sans compression
+    // Image complète sans compression - pas de paramètres
     return `${this.backendUrl}/${productId}`
   }
 
