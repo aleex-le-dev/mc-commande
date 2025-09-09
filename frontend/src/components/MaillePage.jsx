@@ -1,17 +1,16 @@
 import React from 'react'
 import ProductionPage from './ProductionPage'
-import BatchImageLoader from './BatchImageLoader'
+import SmartImageLoader from './SmartImageLoader'
 
 /**
  * Page Maille - Affiche tous les articles de type "maille"
- * Utilise le composant ProductionPage générique avec chargement en lot des images
+ * Utilise le composant ProductionPage générique avec chargement intelligent des images
  */
 const MaillePage = () => {
   return (
     <>
       <ProductionPage productionType="maille" title="Maille" />
-      <BatchImageLoader 
-        articles={[]} // Sera rempli par ProductionPage
+      <SmartImageLoader 
         pageName="maille" 
         priority={true} 
       />

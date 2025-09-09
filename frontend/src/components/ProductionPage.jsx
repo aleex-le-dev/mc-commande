@@ -5,7 +5,6 @@ import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import LoadingSpinner from './LoadingSpinner'
 import { assignmentsService } from '../services/mongodbService'
-import { useImagePreloader } from '../hooks/useImagePreloader'
 
 /**
  * Page générique pour Maille/Couture
@@ -57,8 +56,7 @@ const ProductionPage = ({ productionType, title }) => {
 
   const { articles, allArticles, isLoading, error } = useUnifiedArticles(productionType)
   
-  // Précharger les images de cette page
-  const { isPreloading, preloadedCount } = useImagePreloader(articles, productionType)
+  // Préchargement des images géré par SmartImageLoader dans les pages parentes
 
   // Exposer tous les articles (tous types) globalement pour les actions de commande (ex: suppression)
   useEffect(() => {

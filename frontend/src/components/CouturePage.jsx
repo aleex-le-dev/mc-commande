@@ -1,17 +1,16 @@
 import React from 'react'
 import ProductionPage from './ProductionPage'
-import BatchImageLoader from './BatchImageLoader'
+import SmartImageLoader from './SmartImageLoader'
 
 /**
  * Page Couture - Affiche tous les articles de type "couture"
- * Utilise le composant ProductionPage générique avec chargement en lot des images
+ * Utilise le composant ProductionPage générique avec chargement intelligent des images
  */
 const CouturePage = () => {
   return (
     <>
       <ProductionPage productionType="couture" title="Couture" />
-      <BatchImageLoader 
-        articles={[]} // Sera rempli par ProductionPage
+      <SmartImageLoader 
         pageName="couture" 
         priority={true} 
       />

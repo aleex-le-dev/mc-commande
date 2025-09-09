@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { ImageOptimizationService } from '../services/imageOptimizationService.js'
+import { getBackendUrl } from '../config/api.js'
 
 /**
  * Composant pour précharger les images des autres pages en arrière-plan
@@ -17,31 +18,79 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
       
       for (const page of otherPages) {
         try {
-          // Simuler un appel pour récupérer les articles de cette page
-          const baseUrl = import.meta.env.DEV 
-            ? 'http://localhost:3001' 
-            : 'https://maisoncleo-commande.onrender.com'
+          // Récupérer les vrais articles de cette page
+          const baseUrl = getBackendUrl()
+          let apiEndpoint = ''
           
-          // Précharger quelques images représentatives de chaque page
-          const sampleImageUrls = [
-            `${baseUrl}/api/images/sample-${page}?w=256&q=75&f=webp`,
-            `${baseUrl}/api/images/sample-${page}-2?w=256&q=75&f=webp`,
-            `${baseUrl}/api/images/sample-${page}-3?w=256&q=75&f=webp`
-          ]
+          // Déterminer l'endpoint selon la page
+          switch (page) {
+            case 'couture':
+            case 'maille':
+              apiEndpoint = `${baseUrl}/api/orders/production/${page}`
+              break
+            case 'termine':
+              apiEndpoint = `${baseUrl}/api/orders?status=termine`
+              break
+            case 'fourniture':
+              apiEndpoint = `${baseUrl}/api/orders?status=fourniture`
+              break
+            default:
+              continue
+          }
+          
+          console.log(`🔄 Récupération articles pour ${page}...`)
+          
+          // Récupérer les articles de la page
+          const response = await fetch(apiEndpoint, {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'max-age=300'
+            }
+          })
+          
+          if (!response.ok) {
+            console.log(`❌ Erreur récupération ${page}: ${response.status}`)
+            continue
+          }
+          
+          const data = await response.json()
+          const articles = data.orders || data || []
+          
+          if (!Array.isArray(articles) || articles.length === 0) {
+            console.log(`⚠️ Aucun article trouvé pour ${page}`)
+            continue
+          }
+          
+          // Extraire les URLs d'images des articles
+          const imageUrls = articles
+            .map(article => {
+              if (article.productId) {
+                return `${baseUrl}/api/woocommerce/products/${article.productId}/image?f=webp`
+              }
+              return null
+            })
+            .filter(Boolean)
+          
+          if (imageUrls.length === 0) {
+            console.log(`⚠️ Aucune image trouvée pour ${page}`)
+            continue
+          }
           
           // Préchargement en arrière-plan (sans bloquer l'UI)
-          console.log(`🖼️ Préchargement ${sampleImageUrls.length} images pour ${page}`)
-          ImageOptimizationService.preloadBatch(sampleImageUrls, false)
+          console.log(`🖼️ Préchargement ${imageUrls.length} images pour ${page}`)
+          ImageOptimizationService.preloadBatch(imageUrls, false)
             .then(results => {
-              console.log(`✅ Préchargement ${page} terminé: ${results.length} images`)
+              const successCount = results.filter(r => r.status === 'fulfilled').length
+              console.log(`✅ Préchargement ${page} terminé: ${successCount}/${imageUrls.length} images`)
             })
             .catch(error => {
-              console.log(`Préchargement page ${page} ignoré:`, error.message)
+              console.log(`❌ Erreur préchargement ${page}:`, error.message)
             })
           
         } catch (error) {
           // Ignorer les erreurs de préchargement
-          console.log(`Préchargement page ${page} ignoré:`, error.message)
+          console.log(`❌ Erreur préchargement ${page}:`, error.message)
         }
       }
     }

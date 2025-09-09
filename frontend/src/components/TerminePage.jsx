@@ -6,7 +6,7 @@ import { deleteOrderCompletely } from '../services/mongodbService'
 import { useUnifiedArticles } from './cartes/hooks/useUnifiedArticles'
 import { assignmentsService } from '../services/mongodbService'
 import delaiService from '../services/delaiService'
-import BatchImageLoader from './BatchImageLoader'
+import SmartImageLoader from './SmartImageLoader'
 
 /*
   Page "Terminé":
@@ -320,8 +320,7 @@ const TerminePage = () => {
 
   return (
     <>
-      <BatchImageLoader 
-        articles={unifiedArticles || []} 
+      <SmartImageLoader 
         pageName="termine" 
         priority={false} 
       />
