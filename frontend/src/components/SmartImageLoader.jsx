@@ -21,7 +21,7 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
         const baseUrl = getBackendUrl()
         let apiEndpoint = ''
         
-        // Déterminer l'endpoint selon la page
+        // Déterminer l'endpoint selon la page (fourniture exclue car pas d'images)
         switch (pageName) {
           case 'couture':
           case 'maille':
@@ -31,8 +31,8 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
             apiEndpoint = `${baseUrl}/api/orders?status=termine`
             break
           case 'fourniture':
-            apiEndpoint = `${baseUrl}/api/orders?status=fourniture`
-            break
+            console.log(`ℹ️ Page ${pageName} exclue - pas d'images à charger`)
+            return
           default:
             console.log(`⚠️ Page inconnue: ${pageName}`)
             return
@@ -40,13 +40,19 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
         
         console.log(`🔄 Récupération articles pour ${pageName}...`)
         
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+        
         const response = await fetch(apiEndpoint, {
           credentials: 'include',
+          signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'max-age=300'
           }
         })
+        
+        clearTimeout(timeoutId)
         
         if (!response.ok) {
           console.log(`❌ Erreur récupération ${pageName}: ${response.status}`)
@@ -66,11 +72,15 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
         
         console.log(`🚀 Chargement en lot de ${fetchedArticles.length} images pour ${pageName}`)
         
-        // Charger toutes les images
-        const results = await preloadAllImages(fetchedArticles)
-        setLoadedCount(results.length)
-        
-        console.log(`✅ Chargement terminé: ${results.length}/${fetchedArticles.length} images pour ${pageName}`)
+        // Charger toutes les images en arrière-plan (non bloquant)
+        preloadAllImages(fetchedArticles)
+          .then(results => {
+            setLoadedCount(results.length)
+            console.log(`✅ Chargement terminé: ${results.length}/${fetchedArticles.length} images pour ${pageName}`)
+          })
+          .catch(error => {
+            console.warn(`⚠️ Erreur chargement images ${pageName}:`, error)
+          })
         
       } catch (error) {
         console.warn(`⚠️ Erreur chargement images ${pageName}:`, error)
@@ -79,17 +89,17 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
       }
     }
 
-    // Délai pour ne pas impacter le rendu initial
-    const timeoutId = setTimeout(loadArticlesAndImages, priority ? 0 : 500)
+    // Délai pour charger l'interface d'abord, puis les images
+    const timeoutId = setTimeout(loadArticlesAndImages, priority ? 1000 : 3000)
     
     return () => clearTimeout(timeoutId)
   }, [pageName, priority])
 
-  // Afficher un indicateur de progression
+  // Afficher un indicateur de progression discret
   if (isLoading && totalCount > 0) {
     return (
-      <div className="fixed top-4 right-4 bg-black/80 text-white px-3 py-2 rounded-lg text-sm z-50">
-        📸 Chargement images: {loadedCount}/{totalCount}
+      <div className="fixed bottom-4 right-4 bg-green-600/90 text-white px-3 py-2 rounded-lg text-sm z-50 shadow-lg">
+        📸 Images: {loadedCount}/{totalCount}
       </div>
     )
   }

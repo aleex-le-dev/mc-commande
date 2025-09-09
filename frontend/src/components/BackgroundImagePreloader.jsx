@@ -6,7 +6,7 @@ import { getBackendUrl } from '../config/api.js'
  * Composant pour précharger les images des autres pages en arrière-plan
  * Utilisé dans App.jsx pour optimiser les transitions entre pages
  */
-const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille', 'termine', 'fourniture'] }) => {
+const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille', 'termine'] }) => {
   useEffect(() => {
     // Précharger les images des autres pages en arrière-plan
     const preloadOtherPages = async () => {
@@ -14,7 +14,7 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
       
       if (otherPages.length === 0) return
 
-      console.log(`🖼️ Préchargement images pour: ${otherPages.join(', ')}`)
+      console.log(`🖼️ Préchargement images pour: ${otherPages.join(', ')} (fourniture exclue - pas d'images)`)
       
       for (const page of otherPages) {
         try {
@@ -22,7 +22,7 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
           const baseUrl = getBackendUrl()
           let apiEndpoint = ''
           
-          // Déterminer l'endpoint selon la page
+          // Déterminer l'endpoint selon la page (fourniture exclue car pas d'images)
           switch (page) {
             case 'couture':
             case 'maille':
@@ -31,9 +31,6 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
             case 'termine':
               apiEndpoint = `${baseUrl}/api/orders?status=termine`
               break
-            case 'fourniture':
-              apiEndpoint = `${baseUrl}/api/orders?status=fourniture`
-              break
             default:
               continue
           }
@@ -41,13 +38,19 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
           console.log(`🔄 Récupération articles pour ${page}...`)
           
           // Récupérer les articles de la page
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
+          
           const response = await fetch(apiEndpoint, {
             credentials: 'include',
+            signal: controller.signal,
             headers: {
               'Content-Type': 'application/json',
               'Cache-Control': 'max-age=300'
             }
           })
+          
+          clearTimeout(timeoutId)
           
           if (!response.ok) {
             console.log(`❌ Erreur récupération ${page}: ${response.status}`)
@@ -95,8 +98,8 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
       }
     }
 
-    // Délai pour ne pas impacter les performances de la page actuelle
-    const timeoutId = setTimeout(preloadOtherPages, 2000)
+    // Délai pour charger l'interface d'abord, puis les images des autres pages
+    const timeoutId = setTimeout(preloadOtherPages, 8000)
     
     return () => clearTimeout(timeoutId)
   }, [currentPage, allPages])

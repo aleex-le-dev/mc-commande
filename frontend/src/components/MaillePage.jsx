@@ -12,7 +12,7 @@ const MaillePage = () => {
       <ProductionPage productionType="maille" title="Maille" />
       <SmartImageLoader 
         pageName="maille" 
-        priority={true} 
+        priority={false} 
       />
     </>
   )

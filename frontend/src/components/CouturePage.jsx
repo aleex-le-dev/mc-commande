@@ -12,7 +12,7 @@ const CouturePage = () => {
       <ProductionPage productionType="couture" title="Couture" />
       <SmartImageLoader 
         pageName="couture" 
-        priority={true} 
+        priority={false} 
       />
     </>
   )
