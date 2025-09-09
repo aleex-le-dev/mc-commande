@@ -1,19 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import ArticleCard from './cartes/ArticleCard'
-import { useOrders } from '../hooks/useOrders'
-import { useAssignments } from '../hooks/useAssignments'
-import { useTricoteuses } from '../hooks/useTricoteuses'
+import { useArticles } from '../hooks/useArticles'
 import delaiService from '../services/delaiService'
 import SmartImageLoader from './SmartImageLoader'
 
-/*
-  Page "Terminé":
-  - Regroupe les articles par commande (orderNumber)
-  - Indique si la commande est prête à expédier (tous les articles en statut "termine")
-  - Affiche les commandes partiellement terminées avec la liste des articles restants
-*/
-const TerminePage = () => {
+/**
+ * Page "Terminé" refactorisée avec séparation des responsabilités
+ * - Utilise le hook useArticles pour la gestion des données
+ * - Logique de transformation déplacée dans le service
+ */
+const TerminePageRefactored = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [focusedOrder, setFocusedOrder] = useState(null)
   const [openReadyOverlayId, setOpenReadyOverlayId] = useState(null)
@@ -21,228 +18,48 @@ const TerminePage = () => {
   const [openInProgressOverlayId, setOpenInProgressOverlayId] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Utiliser les nouveaux hooks
+  // Utiliser le hook unifié pour les articles
   const { 
-    orders, 
-    pagination, 
-    loading: ordersLoading, 
-    error: ordersError,
-    refetch: refetchOrders 
-  } = useOrders({
+    groupedArticles,
+    pagination,
+    isLoading,
+    error
+  } = useArticles({
     page: currentPage,
     limit: 15,
     status: 'all',
     search: searchTerm,
     sortBy: 'order_date',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    productionType: 'all'
   })
-  
-  const { 
-    assignments, 
-    loading: assignmentsLoading,
-    getAssignmentByArticleId 
-  } = useAssignments()
-  
-  const { 
-    tricoteuses, 
-    loading: tricoteusesLoading,
-    getTricoteuseById 
-  } = useTricoteuses()
   
   const [urgentByArticleId, setUrgentByArticleId] = useState({})
   const [delaiConfig, setDelaiConfig] = useState(null)
   const [holidays, setHolidays] = useState({})
   const [dateLimiteStr, setDateLimiteStr] = useState(null)
 
-  // Formatage simple pour gérer le singulier/pluriel en français
-  const formatCount = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`
-
-  // Priorité d'affichage des statuts (en_cours, en_pause, termine, a_faire)
-  const getStatusPriority = (status) => {
-    switch (status) {
-      case 'en_cours':
-        return 0
-      case 'en_pause':
-        return 1
-      case 'termine':
-        return 2
-      case 'a_faire':
-        return 3
-      default:
-        return 4
+  // Charger la configuration des délais
+  useEffect(() => {
+    const loadDelaiConfig = async () => {
+      try {
+        const config = await delaiService.getDelaiConfig()
+        setDelaiConfig(config)
+        setDateLimiteStr(config?.dateLimite)
+      } catch (error) {
+        console.error('Erreur chargement config délais:', error)
+      }
     }
-  }
-
-  // Charger les assignations pour récupérer les flags urgent (avec cache)
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        // Utiliser le cache global si disponible
-        const cached = window.mcAssignmentsCache
-        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes
-          setUrgentByArticleId(cached.urgentMap)
-          return
-        }
-        
-        const all = await assignmentsService.getAllAssignments()
-        if (cancelled) return
-        const map = {}
-        for (const a of all) {
-          if (!a) continue
-          const id = a.article_id != null ? String(a.article_id) : ''
-          if (!id) continue
-          map[id] = !!a.urgent
-        }
-        setUrgentByArticleId(map)
-        
-        // Mettre en cache
-        window.mcAssignmentsCache = {
-          urgentMap: map,
-          timestamp: Date.now()
-        }
-      } catch {}
-    })()
-    return () => { cancelled = true }
+    loadDelaiConfig()
   }, [])
 
-  // Charger tricoteuses (pour avatars/couleurs)
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        setTricoteusesLoading(true)
-        const data = await tricoteusesService.getAllTricoteuses()
-        if (!cancelled) setTricoteuses(data || [])
-      } catch {
-        if (!cancelled) setTricoteuses([])
-      } finally {
-        if (!cancelled) setTricoteusesLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  // Charger config délais + jours fériés pour calcul retard (avec cache)
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        // Utiliser le cache global si disponible
-        const cached = window.mcDelaiCache
-        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes
-          setDelaiConfig(cached.delaiConfig)
-          setHolidays(cached.holidays)
-          if (cached.dateLimiteStr) {
-            setDateLimiteStr(cached.dateLimiteStr)
-          }
-          return
-        }
-        
-        const conf = await delaiService.getDelai()
-        if (!cancelled && conf && conf.data) {
-          setDelaiConfig(conf.data)
-          let dateLimiteStr = null
-          if (conf.data.dateLimite) {
-            dateLimiteStr = String(conf.data.dateLimite).split('T')[0]
-            setDateLimiteStr(dateLimiteStr)
-          }
-          
-          try {
-            const jf = await delaiService.getJoursFeries()
-            if (!cancelled && jf && jf.success) {
-              const holidays = jf.joursFeries || {}
-              setHolidays(holidays)
-              
-              // Mettre en cache
-              window.mcDelaiCache = {
-                delaiConfig: conf.data,
-                holidays,
-                dateLimiteStr,
-                timestamp: Date.now()
-              }
-            }
-          } catch {}
-        }
-      } catch {}
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  const isHoliday = useMemo(() => {
-    const keys = new Set(Object.keys(holidays || {}))
-    return (d) => keys.has(d.toISOString().slice(0,10))
-  }, [holidays])
-
-  // Si le backend n'a pas fourni de dateLimite, calculer en remontant dans le temps (même logique que la grille)
-  useEffect(() => {
-    if (!delaiConfig || dateLimiteStr) return
-    try {
-      const joursDelai = delaiConfig.joursDelai || delaiConfig.delaiJours || 21
-      const working = delaiConfig.joursOuvrables || { lundi: true, mardi: true, mercredi: true, jeudi: true, vendredi: true, samedi: false, dimanche: false }
-      const dayName = (date) => ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][date.getDay()]
-      const today = new Date()
-      const d = new Date(today)
-      let removed = 0
-      while (removed < joursDelai) {
-        d.setDate(d.getDate() - 1)
-        const name = dayName(d)
-        if (working[name] && !isHoliday(d)) {
-          removed++
-        }
-      }
-      setDateLimiteStr(d.toISOString().slice(0,10))
-    } catch {}
-  }, [delaiConfig, dateLimiteStr, isHoliday])
-
+  // Utiliser les articles groupés fournis par le hook useArticles
   const grouped = useMemo(() => {
-    // Gérer les deux formats : nouveau (avec pagination) et ancien (tableau direct)
-    const ordersArray = orders?.orders || orders
-    
-    if (!ordersArray || !Array.isArray(ordersArray)) {
-      console.log('❌ Pas de commandes disponibles dans TerminePage:', orders)
+    if (!groupedArticles || Object.keys(groupedArticles).length === 0) {
       return []
     }
     
-    console.log('📋 Commandes reçues dans TerminePage:', ordersArray.length)
-    
-    // Regrouper les articles par commande
-    const ordersByNumber = {}
-    ordersArray.forEach(order => {
-      // Le backend retourne 'items', pas 'line_items'
-      const orderItems = order.items || order.line_items || []
-      
-      if (Array.isArray(orderItems)) {
-        orderItems.forEach(item => {
-          const orderNumber = order.order_number
-          if (!ordersByNumber[orderNumber]) {
-            ordersByNumber[orderNumber] = {
-              order: order,
-              articles: []
-            }
-          }
-          
-          // Utiliser line_item_id au lieu de article_id pour la correspondance
-          const articleId = item.line_item_id || item.id
-          const assignment = getAssignmentByArticleId(articleId)
-          const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
-          
-          ordersByNumber[orderNumber].articles.push({
-            ...item,
-            article_id: articleId, // S'assurer que article_id est défini
-            orderNumber: order.order_number,
-            customer: order.customer,
-            orderDate: order.order_date,
-            status: item.production_status?.status || 'a_faire',
-            assignedTo: tricoteuse?.name || null,
-            urgent: assignment?.urgent || false,
-            assignmentId: assignment?._id || null
-          })
-        })
-      }
-    })
-    
-    const enriched = Object.entries(ordersByNumber).map(([orderNumber, { order, articles }]) => {
+    const enriched = Object.entries(groupedArticles).map(([orderNumber, { order, articles }]) => {
       // Calculer les statuts pour cette commande
       const statusCounts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
       let totalArticles = 0
@@ -317,272 +134,225 @@ const TerminePage = () => {
     })
 
     return filtered
-  }, [ordersByNumber, searchTerm, urgentByArticleId, dateLimiteStr])
+  }, [groupedArticles, searchTerm, dateLimiteStr])
 
   // Calculer les sections avec priorité d'affichage
   const ready = useMemo(() => {
-    const readyOrders = grouped.filter(g => g.isReadyToShip)
+    return grouped.filter(o => o.isReadyToShip)
+  }, [grouped])
+
+  const inProgress = useMemo(() => {
+    return grouped.filter(o => o.globalStatus === 'in_progress')
+  }, [grouped])
+
+  const paused = useMemo(() => {
+    return grouped.filter(o => o.globalStatus === 'paused')
+  }, [grouped])
+
+  const toDo = useMemo(() => {
+    return grouped.filter(o => o.globalStatus === 'a_faire')
+  }, [grouped])
+
+  // Fonctions de gestion des overlays
+  const handleOverlayOpen = (overlayId, type) => {
+    setOpenReadyOverlayId(null)
+    setOpenPausedOverlayId(null)
+    setOpenInProgressOverlayId(null)
     
-
-    
-    return readyOrders
-  }, [grouped])
-
-  // Aplatir les articles terminés des commandes prêtes
-  const readyArticles = useMemo(() => {
-    const list = []
-    ready.forEach(order => {
-      order.items.filter(it => it.status === 'termine').forEach(it => {
-        list.push({ ...it })
-      })
-    })
-    return list
-  }, [ready])
-  const inProgress = useMemo(() => grouped.filter(g => {
-    // Afficher les commandes qui ont au moins un article en statut "en_cours", "en_pause" ou "termine" (mais pas entièrement terminées)
-    if (g.isReadyToShip) return false
-    return g.items.some(item => ['en_cours', 'en_pause', 'termine'].includes(item.status))
-  }), [grouped])
-  const inProgressArticles = useMemo(() => {
-    const list = []
-    inProgress.forEach(order => {
-      order.items.filter(it => ['en_cours', 'en_pause', 'termine'].includes(it.status)).forEach(it => {
-        list.push({ ...it })
-      })
-    })
-    return list
-  }, [inProgress])
-  const partial = useMemo(() => grouped.filter(g => {
-    // Articles en pause : commandes qui ont au moins un article avec statut "en_pause"
-    return g.items.some(item => item.status === 'en_pause')
-  }), [grouped])
-  const pausedArticles = useMemo(() => {
-    const list = []
-    grouped.forEach(order => {
-      order.items.filter(it => it.status === 'en_pause').forEach(it => {
-        list.push({ ...it })
-      })
-    })
-    return list
-  }, [grouped])
-  const urgentCount = useMemo(() => grouped.filter(g => g.hasUrgent).length, [grouped])
-  const lateCount = useMemo(() => grouped.filter(g => g.isLate).length, [grouped])
-
-  const filteredCount = grouped.length
-  
-  // Compter uniquement les articles terminés (pas les commandes)
-  const totalFinishedArticles = useMemo(() => {
-    return grouped.reduce((total, order) => {
-      return total + order.finished
-    }, 0)
-  }, [grouped])
-
-  // État de chargement progressif
-  const [showPartial, setShowPartial] = useState(false)
-
-  // Afficher progressivement les sections
-  useEffect(() => {
-    if (ready.length > 0) {
-      const timer1 = setTimeout(() => setShowPartial(true), 100)
-      return () => {
-        clearTimeout(timer1)
-      }
+    switch (type) {
+      case 'ready':
+        setOpenReadyOverlayId(overlayId)
+        break
+      case 'paused':
+        setOpenPausedOverlayId(overlayId)
+        break
+      case 'in_progress':
+        setOpenInProgressOverlayId(overlayId)
+        break
     }
-  }, [ready.length])
+  }
 
-  // Ecouter l'ouverture ciblée depuis une carte
-  React.useEffect(() => {
-    const handler = (ev) => {
-      const n = ev?.detail?.orderNumber
-      if (n) setFocusedOrder(`${n}`)
+  const handleClickOutside = () => {
+    setOpenReadyOverlayId(null)
+    setOpenPausedOverlayId(null)
+    setOpenInProgressOverlayId(null)
+  }
+
+  // Fonctions pour les cartes
+  const getArticleSize = (article) => {
+    const name = article.product_name?.toLowerCase() || ''
+    return name.includes('sweat') || name.includes('hoodie') || name.includes('cardigan') ? 'large' : 'medium'
+  }
+
+  const getArticleColor = (article) => {
+    const colors = {
+      'termine': 'border-green-500 bg-green-50',
+      'en_cours': 'border-blue-500 bg-blue-50',
+      'en_pause': 'border-yellow-500 bg-yellow-50',
+      'a_faire': 'border-gray-300 bg-white'
     }
-    window.addEventListener('mc-open-termine-for-order', handler)
-    return () => window.removeEventListener('mc-open-termine-for-order', handler)
-  }, [])
+    return colors[article.status] || colors['a_faire']
+  }
+
+  const getArticleOptions = () => ({
+    showAssignButton: true,
+    showStatusButton: true,
+    showNoteButton: true,
+    showClientButton: true
+  })
+
+  if (isLoading) {
+    return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center">Chargement...</div></div>
+  }
+
+  if (error) {
+    return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement: {error.message}</div></div>
+  }
 
   return (
-    <>
-      {/* Temporairement désactivé - erreurs 502 sur Render */}
-      {/* <SmartImageLoader 
-        pageName="termine" 
-        priority={false} 
-      /> */}
-      <div className="w-full px-4">
+    <div className="w-full px-4">
       <div className="mb-6">
         <OrderHeader
           selectedType="termine"
-          filteredArticlesCount={totalFinishedArticles}
+          filteredArticlesCount={grouped.length}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          onGoToEnd={() => {
+            try {
+              const container = document.scrollingElement || document.documentElement
+              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+            } catch {}
+          }}
         />
-        {/* Résumés urgent / retard */}
-        <div className="mt-3 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border bg-white">
-            🚨 Urgentes: <strong>{urgentCount}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border bg-white">
-            ⚠️ En retard: <strong>{lateCount}</strong>
-          </span>
+        
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => { setFocusedOrder(null); setOpenReadyOverlayId(null) }}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              !focusedOrder 
+                ? 'bg-blue-100 border-blue-300 text-blue-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            📋 Total: <strong>{grouped.length}</strong>
+          </button>
+          
+          <button
+            onClick={() => setFocusedOrder('ready')}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              focusedOrder === 'ready' 
+                ? 'bg-green-100 border-green-300 text-green-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            ✅ Prêtes: <strong>{ready.length}</strong>
+          </button>
+          
+          <button
+            onClick={() => setFocusedOrder('in_progress')}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              focusedOrder === 'in_progress' 
+                ? 'bg-blue-100 border-blue-300 text-blue-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            🔄 En cours: <strong>{inProgress.length}</strong>
+          </button>
+          
+          <button
+            onClick={() => setFocusedOrder('paused')}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              focusedOrder === 'paused' 
+                ? 'bg-yellow-100 border-yellow-300 text-yellow-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            ⏸️ En pause: <strong>{paused.length}</strong>
+          </button>
+          
+          <button
+            onClick={() => setFocusedOrder('to_do')}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+              focusedOrder === 'to_do' 
+                ? 'bg-gray-100 border-gray-300 text-gray-800' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            🆕 À faire: <strong>{toDo.length}</strong>
+          </button>
         </div>
       </div>
 
-      {/* Etat de chargement / erreur */}
-      {isLoading && (
-        <LoadingSpinner />
-      )}
-      {error && (
-        <div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement</div>
-      )}
-
-      {!isLoading && !error && (
-        <div className="space-y-8">
-          {/* Commandes prêtes à expédier */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">Prêtes à expédier</h2>
-              <span className="text-sm text-gray-600">{formatCount(ready.length, 'commande', 'commandes')} — {formatCount(readyArticles.length, 'article', 'articles')}</span>
+      {/* Affichage des commandes groupées */}
+      <div className="space-y-6">
+        {grouped.map(({ orderNumber, order, articles, remaining, statusCounts, totalArticles, urgentCount, globalStatus, isReadyToShip, hasUrgent, isLate }) => (
+          <div key={orderNumber} className="bg-white rounded-2xl shadow-sm border p-6">
+            {/* En-tête de commande */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Commande #{orderNumber}
+                </h3>
+                {hasUrgent && (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-100 text-red-800 border border-red-200">
+                    🚨 {urgentCount} urgent{urgentCount > 1 ? 's' : ''}
+                  </span>
+                )}
+                {isLate && (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                    ⏰ En retard
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {statusCounts.termine}/{totalArticles} terminé{statusCounts.termine > 1 ? 's' : ''}
+                </span>
+                {isReadyToShip ? (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 border border-green-200">
+                    ✅ Prête à expédier
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    🔄 En cours
+                  </span>
+                )}
+              </div>
             </div>
-            {readyArticles.length === 0 ? (
-              <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande prête</div>
-            ) : (
-              <div className="flex flex-wrap gap-5">
-                {ready.map(order => (
-                  <div key={`ready-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border-2 border-green-500 p-4 w-fit inline-block align-top">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600">{order.items.length} article(s)</span>
-                        <button
-                          className="text-xs px-3 py-1 rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                          onClick={async () => {
-                            const ok = window.confirm(`Confirmer l'envoi et supprimer la commande #${order.orderNumber} ?`)
-                            if (!ok) return
-                            const res = await deleteOrderCompletely(order.orderId)
-                            if (!res.success) {
-                              alert('Erreur lors de la suppression: ' + (res.error || 'inconnue'))
-                            }
-                          }}
-                        >
-                          Confirmer l'envoi
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-4">
-                      {order.items.map((article, index) => (
-                        <div key={`ready-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
-                          <ArticleCard
-                            article={{ ...article }}
-                            index={index}
-                            getArticleSize={() => 'medium'}
-                            getArticleColor={() => null}
-                            getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                            onOverlayOpen={() => setOpenReadyOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                            isOverlayOpen={openReadyOverlayId === `${article.orderId}_${article.line_item_id}`}
-                            isHighlighted={false}
-                            searchTerm={''}
-                            productionType={article.productionType}
-                            tricoteusesProp={tricoteuses}
-                            compact
-                            disableStatusBorder
-                            disableAssignmentModal
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
 
-          {/* Commandes en cours */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">En cours</h2>
-              <span className="text-sm text-gray-600">{formatCount(inProgress.length, 'commande', 'commandes')} — {formatCount(inProgressArticles.length, 'article', 'articles')}</span>
+            {/* Informations client */}
+            <div className="mb-4 text-sm text-gray-600">
+              <p><strong>Client:</strong> {order.customer_name}</p>
+              <p><strong>Email:</strong> {order.customer_email}</p>
+              <p><strong>Date:</strong> {new Date(order.order_date).toLocaleDateString('fr-FR')}</p>
             </div>
-            {inProgressArticles.length === 0 ? (
-              <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucune commande en cours</div>
-            ) : (
-              <div className="flex flex-wrap gap-5">
-                {inProgress.map(order => (
-                  <div key={`inprogress-order-${order.orderId}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-cours">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-sm font-medium">Commande #{order.orderNumber}</div>
-                      <span className="text-xs text-gray-600">{(() => { const c = order.items.filter(it => ['en_cours', 'en_pause', 'termine'].includes(it.status)).length; return formatCount(c, 'article en cours', 'articles en cours') })()}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-4">
-                      {order.items
-                        .slice()
-                        .sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status))
-                        .map((article, index) => (
-                        <div key={`inprogress-${order.orderId}-${article.line_item_id}`} className="w-[260px]">
-                        <ArticleCard
-                          article={{ ...article }}
-                          index={index}
-                          getArticleSize={() => 'medium'}
-                          getArticleColor={() => null}
-                          getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                          onOverlayOpen={() => setOpenInProgressOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                          isOverlayOpen={openInProgressOverlayId === `${article.orderId}_${article.line_item_id}`}
-                          isHighlighted={false}
-                          searchTerm={''}
-                          productionType={article.productionType}
-                          tricoteusesProp={tricoteuses}
-                          compact
-                            disableStatusBorder={order.items.length === 1 ? true : !(['en_cours', 'en_pause', 'termine'].includes(article.status))}
-                            disableAssignmentModal
-                        />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
 
-          {/* Articles en pause */}
-          {showPartial && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">Articles en pause</h2>
-                <span className="text-sm text-gray-600">{pausedArticles.length}</span>
-              </div>
-              {pausedArticles.length === 0 ? (
-                <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-600">Aucun article en pause</div>
-              ) : (
-                <div className="flex flex-wrap gap-5">
-                  {pausedArticles.map((article, index) => (
-                    <div key={`paused-${article.orderId}-${article.line_item_id}`} className="bg-white rounded-2xl shadow-sm border p-4 w-fit inline-block align-top border-status-en-pause">
-                      <div className="w-[260px]">
-                    <ArticleCard
-                      article={{ ...article, status: 'en_pause' }}
-                      index={index}
-                      getArticleSize={() => 'medium'}
-                      getArticleColor={() => null}
-                      getArticleOptions={() => ({ showAssignButton: false, showStatusButton: false, showNoteButton: true, showClientButton: true })}
-                      onOverlayOpen={() => setOpenPausedOverlayId(prev => prev === `${article.orderId}_${article.line_item_id}` ? null : `${article.orderId}_${article.line_item_id}`)}
-                      isOverlayOpen={openPausedOverlayId === `${article.orderId}_${article.line_item_id}`}
-                      isHighlighted={false}
-                      searchTerm={''}
-                      productionType={article.productionType}
-                      tricoteusesProp={tricoteuses}
-                      compact
-                          disableStatusBorder
-                          disableAssignmentModal
-                    />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          
-        </div>
-      )}
+            {/* Articles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {articles.map((article) => (
+                <ArticleCard
+                  key={article.article_id}
+                  article={article}
+                  size={getArticleSize(article)}
+                  color={getArticleColor(article)}
+                  options={getArticleOptions()}
+                  onOverlayOpen={(cardId) => handleOverlayOpen(cardId, globalStatus)}
+                  openOverlayCardId={
+                    globalStatus === 'ready' ? openReadyOverlayId :
+                    globalStatus === 'paused' ? openPausedOverlayId :
+                    globalStatus === 'in_progress' ? openInProgressOverlayId : null
+                  }
+                  onClickOutside={handleClickOutside}
+                  searchTerm={searchTerm}
+                  productionType="all"
+                  prioritizeUrgent={true}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
       
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
@@ -610,8 +380,7 @@ const TerminePage = () => {
         </div>
       )}
     </div>
-    </>
   )
 }
 
-export default TerminePage
+export default TerminePageRefactored

@@ -17,12 +17,10 @@ export { default as StatusTab } from './StatusTab.jsx'
 export { default as TricoteusesTab } from './TricoteusesTab.jsx'
 
 // Hooks personnalisés
-export { useOrderData } from './hooks/useOrderData.js'
 export { useSyncProgress } from './hooks/useSyncProgress.js'
 export { useOrderFilters } from './hooks/useOrderFilters.js'
 export { usePagination } from './hooks/usePagination.js'
 export { useServerPagination } from './hooks/useServerPagination.js'
-export { useUnifiedArticles } from './hooks/useUnifiedArticles.js'
 
 // Documentation disponible :
 // - README.md : Structure et organisation du dossier cartes

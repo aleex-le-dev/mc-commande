@@ -2,9 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import LoadingSpinner from './LoadingSpinner'
-import { useOrders } from '../hooks/useOrders'
-import { useAssignments } from '../hooks/useAssignments'
-import { useTricoteuses } from '../hooks/useTricoteuses'
+import { useArticles } from '../hooks/useArticles'
 
 /**
  * Page générique pour Maille/Couture
@@ -15,139 +13,24 @@ const ProductionPage = ({ productionType, title }) => {
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   
-  // Utiliser les nouveaux hooks
+  // Utiliser le hook unifié pour les articles
   const { 
-    orders, 
-    pagination, 
-    loading: ordersLoading, 
-    error: ordersError,
-    refetch: refetchOrders 
-  } = useOrders({
+    articles,
+    filteredArticles,
+    stats,
+    pagination,
+    isLoading,
+    error
+  } = useArticles({
     page: currentPage,
     limit: 15,
     status: selectedStatus,
     search: searchTerm,
     sortBy: 'order_date',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    productionType,
+    showUrgentOnly
   })
-  
-  const { 
-    assignments, 
-    loading: assignmentsLoading,
-    getAssignmentByArticleId,
-    getActiveAssignments 
-  } = useAssignments()
-  
-  const { 
-    tricoteuses, 
-    loading: tricoteusesLoading,
-    getTricoteuseById 
-  } = useTricoteuses()
-  
-  // Créer la carte des urgences
-  const urgentMap = useMemo(() => {
-    const map = {}
-    assignments.forEach(a => {
-      if (a && a.article_id && a.urgent) {
-        map[String(a.article_id)] = true
-      }
-    })
-    return map
-  }, [assignments])
-
-  // Convertir les commandes en articles pour l'affichage
-  const articles = useMemo(() => {
-    // Gérer les deux formats : nouveau (avec pagination) et ancien (tableau direct)
-    const ordersArray = orders?.orders || orders
-    
-    if (!ordersArray || !Array.isArray(ordersArray)) {
-      console.log('❌ Pas de commandes disponibles:', orders)
-      return []
-    }
-    
-    console.log('📋 Commandes reçues:', ordersArray.length, 'TIMESTAMP:', Date.now())
-    
-    // DEBUG FORCÉ: Structure complète des données
-    console.log('🚨🚨🚨 DEBUG FORCÉ - Structure des ordres:', JSON.stringify(ordersArray[0], null, 2))
-    
-    const allArticles = []
-    ordersArray.forEach(order => {
-      // Debug complet de la structure
-      console.log('🔍 Commande complète:', order)
-      console.log('🔍 Clés de la commande:', Object.keys(order))
-      console.log('🔍 order.items:', order.items)
-      console.log('🔍 order.line_items:', order.line_items)
-      
-      // Le backend retourne 'items', pas 'line_items'
-      const orderItems = order.items || order.line_items || []
-      console.log('🔍 Commande:', order.order_number, 'Items:', orderItems.length)
-      
-      if (Array.isArray(orderItems)) {
-        orderItems.forEach((item, index) => {
-          console.log(`🚨 ITEM ${index}:`, JSON.stringify(item, null, 2))
-          console.log('🔍 Item complet:', item)
-          console.log('🔍 Item:', item?.product_name, 'Type:', item?.production_status?.production_type, 'Filtre:', productionType)
-          
-          // Filtrer par type de production
-          if (productionType === 'maille' && item.production_status?.production_type !== 'maille') {
-            console.log('❌ Item filtré (maille):', item.product_name)
-            return
-          }
-          if (productionType === 'couture' && item.production_status?.production_type !== 'couture') {
-            console.log('❌ Item filtré (couture):', item.product_name)
-            return
-          }
-          
-          // Utiliser line_item_id au lieu de article_id pour la correspondance
-          const articleId = item.line_item_id || item.id
-          const assignment = getAssignmentByArticleId(articleId)
-          const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
-          
-          allArticles.push({
-            ...item,
-            article_id: articleId, // S'assurer que article_id est défini
-            orderNumber: order.order_number,
-            customer: order.customer,
-            orderDate: order.order_date,
-            status: item.production_status?.status || 'a_faire',
-            assignedTo: tricoteuse?.name || null,
-            urgent: assignment?.urgent || false,
-            assignmentId: assignment?._id || null
-          })
-        })
-      }
-    })
-    
-    console.log('📦 Articles générés:', allArticles.length, 'pour', productionType)
-    return allArticles
-  }, [orders, assignments, tricoteuses, productionType, getAssignmentByArticleId, getTricoteuseById])
-  
-  // Filtrage local par recherche et statut
-  const filteredArticles = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim()
-    let filtered = articles
-    
-    // Filtrage urgent prioritaire
-    if (showUrgentOnly) {
-      filtered = filtered.filter(article => article.urgent === true)
-    } else {
-      // Filtrage par statut
-      if (selectedStatus !== 'all') {
-        filtered = filtered.filter(article => article.status === selectedStatus)
-      }
-    }
-    
-    // Filtrage par recherche
-    if (term) {
-      filtered = filtered.filter(article => 
-        `${article.orderNumber}`.toLowerCase().includes(term) ||
-        (article.customer || '').toLowerCase().includes(term) ||
-        (article.product_name || '').toLowerCase().includes(term)
-      )
-    }
-    
-    return filtered
-  }, [articles, searchTerm, selectedStatus, showUrgentOnly])
 
   // logs retirés
   
@@ -183,33 +66,14 @@ const ProductionPage = ({ productionType, title }) => {
     showClientButton: true
   })
 
-  const statusCounts = useMemo(() => {
-    const counts = { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0 }
-    articles.forEach(a => {
-      if (counts[a.status] !== undefined) counts[a.status] += 1
-    })
-    return counts
-  }, [articles])
-
-  const urgentCount = useMemo(() => {
-    return articles.reduce((n, article) => n + (article.urgent ? 1 : 0), 0)
-  }, [articles])
-
-  const isLoading = ordersLoading || assignmentsLoading || tricoteusesLoading
-  const error = ordersError
-
-  // Logs de debug
-  console.log('🔍 Debug ProductionPage:', {
-    ordersLoading,
-    assignmentsLoading,
-    tricoteusesLoading,
-    isLoading,
-    error,
-    orders: orders ? Object.keys(orders) : 'null',
-    articles: articles.length,
-    assignments: assignments.length,
-    tricoteuses: tricoteuses.length
-  })
+  // Les statistiques sont maintenant fournies par le hook useArticles
+  const statusCounts = {
+    a_faire: stats.a_faire,
+    en_cours: stats.en_cours,
+    en_pause: stats.en_pause,
+    termine: stats.termine
+  }
+  const urgentCount = stats.urgent
 
   if (isLoading) {
     console.log('⏳ Affichage du spinner...')

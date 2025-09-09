@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getOrdersPaginated } from '../../../services/mongodbService'
+import { transformItemToArticle } from '../../../services/articleTransformationService'
 
 export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
   const [currentPage, setCurrentPage] = useState(1)
@@ -34,28 +35,14 @@ export const useServerPagination = (selectedType = 'all', searchTerm = '') => {
   const articles = useMemo(() => {
     if (!orders || orders.length === 0) return []
     
+    // Utiliser le service de transformation pour éviter la duplication
     const articles = []
     orders.forEach((order) => {
-      order.items?.forEach((item) => {
-        articles.push({
-          ...item,
-          orderId: order.order_id,
-          orderNumber: order.order_number,
-          orderDate: order.order_date,
-          customer: order.customer_name,
-          customerEmail: order.customer_email,
-          customerPhone: order.customer_phone,
-          customerAddress: order.customer_address,
-          customerNote: order.customer_note,
-          shippingMethod: order.shipping_title || order.shipping_method_title || order.shipping_method || 'Livraison gratuite',
-          shippingCarrier: order.shipping_carrier || null,
-          customerCountry: order.customer_country || null,
-          permalink: item.permalink,
-          productionType: item.production_status?.production_type || 'couture',
-          status: item.production_status?.status || 'a_faire',
-          assigned_to: item.production_status?.assigned_to || null,
-          isDispatched: item.production_status && item.production_status.status !== 'a_faire'
-        })
+      const orderItems = order.items || order.line_items || []
+      orderItems.forEach((item) => {
+        // Utiliser la fonction de transformation centralisée
+        const article = transformItemToArticle(item, order)
+        articles.push(article)
       })
     })
     
