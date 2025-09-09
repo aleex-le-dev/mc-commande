@@ -6,7 +6,8 @@ import { IoSettingsOutline, IoLockClosedOutline, IoMenuOutline, IoCloseOutline }
 import SyncButton from './components/SyncButton'
 import { RiStickyNoteAddLine, RiStickyNoteFill } from 'react-icons/ri'
 import authService from './components/../services/authService'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { syncOrders } from './services/mongodbService'
 
 import TerminePage from './components/TerminePage'
 import FourniturePage from './components/FourniturePage'
@@ -29,6 +30,7 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
   const [ctxVisible, setCtxVisible] = useState(false)
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
@@ -40,6 +42,50 @@ function App() {
   const [showDeleteToast, setShowDeleteToast] = useState(false)
   const [deleteOrderInfo, setDeleteOrderInfo] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [dailySyncToast, setDailySyncToast] = useState({ visible: false, message: '' })
+
+  // Planifier une synchro quotidienne à 12:00 locale (manuelle programmée)
+  useEffect(() => {
+    let timeoutId
+    let nextTimerId
+    const scheduleNext = () => {
+      const now = new Date()
+      const next = new Date()
+      next.setHours(12, 0, 0, 0)
+      if (now >= next) {
+        next.setDate(next.getDate() + 1)
+      }
+      const delay = next.getTime() - now.getTime()
+      timeoutId = setTimeout(async () => {
+        try {
+          setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne…' })
+          try { window.__dailySyncToast = 'Synchronisation quotidienne…' } catch {}
+          await syncOrders({})
+          // Invalidate caches comme le bouton
+          queryClient.invalidateQueries(['db-orders'])
+          queryClient.invalidateQueries(['production-statuses'])
+          queryClient.invalidateQueries(['unified-orders'])
+          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
+          setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne terminée ✅' })
+          try { window.__dailySyncToast = 'Synchronisation quotidienne terminée ✅' } catch {}
+        } catch (e) {
+          setDailySyncToast({ visible: true, message: "Erreur de synchronisation quotidienne" })
+          try { window.__dailySyncToast = 'Erreur de synchronisation quotidienne' } catch {}
+        } finally {
+          // masquer après 6s
+          setTimeout(() => setDailySyncToast({ visible: false, message: '' }), 6000)
+          try { setTimeout(() => { window.__dailySyncToast = '' }, 6000) } catch {}
+          // replanifier pour le lendemain
+          scheduleNext()
+        }
+      }, delay)
+    }
+    scheduleNext()
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (nextTimerId) clearTimeout(nextTimerId)
+    }
+  }, [queryClient])
 
   useEffect(() => {
     const handleContextMenu = (e) => {

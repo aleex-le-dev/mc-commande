@@ -4,6 +4,16 @@ import './App.css'
 import App from './App.jsx'
 import { prefetchAppData } from './services/mongodbService.js'
 import AuthGate from './components/AuthGate.jsx'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false
+    }
+  }
+})
 
 const Root = () => {
   // Démarrer le préchargement (sans synchronisation) en arrière-plan, avant l'authentification
@@ -13,10 +23,23 @@ const Root = () => {
       prefetchAppData()
     }
   }, [])
+
+  // Empreinte console: une seule ligne cliquable
+  useEffect(() => {
+    try {
+      if (!window.__alexPrintOnce) {
+        const style = 'color:#10b981;background:#0b1220;padding:6px 10px;border-radius:12px;font-weight:700;letter-spacing:.03em;font-size:12px'
+        console.log('%cCreated by AleexLeDev · https://salutalex.fr', style)
+        window.__alexPrintOnce = true
+      }
+    } catch {}
+  }, [])
   return (
-    <AuthGate>
-      <App />
-    </AuthGate>
+    <QueryClientProvider client={queryClient}>
+      <AuthGate>
+        <App />
+      </AuthGate>
+    </QueryClientProvider>
   )
 }
 

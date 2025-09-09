@@ -11,6 +11,7 @@ import { syncOrders, getSyncLogs } from '../services/mongodbService'
 const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
   const queryClient = useQueryClient()
   const [isSyncing, setIsSyncing] = useState(false)
+  const [toast, setToast] = useState({ visible: false, message: '', variant: 'success' })
 
   const handleManualSync = useCallback(async () => {
     if (isSyncing) return
@@ -42,16 +43,14 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
           }
         }
       } catch {}
-      try {
-        const syncLog = await getSyncLogs()
-        console.log('📝 [SYNC] Dernier log backend:', syncLog)
-      } catch (e) {
-        console.warn('⚠️ [SYNC] Impossible de récupérer le log backend:', e)
-      }
-      const dt = Math.round(performance.now() - t0)
-      
+      // logs retirés
+      // Toast succès sans durée
+      setToast({ visible: true, message: 'Synchronisation terminée ✅', variant: 'success' })
+      setTimeout(() => setToast({ visible: false, message: '', variant: 'success' }), 5000)
     } catch (e) {
       console.error('❌ [SYNC] Échec de la synchronisation:', e)
+      setToast({ visible: true, message: 'Erreur de synchronisation ❌', variant: 'error' })
+      setTimeout(() => setToast({ visible: false, message: '', variant: 'error' }), 5000)
     } finally {
       setIsSyncing(false)
       if (typeof onDone === 'function') onDone()
@@ -74,17 +73,27 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleManualSync}
-      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)] disabled:opacity-60 ${className}`}
-      style={{ color: 'var(--text-secondary)' }}
-      title={isSyncing ? 'Synchronisation…' : 'Synchroniser'}
-      aria-label="Synchroniser"
-      disabled={isSyncing}
-    >
-      <IoRefreshOutline className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
-    </button>
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={handleManualSync}
+        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)] disabled:opacity-60 ${className}`}
+        style={{ color: 'var(--text-secondary)' }}
+        title={isSyncing ? 'Synchronisation…' : 'Synchroniser'}
+        aria-label="Synchroniser"
+        disabled={isSyncing}
+      >
+        <IoRefreshOutline className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
+      </button>
+      {toast.visible && (
+        <div
+          className={`fixed z-50 px-4 py-2 rounded-lg shadow-lg ${toast.variant === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
+          style={{ top: '64px', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          {toast.message}
+        </div>
+      )}
+    </div>
   )
 }
 
