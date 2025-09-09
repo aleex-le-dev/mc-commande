@@ -50,11 +50,11 @@ function cacheDelete(key) {
 
 
 
-async function requestWithRetry(url, options = {}, retries = 2) {
+async function requestWithRetry(url, options = {}, retries = 1) {
   const controller = new AbortController()
   const timeout = setTimeout(() => {
     controller.abort()
-  }, options.timeoutMs || 30000) // 30s pour production lente
+  }, options.timeoutMs || 15000) // 15s pour local
   
   try {
     await acquireSlot()
@@ -738,16 +738,10 @@ export const assignmentsService = {
   }
 }
 
-// Préchargement des données à l'ouverture de l'app
+// Préchargement des données à l'ouverture de l'app (désactivé pour accélérer le chargement)
 export async function prefetchAppData() {
   try {
-    // Préchargement léger sans synchronisation backend
-    await Promise.all([
-      tricoteusesService.getAllTricoteuses(),
-      assignmentsService.getAllAssignments(),
-      // Charger un premier lot de commandes depuis la BDD uniquement
-      (async () => { try { await getOrdersFromDatabase() } catch (e) {} })()
-    ])
+    // Préchargement désactivé - les données se chargeront à la demande
     try { sessionStorage.setItem('mc-prefetch-ok-v1', '1') } catch {}
     try { window.dispatchEvent(new Event('mc-prefetch-done')) } catch {}
   } catch {
