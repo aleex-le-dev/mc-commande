@@ -27,7 +27,8 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       console.log('🗂️ [SYNC] Invalidation des caches React Query: [\'db-orders\'], [\'production-statuses\']')
       try {
         // Log de la dernière commande présente en BDD
-        const res = await fetch('http://localhost:3001/api/orders', { credentials: 'include' })
+        const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+        const res = await fetch(`${base}/api/orders`, { credentials: 'include' })
         if (res.ok) {
           const data = await res.json()
           const orders = Array.isArray(data?.orders) ? data.orders : []

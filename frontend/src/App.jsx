@@ -169,7 +169,8 @@ function App() {
   const handleDeleteArticle = async (orderId, lineItemId) => {
     try {
       console.log('[DELETE-ARTICLE] Demande de suppression', { orderId, lineItemId })
-      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/items/${lineItemId}`, {
+      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+      const response = await fetch(`${base}/api/orders/${orderId}/items/${lineItemId}`, {
         method: 'DELETE'
       })
       
@@ -214,7 +215,8 @@ function App() {
     
     setIsDeleting(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/orders/${deleteOrderInfo.orderId}`, {
+      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+      const response = await fetch(`${base}/api/orders/${deleteOrderInfo.orderId}`, {
         method: 'DELETE'
       })
       

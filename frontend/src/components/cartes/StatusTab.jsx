@@ -31,7 +31,8 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, wordpressProducts: true }))
     try {
       // Test de récupération des produits via une route qui retourne du JSON
-      const response = await fetch('http://localhost:3001/api/orders?limit=1')
+      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+      const response = await fetch(`${base}/api/orders?limit=1`)
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }

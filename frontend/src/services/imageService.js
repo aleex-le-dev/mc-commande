@@ -5,7 +5,9 @@
 
 class ImageService {
   constructor() {
-    this.backendUrl = 'http://localhost:3001/api/images'
+    // En dev: backend local; en prod: Render ou VITE_API_URL
+    const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+    this.backendUrl = `${base}/api/images`
   }
 
   /**
