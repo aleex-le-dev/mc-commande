@@ -23,13 +23,13 @@ const BottomBar = ({
 
   return (
     <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-2 pt-2' : 'px-3 pt-3'} pb-2 sm:pb-3`}>
-      <div className="flex items-end justify-between">
+      <div className="flex items-center justify-between">
         {/* Date et heure (heure masquée en mobile) */}
-        <div className={`flex items-end ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
-          <span className={`bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
+        <div className={`flex items-center ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
+          <span className={`inline-flex items-center bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md`}>
             {article.orderDate ? format(new Date(article.orderDate), 'dd/MM', { locale: fr }) : 'N/A'}
           </span>
-          <span className={`hidden sm:inline-block bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md align-middle`}>
+          <span className={`hidden sm:inline-flex items-center bg-gray-100 ${compact ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-md`}>
             {article.orderDate ? format(new Date(article.orderDate), 'HH:mm', { locale: fr }) : 'N/A'}
           </span>
           {/* Bouton note: style différent si note présente */}
@@ -37,7 +37,7 @@ const BottomBar = ({
             type="button"
             onClick={onToggleNote}
             ref={noteBtnRef}
-            className={`inline-flex items-center ${ hasNote ? (compact ? 'px-1.5 py-0.5' : 'px-2 py-1') + ' rounded-md border note-btn' : '' }`}
+            className={`inline-flex items-center justify-center align-middle ${ hasNote ? (compact ? 'px-1.5 py-0.5' : 'px-2 py-1') + ' rounded-md border note-btn' : '' }`}
             style={{
               backgroundColor: hasNote ? '#fbbf24' : 'transparent',
               color: hasNote ? '#78350f' : '#374151',
