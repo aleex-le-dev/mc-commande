@@ -598,7 +598,7 @@ export const tricoteusesService = {
         return persistentCached
       }
       
-      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 3000 })
+      const response = await requestWithRetry(`${API_BASE_URL}/tricoteuses`, { timeoutMs: 10000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des tricoteuses')
       const result = await response.json()
       const data = result.data || []
@@ -700,7 +700,7 @@ export const assignmentsService = {
         return persistentCached
       }
       
-      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 3000 })
+      const response = await requestWithRetry(`${API_BASE_URL}/assignments`, { timeoutMs: 10000 })
       if (!response || !response.ok) throw new Error('Erreur lors de la récupération des assignations')
       const result = await response.json()
       const data = result.data || []
