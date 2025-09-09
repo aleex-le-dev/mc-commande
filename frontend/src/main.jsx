@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { ApiService } from './services/apiService.js'
 import AuthGate from './components/AuthGate.jsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import './utils/circuitBreakerReset.js'
 
 const queryClient = new QueryClient({
   defaultOptions: {

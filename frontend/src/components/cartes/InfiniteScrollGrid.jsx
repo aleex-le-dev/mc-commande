@@ -270,14 +270,20 @@ const InfiniteScrollGrid = forwardRef(({
 
   // Initialiser le chargement en parallèle
   useEffect(() => {
-    // Paralléliser les requêtes pour améliorer les performances
-    Promise.all([
-      loadAssignments(),
-      loadTricoteuses(),
-      loadDateLimite()
-    ]).catch(error => {
-      console.error('Erreur lors du chargement initial:', error)
-    })
+    // Chargement séquentiel pour éviter la surcharge Render
+    const loadDataSequentially = async () => {
+      try {
+        await loadAssignments()
+        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
+        await loadTricoteuses()
+        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
+        await loadDateLimite()
+      } catch (error) {
+        console.error('Erreur lors du chargement initial:', error)
+      }
+    }
+    
+    loadDataSequentially()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType])
 
   // Rafraîchir les tricoteuses en temps réel après modifications dans l'onglet Admin

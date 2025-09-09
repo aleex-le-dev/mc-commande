@@ -32,10 +32,66 @@ let concurrentRequests = 0
 const MAX_CONCURRENT = 1 // Une seule requête à la fois pour Render
 const waitQueue = []
 
+// Circuit breaker pour protéger contre les pannes serveur
+let circuitBreakerState = 'CLOSED' // CLOSED, OPEN, HALF_OPEN
+let failureCount = 0
+let lastFailureTime = 0
+const FAILURE_THRESHOLD = 3 // 3 échecs consécutifs
+const RECOVERY_TIMEOUT = 30000 // 30 secondes avant de réessayer
+
+/**
+ * Vérifier l'état du circuit breaker
+ */
+const checkCircuitBreaker = () => {
+  const now = Date.now()
+  
+  if (circuitBreakerState === 'OPEN') {
+    if (now - lastFailureTime > RECOVERY_TIMEOUT) {
+      circuitBreakerState = 'HALF_OPEN'
+      console.log('🔄 Circuit breaker: passage en mode HALF_OPEN')
+      return true
+    }
+    return false
+  }
+  
+  return true
+}
+
+/**
+ * Enregistrer un succès
+ */
+const recordSuccess = () => {
+  if (circuitBreakerState === 'HALF_OPEN') {
+    circuitBreakerState = 'CLOSED'
+    failureCount = 0
+    console.log('✅ Circuit breaker: fermé après succès')
+  }
+}
+
+/**
+ * Enregistrer un échec
+ */
+const recordFailure = () => {
+  failureCount++
+  lastFailureTime = Date.now()
+  
+  if (failureCount >= FAILURE_THRESHOLD) {
+    circuitBreakerState = 'OPEN'
+    console.log('🚨 Circuit breaker: ouvert après', failureCount, 'échecs')
+  }
+}
+
 /**
  * Acquérir un slot pour une requête
  */
 const acquireSlot = () => new Promise((resolve) => {
+  // Vérifier le circuit breaker
+  if (!checkCircuitBreaker()) {
+    console.log('🚫 Circuit breaker ouvert, requête bloquée')
+    resolve(false) // Indiquer que la requête ne doit pas être exécutée
+    return
+  }
+  
   if (concurrentRequests < MAX_CONCURRENT) {
     concurrentRequests += 1
     // Délai entre les requêtes pour éviter de surcharger Render
@@ -48,8 +104,16 @@ const acquireSlot = () => new Promise((resolve) => {
 /**
  * Libérer un slot après une requête
  */
-const releaseSlot = () => {
+const releaseSlot = (success = true) => {
   concurrentRequests = Math.max(0, concurrentRequests - 1)
+  
+  // Enregistrer le résultat
+  if (success) {
+    recordSuccess()
+  } else {
+    recordFailure()
+  }
+  
   const next = waitQueue.shift()
   if (next) {
     concurrentRequests += 1

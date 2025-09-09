@@ -18,6 +18,12 @@ import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
+import DebugPanel from './components/DebugPanel'
+
+// Charger les scripts de test en mode développement
+if (import.meta.env.DEV) {
+  import('./utils/circuitBreakerTest.js')
+}
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
 import BackgroundImagePreloader from './components/BackgroundImagePreloader'
 import './App.css'
@@ -517,6 +523,9 @@ function App() {
           articles={deleteOrderInfo?.articles || []}
           isDeleting={isDeleting}
         />
+        
+        {/* Panneau de debug */}
+        <DebugPanel />
           </div>
         </SlowDeviceOptimizer>
       </PerformanceOptimizer>

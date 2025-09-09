@@ -20,11 +20,11 @@ Le projet souffre de problèmes architecturaux majeurs qui causent des performan
 - ✅ **Timeouts optimisés** - 10-30s selon le type de requête
 - ✅ **Retry intelligent** - Backoff exponentiel avec 3 tentatives
 
-### **3. SURCHARGE DU SERVEUR RENDER**
-- ❌ **Trop de requêtes simultanées** - 12-20 requêtes en parallèle
-- ❌ **Pas de limitation de concurrence** - Surcharge du serveur
-- ❌ **Pas de délais entre requêtes** - Attaque du serveur
-- ❌ **Pas de gestion de la charge** - 502 Bad Gateway fréquents
+### **3. SURCHARGE DU SERVEUR RENDER** ✅ RÉSOLU
+- ✅ **Requêtes séquentielles** - Chargement séquentiel avec `await` dans `loadDataSequentially()`
+- ✅ **Limitation de concurrence** - 1 requête à la fois avec `MAX_CONCURRENT = 1`
+- ✅ **Délais entre requêtes** - 200ms dans `acquireSlot()` + 100ms entre chargements
+- ✅ **Gestion de la charge** - Queue d'attente + timeouts 30s + retry intelligent
 
 ### **4. GESTION D'ÉTAT DÉFAILLANTE**
 - ❌ **`useUnifiedArticles` fait trop de choses** - Hook monolithique

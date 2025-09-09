@@ -172,14 +172,20 @@ const SimpleFlexGrid = ({
   }, [])
 
   useEffect(() => {
-    // Paralléliser les requêtes pour améliorer les performances
-    Promise.all([
-      loadAssignments(),
-      loadTricoteuses(),
-      loadDateLimite()
-    ]).catch(error => {
-      console.error('Erreur lors du chargement initial:', error)
-    })
+    // Chargement séquentiel pour éviter la surcharge Render
+    const loadDataSequentially = async () => {
+      try {
+        await loadAssignments()
+        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
+        await loadTricoteuses()
+        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
+        await loadDateLimite()
+      } catch (error) {
+        console.error('Erreur lors du chargement initial:', error)
+      }
+    }
+    
+    loadDataSequentially()
   }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType]) // Recharger quand on change d'onglet
 
   // Écouter les mises à jour globales des tricoteuses pour recharger la liste sans refresh

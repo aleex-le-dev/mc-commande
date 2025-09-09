@@ -37,9 +37,12 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
           
           console.log(`🔄 Récupération articles pour ${page}...`)
           
-          // Récupérer les articles de la page
+          // Récupérer les articles de la page avec limitation de charge
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
+          const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout pour Render
+          
+          // Délai entre les requêtes pour éviter la surcharge
+          await new Promise(resolve => setTimeout(resolve, 500))
           
           const response = await fetch(apiEndpoint, {
             credentials: 'include',
