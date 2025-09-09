@@ -16,7 +16,9 @@ const ProductImage = ({ productId, productName, permalink }) => {
   const backendUrl = useMemo(() => {
     if (!productId) return null
     const baseUrl = getBackendUrl()
-    return `${baseUrl}/api/images/${productId}`
+    // Forcer le rechargement avec un timestamp pour éviter le cache
+    const timestamp = Date.now()
+    return `${baseUrl}/api/images/${productId}?t=${timestamp}`
   }, [productId])
 
   useEffect(() => {
