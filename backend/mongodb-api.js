@@ -63,7 +63,7 @@ const WOOCOMMERCE_URL = process.env.VITE_WORDPRESS_URL || 'https://maisoncleo.co
 const WOOCOMMERCE_CONSUMER_KEY = process.env.VITE_WORDPRESS_CONSUMER_KEY
 const WOOCOMMERCE_CONSUMER_SECRET = process.env.VITE_WORDPRESS_CONSUMER_SECRET
 
-console.log('🔍 URL MongoDB configurée:', mongoUrl)
+console.log('🔍 URL MongoDB: protégée (masquée)')
 console.log('🔍 Variables d\'environnement:', {
   MONGO_URI: process.env.MONGO_URI ? '✅ Définie' : '❌ Manquante',
   WOOCOMMERCE_URL: WOOCOMMERCE_URL ? '✅ Définie' : '❌ Manquante',
@@ -3227,34 +3227,36 @@ async function startServer() {
 
   const server = app.listen(PORT, () => {
     console.log(`🚀 Serveur MongoDB API démarré sur le port ${PORT}`)
-    console.log(`📊 Endpoints disponibles:`)
-    console.log(`   POST /api/sync/orders - Synchroniser les commandes`)
-    console.log(`   GET  /api/orders - Récupérer toutes les commandes`)
-    console.log(`   GET  /api/orders/search/:orderNumber - Rechercher une commande par numéro`)
-    console.log(`   GET  /api/orders/production/:type - Commandes par type de production`)
-    console.log(`   POST /api/production/dispatch - Dispatcher vers production`)
-    console.log(`   PUT  /api/production/redispatch - Redispatch vers un autre type`)
-    console.log(`   PUT  /api/production/status - Mettre à jour le statut`)
-    console.log(`   GET  /api/production-status - Statuts de production`)
-    console.log(`   GET  /api/production-status/stats - Statistiques de production`)
-    console.log(`   POST /api/production-status - Mettre à jour statut`)
-    console.log(`   GET  /api/debug/articles-couture - Debug articles couture`)
-    console.log(`   GET  /api/woocommerce/products/:productId/permalink - Permalink d'un produit`)
-    console.log(`   POST /api/woocommerce/products/permalink/batch - Permalinks en lot`)
-    console.log(`   GET  /api/sync/logs - Logs de synchronisation`)
-    console.log(`   POST /api/sync/logs/clear - Vider les logs`)
-    console.log(`   GET  /api/test/connection - Test connexion WordPress`)
-    console.log(`   GET  /api/test/sync - Test connexion base de données`)
-    console.log(`   GET  /api/debug/status - Debug de l'état de la base`)
-    console.log(`   GET  /api/tricoteuses - Récupérer toutes les tricoteuses`)
-    console.log(`   POST /api/tricoteuses - Créer une nouvelle tricoteuse`)
-    console.log(`   PUT  /api/tricoteuses/:id - Modifier une tricoteuse`)
-    console.log(`   DELETE /api/tricoteuses/:id - Supprimer une tricoteuse`)
-    console.log(`   GET  /api/assignments - Récupérer toutes les assignations`)
-    console.log(`   GET  /api/assignments/:articleId - Récupérer une assignation`)
-    console.log(`   POST /api/assignments - Créer/mettre à jour une assignation`)
-    console.log(`   DELETE /api/assignments/:assignmentId - Supprimer une assignation`)
-    console.log(`   DELETE /api/assignments/by-article/:articleId - Supprimer par article_id`)
+    console.log('📊 Endpoints disponibles:')
+    const endpoints = [
+      'POST /api/auth/verify',
+      'POST /api/sync/orders',
+      'GET  /api/orders',
+      'GET  /api/orders/search/:orderNumber',
+      'GET  /api/orders/production/:type',
+      'POST /api/production/dispatch',
+      'PUT  /api/production/redispatch',
+      'PUT  /api/production/status',
+      'GET  /api/production-status',
+      'GET  /api/production-status/stats',
+      'POST /api/production-status',
+      'GET  /api/woocommerce/products/:productId/permalink',
+      'POST /api/woocommerce/products/permalink/batch',
+      'GET  /api/sync/logs',
+      'POST /api/sync/logs/clear',
+      'GET  /api/test/connection',
+      'GET  /api/test/sync',
+      'GET  /api/tricoteuses',
+      'POST /api/tricoteuses',
+      'PUT  /api/tricoteuses/:id',
+      'DELETE /api/tricoteuses/:id',
+      'GET  /api/assignments',
+      'GET  /api/assignments/:articleId',
+      'POST /api/assignments',
+      'DELETE /api/assignments/:assignmentId',
+      'DELETE /api/assignments/by-article/:articleId',
+    ]
+    endpoints.forEach(e => console.log(`   ${e}`))
   })
   server.on('error', (err) => {
     console.error('❌ Erreur serveur:', err)
