@@ -87,10 +87,6 @@ export const CacheService = {
    * Obtenir une valeur du cache mémoire
    */
   getMemory(key) {
-    // Désactiver temporairement le cache pour diagnostic
-    console.log(`🚫 Cache mémoire désactivé pour diagnostic: ${key}`)
-    return null
-    
     const entry = memoryCache.get(key)
     if (isCacheValid(entry, CACHE_CONFIG.MEMORY_TTL)) {
       console.log(`📦 Cache mémoire hit: ${key}`)
@@ -119,10 +115,6 @@ export const CacheService = {
    * Obtenir une valeur du cache persistant (sessionStorage)
    */
   getPersistent(key) {
-    // Désactiver temporairement le cache pour diagnostic
-    console.log(`🚫 Cache persistant désactivé pour diagnostic: ${key}`)
-    return null
-    
     try {
       const stored = sessionStorage.getItem(`cache_${key}`)
       if (!stored) return null
