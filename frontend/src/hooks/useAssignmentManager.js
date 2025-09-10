@@ -102,8 +102,8 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
 
   // Ouvrir la modal d'assignation
   const openTricoteuseModal = useCallback(() => {
-    loadTricoteuses()
     setShowTricoteuseModal(true)
+    loadTricoteuses()
   }, [loadTricoteuses])
 
   // Fermer la modal d'assignation

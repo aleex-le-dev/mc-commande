@@ -76,6 +76,8 @@ const ArticleCard = forwardRef(({
     loadExistingAssignment,
     loadTricoteuses,
     removeAssignment,
+    assignArticle,
+    changeStatus,
     handleTranslation,
     isValidPhotoUrl,
     doitAvoirTraitRouge,
@@ -462,69 +464,8 @@ const ArticleCard = forwardRef(({
         tricoteuses={tricoteuses}
         localAssignment={localAssignment}
         onRemove={removeAssignment}
-        onPick={async (tricoteuse) => {
-          if (isAssigning) return
-                    setIsAssigning(true)
-          // Préserver le statut urgent existant lors du changement d'assignation
-          const currentUrgent = localAssignment ? localAssignment.urgent : localUrgent
-          const assignmentData = { 
-            article_id: uniqueAssignmentId, 
-            tricoteuse_id: tricoteuse._id, 
-            tricoteuse_name: tricoteuse.firstName, 
-            status: 'en_cours',
-            urgent: currentUrgent
-          }
-          try {
-            await ApiService.assignments.createAssignment(assignmentData)
-            
-            // Synchroniser le status initial avec production_status en BDD
-            try { 
-              await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, 'en_cours') 
-            } catch (error) {
-              console.error('❌ Erreur synchronisation status initial en BDD:', error)
-            }
-            
-            const enrichedAssignment = { ...assignmentData, tricoteuse_photo: tricoteuse.photoUrl, tricoteuse_color: tricoteuse.color, tricoteuse_name: tricoteuse.firstName }
-            setLocalAssignment(enrichedAssignment)
-            if (onAssignmentUpdate) { onAssignmentUpdate(uniqueAssignmentId, enrichedAssignment) }
-            closeTricoteuseModal()
-            
-            // Déclencher le rechargement des données
-            setTimeout(() => {
-              window.dispatchEvent(new Event('mc-refresh-data'))
-            }, 500)
-          } catch (error) {
-            console.error('Erreur lors de la sauvegarde:', error)
-            alert('Erreur lors de l\'assignation. Veuillez réessayer.')
-          } finally {
-            setIsAssigning(false)
-          }
-                  }}
-        onChangeStatus={async (status) => {
-          const updatedAssignment = { ...localAssignment, status }
-          
-          // Utiliser le service de statut pour une mise à jour temps réel
-          try {
-            await statusService.updateStatus(article.orderId, article.line_item_id, status)
-          } catch (error) {
-            console.error('❌ Erreur synchronisation status:', error)
-          }
-          
-          if (status === 'termine') {
-            const rect = document.body.getBoundingClientRect()
-            setConfettiPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
-            setShowConfetti(true)
-          }
-          
-          try {
-            await ApiService.assignments.updateAssignment(updatedAssignment._id, updatedAssignment)
-            setLocalAssignment(updatedAssignment)
-            if (onAssignmentUpdate) { onAssignmentUpdate() }
-            closeTricoteuseModal()
-          } catch (error) {
-            console.error('Erreur lors de la mise à jour du statut:', error)
-          }
-        }}
+        onPick={assignArticle}
+        onChangeStatus={changeStatus}
         isValidPhotoUrl={isValidPhotoUrl}
       />
       

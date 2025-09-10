@@ -73,6 +73,10 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     // Calculs
     doitAvoirTraitRouge,
     estApresDateLimite,
+    
+    // Fonctions d'assignation (explicitement exportées)
+    assignArticle: assignmentData.assignArticle,
+    changeStatus: assignmentData.changeStatus
   }
 }
 

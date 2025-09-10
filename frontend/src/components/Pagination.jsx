@@ -16,7 +16,7 @@ const Pagination = ({
   // Générer les numéros de page à afficher
   const getPageNumbers = () => {
     const pages = []
-    const maxVisible = 5
+    const maxVisible = 3
     
     if (totalPages <= maxVisible) {
       // Si peu de pages, toutes les afficher
@@ -25,7 +25,7 @@ const Pagination = ({
       }
     } else {
       // Logique pour afficher les pages pertinentes
-      const start = Math.max(1, currentPage - 2)
+      const start = Math.max(1, currentPage - 1)
       const end = Math.min(totalPages, start + maxVisible - 1)
       
       if (start > 1) {
@@ -59,7 +59,7 @@ const Pagination = ({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-lg shadow-sm border">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-lg shadow-sm border mt-6">
       {/* Informations sur les éléments */}
       <div className="text-sm text-gray-600">
         {totalItems > 0 ? (
@@ -74,12 +74,12 @@ const Pagination = ({
       </div>
 
       {/* Contrôles de pagination */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         {/* Bouton première page */}
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Première page"
         >
           ««
@@ -89,7 +89,7 @@ const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Page précédente"
         >
           <IoChevronBack className="w-4 h-4" />
@@ -108,7 +108,7 @@ const Pagination = ({
                   ? 'bg-blue-600 text-white'
                   : page === '...'
                   ? 'text-gray-400 cursor-default'
-                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 cursor-pointer'
               }`}
             >
               {page}
@@ -120,7 +120,7 @@ const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Page suivante"
         >
           Suivant
@@ -131,7 +131,7 @@ const Pagination = ({
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Dernière page"
         >
           »»
@@ -140,12 +140,12 @@ const Pagination = ({
 
       {/* Sélecteur d'éléments par page */}
       {showItemsPerPage && onItemsPerPageChange && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-4 sm:mt-0">
           <label className="text-sm text-gray-600">Par page:</label>
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
           >
             <option value={10}>10</option>
             <option value={15}>15</option>

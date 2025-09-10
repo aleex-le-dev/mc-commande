@@ -18,21 +18,6 @@ const OrderHeader = ({ selectedType, filteredArticlesCount, searchTerm, onSearch
         <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
           {getTitle()} ({countLabel})
         </h2>
-        {typeof onGoToEnd === 'function' && (
-          <button
-            type="button"
-            onClick={onGoToEnd}
-            className="px-3 py-1.5 text-sm border rounded hover:bg-[var(--bg-tertiary)] cursor-pointer transition-colors"
-            style={{ 
-              borderColor: 'var(--border-primary)',
-              color: 'var(--text-secondary)'
-            }}
-            title="Aller à la fin"
-            aria-label="Aller à la fin"
-          >
-            Aller à la fin
-          </button>
-        )}
       </div>
       <div className="w-full sm:w-80">
         <form onSubmit={(e) => { e.preventDefault(); /* surlignage en direct */ }}>

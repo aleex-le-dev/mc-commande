@@ -11,7 +11,74 @@ const preloadQueue = new Set()
 const loadingPromises = new Map()
 const httpCache = new Map() // Cache HTTP persistant
 
-// Cache ultra-simple - pas de persistance complexe
+// Cache persistant avec localStorage et sessionStorage
+const PERSISTENT_CACHE_KEY = 'mc-image-cache-v1'
+const SESSION_CACHE_KEY = 'mc-session-cache-v1'
+
+// Charger le cache persistant au démarrage
+const loadPersistentCache = () => {
+  try {
+    const stored = localStorage.getItem(PERSISTENT_CACHE_KEY)
+    if (stored) {
+      const data = JSON.parse(stored)
+      data.forEach(([key, value]) => httpCache.set(key, value))
+      console.log(`📦 Cache persistant chargé: ${httpCache.size} images`)
+    }
+  } catch (error) {
+    console.warn('Erreur chargement cache persistant:', error)
+  }
+}
+
+// Sauvegarder le cache persistant
+const savePersistentCache = () => {
+  try {
+    const data = Array.from(httpCache.entries())
+    localStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify(data))
+    console.log(`💾 Cache persistant sauvegardé: ${data.length} images`)
+  } catch (error) {
+    console.warn('Erreur sauvegarde cache persistant:', error)
+  }
+}
+
+// Charger le cache de session
+const loadSessionCache = () => {
+  try {
+    const stored = sessionStorage.getItem(SESSION_CACHE_KEY)
+    if (stored) {
+      const data = JSON.parse(stored)
+      data.forEach(([key, value]) => imageCache.set(key, value))
+      console.log(`📦 Cache session chargé: ${imageCache.size} images`)
+    }
+  } catch (error) {
+    console.warn('Erreur chargement cache session:', error)
+  }
+}
+
+// Sauvegarder le cache de session
+const saveSessionCache = () => {
+  try {
+    const data = Array.from(imageCache.entries())
+    sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(data))
+    console.log(`💾 Cache session sauvegardé: ${data.length} images`)
+  } catch (error) {
+    console.warn('Erreur sauvegarde cache session:', error)
+  }
+}
+
+// Initialiser les caches au démarrage
+loadPersistentCache()
+loadSessionCache()
+
+// Nettoyer le cache ancien au démarrage
+setTimeout(() => {
+  ImageOptimizationService.cleanupOldCache()
+}, 1000)
+
+// Sauvegarder périodiquement (toutes les 30 secondes)
+setInterval(() => {
+  if (imageCache.size > 0) saveSessionCache()
+  if (httpCache.size > 0) savePersistentCache()
+}, 30000)
 
 // Configuration optimisée pour Render (chargement progressif)
 const RENDER_CONFIG = {
@@ -52,6 +119,7 @@ export const ImageOptimizationService = {
   preloadImage: async (url, priority = false) => {
     // 1. Vérifier le cache mémoire (instantané)
     if (imageCache.has(url)) {
+      console.log(`⚡ Cache mémoire: ${url.split('/').pop()}`)
       return Promise.resolve(imageCache.get(url))
     }
 
@@ -59,10 +127,44 @@ export const ImageOptimizationService = {
     if (httpCache.has(url)) {
       const cachedUrl = httpCache.get(url)
       imageCache.set(url, cachedUrl)
+      console.log(`⚡ Cache HTTP: ${url.split('/').pop()}`)
       return Promise.resolve(cachedUrl)
     }
 
-    // 3. Vérifier si déjà en cours de chargement
+    // 3. Vérifier le sessionStorage (fallback)
+    try {
+      const sessionData = sessionStorage.getItem(SESSION_CACHE_KEY)
+      if (sessionData) {
+        const sessionCache = new Map(JSON.parse(sessionData))
+        if (sessionCache.has(url)) {
+          const cachedUrl = sessionCache.get(url)
+          imageCache.set(url, cachedUrl)
+          console.log(`⚡ Cache session: ${url.split('/').pop()}`)
+          return Promise.resolve(cachedUrl)
+        }
+      }
+    } catch (error) {
+      console.warn('Erreur lecture sessionStorage:', error)
+    }
+
+    // 4. Vérifier le localStorage (fallback final)
+    try {
+      const persistentData = localStorage.getItem(PERSISTENT_CACHE_KEY)
+      if (persistentData) {
+        const persistentCache = new Map(JSON.parse(persistentData))
+        if (persistentCache.has(url)) {
+          const cachedUrl = persistentCache.get(url)
+          imageCache.set(url, cachedUrl)
+          httpCache.set(url, cachedUrl) // Remettre dans le cache HTTP
+          console.log(`⚡ Cache localStorage: ${url.split('/').pop()}`)
+          return Promise.resolve(cachedUrl)
+        }
+      }
+    } catch (error) {
+      console.warn('Erreur lecture localStorage:', error)
+    }
+
+    // 5. Vérifier si déjà en cours de chargement
     if (preloadQueue.has(url)) {
       return loadingPromises.get(url) || Promise.resolve()
     }
@@ -111,6 +213,11 @@ export const ImageOptimizationService = {
           preloadQueue.delete(url)
           loadingPromises.delete(url)
           console.log(`✅ Image mise en cache: ${url.split('/').pop()} (total: ${imageCache.size})`)
+          
+          // Sauvegarder immédiatement les caches
+          saveSessionCache()
+          savePersistentCache()
+          
           resolve(url)
         }
         
@@ -231,7 +338,43 @@ export const ImageOptimizationService = {
     imageCache.clear()
     preloadQueue.clear()
     loadingPromises.clear()
-    // Ne pas vider httpCache - il doit persister
+    httpCache.clear()
+    
+    // Vider aussi les caches persistants
+    try {
+      localStorage.removeItem(PERSISTENT_CACHE_KEY)
+      sessionStorage.removeItem(SESSION_CACHE_KEY)
+      console.log('🗑️ Tous les caches vidés')
+    } catch (error) {
+      console.warn('Erreur vidage caches persistants:', error)
+    }
+  },
+
+  /**
+   * Nettoyer le cache ancien (plus de 7 jours)
+   */
+  cleanupOldCache: () => {
+    try {
+      const now = Date.now()
+      const maxAge = 7 * 24 * 60 * 60 * 1000 // 7 jours
+      
+      // Nettoyer le cache persistant
+      const stored = localStorage.getItem(PERSISTENT_CACHE_KEY)
+      if (stored) {
+        const data = JSON.parse(stored)
+        const filtered = data.filter(([key, value]) => {
+          // Garder seulement les URLs récentes (logique simplifiée)
+          return key.includes('w=256&q=75&f=webp')
+        })
+        
+        if (filtered.length !== data.length) {
+          localStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify(filtered))
+          console.log(`🧹 Cache nettoyé: ${data.length - filtered.length} images supprimées`)
+        }
+      }
+    } catch (error) {
+      console.warn('Erreur nettoyage cache:', error)
+    }
   },
 
   /**
@@ -402,3 +545,4 @@ export const useImageOptimization = (urls = [], priority = false) => {
 }
 
 export default ImageOptimizationService
+

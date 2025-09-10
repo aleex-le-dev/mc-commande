@@ -26,7 +26,7 @@ export const TricoteusesService = {
       }
       
       const data = await response.json()
-      const tricoteuses = data.tricoteuses || []
+      const tricoteuses = data.data || data.tricoteuses || []
       
       // Mettre en cache
       HttpCacheService.set('tricoteuses', tricoteuses)

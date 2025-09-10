@@ -126,7 +126,15 @@ const TerminePageRefactored = () => {
     ) : enriched
 
     if (focusedOrder) {
-      filtered = filtered.filter(o => `${o.orderNumber}` === `${focusedOrder}`)
+      if (focusedOrder === 'ready') {
+        filtered = filtered.filter(o => o.isReadyToShip)
+      } else if (focusedOrder === 'in_progress') {
+        filtered = filtered.filter(o => o.globalStatus === 'in_progress')
+      } else if (focusedOrder === 'paused') {
+        filtered = filtered.filter(o => o.globalStatus === 'paused')
+      } else if (focusedOrder === 'to_do') {
+        filtered = filtered.filter(o => o.globalStatus === 'a_faire')
+      }
     }
 
     // Ordonner: prêtes à expédier en premier, puis partiellement, par date croissante
