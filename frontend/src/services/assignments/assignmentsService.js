@@ -20,8 +20,6 @@ export const AssignmentsService = {
       // Vérifier le cache d'abord
       const cached = HttpCacheService.get('assignments')
       if (cached) {
-        // Debug: vérifier le cache
-        console.log('🔍 Cache assignations:', cached.map(a => ({ article_id: a.article_id, _id: a._id })))
         return cached
       }
 
@@ -36,15 +34,6 @@ export const AssignmentsService = {
       // Mettre en cache
       HttpCacheService.set('assignments', assignments)
       
-      // Debug: vérifier que l'_id est présent
-      console.log('🔍 Assignations chargées avec _id:', assignments.map(a => ({ article_id: a.article_id, _id: a._id, id: a.id })))
-      
-      // S'assurer que chaque assignation a un _id
-      assignments.forEach(assignment => {
-        if (!assignment._id && !assignment.id) {
-          console.error('Assignation sans ID:', assignment)
-        }
-      })
       
       return assignments
     } catch (error) {

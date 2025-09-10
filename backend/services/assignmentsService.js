@@ -11,6 +11,16 @@ class AssignmentsService {
     return await collection.findOne({ article_id: articleId })
   }
 
+  async getAssignmentById(assignmentId) {
+    const collection = db.getCollection('article_assignments')
+    
+    if (!db.isValidObjectId(assignmentId)) {
+      throw new Error('ID d\'assignation invalide')
+    }
+
+    return await collection.findOne({ _id: db.createObjectId(assignmentId) })
+  }
+
   async createAssignment(assignmentData) {
     const collection = db.getCollection('article_assignments')
     const assignment = {
@@ -26,7 +36,11 @@ class AssignmentsService {
   async updateAssignment(assignmentId, updateData) {
     const collection = db.getCollection('article_assignments')
     
+    console.log('🔍 updateAssignment - ID reçu:', assignmentId)
+    console.log('🔍 updateAssignment - Données:', updateData)
+    
     if (!db.isValidObjectId(assignmentId)) {
+      console.error('❌ ID d\'assignation invalide:', assignmentId)
       throw new Error('ID d\'assignation invalide')
     }
 
@@ -40,7 +54,10 @@ class AssignmentsService {
       }
     )
 
+    console.log('🔍 updateAssignment - Résultat:', result)
+
     if (result.matchedCount === 0) {
+      console.error('❌ Aucune assignation trouvée avec l\'ID:', assignmentId)
       throw new Error('Assignation non trouvée')
     }
 

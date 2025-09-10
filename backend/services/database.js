@@ -37,35 +37,48 @@ class DatabaseService {
   async createCollectionsAndIndexes() {
     try {
       // Collection des commandes
-      await this.db.collection('orders').createIndex({ order_id: 1 }, { unique: true })
-      await this.db.collection('orders').createIndex({ order_date: -1 })
-      await this.db.collection('orders').createIndex({ status: 1 })
-      await this.db.collection('orders').createIndex({ customer: 1 })
+      await this.createIndexIfNotExists('orders', { order_id: 1 }, { unique: true })
+      await this.createIndexIfNotExists('orders', { order_date: -1 })
+      await this.createIndexIfNotExists('orders', { status: 1 })
+      await this.createIndexIfNotExists('orders', { customer: 1 })
 
       // Collection des statuts de production
-      await this.db.collection('production_status').createIndex({ order_id: 1, line_item_id: 1 }, { unique: true })
-      await this.db.collection('production_status').createIndex({ status: 1 })
-      await this.db.collection('production_status').createIndex({ updated_at: -1 })
+      await this.createIndexIfNotExists('production_status', { order_id: 1, line_item_id: 1 }, { unique: true })
+      await this.createIndexIfNotExists('production_status', { status: 1 })
+      await this.createIndexIfNotExists('production_status', { updated_at: -1 })
 
       // Collection des assignations
-      await this.db.collection('article_assignments').createIndex({ article_id: 1 }, { unique: true })
-      await this.db.collection('article_assignments').createIndex({ tricoteuse_id: 1 })
-      await this.db.collection('article_assignments').createIndex({ assigned_at: -1 })
+      await this.createIndexIfNotExists('article_assignments', { article_id: 1 }, { unique: true })
+      await this.createIndexIfNotExists('article_assignments', { tricoteuse_id: 1 })
+      await this.createIndexIfNotExists('article_assignments', { assigned_at: -1 })
 
       // Collection des tricoteuses
-      await this.db.collection('tricoteuses').createIndex({ email: 1 }, { unique: true })
-      await this.db.collection('tricoteuses').createIndex({ firstName: 1 })
+      await this.createIndexIfNotExists('tricoteuses', { email: 1 }, { unique: true, sparse: true })
+      await this.createIndexIfNotExists('tricoteuses', { firstName: 1 })
 
       // Collection des délais
-      await this.db.collection('delais').createIndex({ type: 1 }, { unique: true })
+      await this.createIndexIfNotExists('delais', { type: 1 }, { unique: true })
 
       // Collection des utilisateurs
-      await this.db.collection('users').createIndex({ email: 1 }, { unique: true })
+      await this.createIndexIfNotExists('users', { email: 1 }, { unique: true })
 
       console.log('✅ Collections et index créés')
     } catch (error) {
       console.error('❌ Erreur création collections/index:', error)
       throw error
+    }
+  }
+
+  async createIndexIfNotExists(collectionName, indexSpec, options = {}) {
+    try {
+      await this.db.collection(collectionName).createIndex(indexSpec, options)
+    } catch (error) {
+      // Ignorer les erreurs d'index existant
+      if (error.code === 86 || error.codeName === 'IndexKeySpecsConflict') {
+        console.log(`ℹ️ Index déjà existant pour ${collectionName}:`, indexSpec)
+      } else {
+        throw error
+      }
     }
   }
 

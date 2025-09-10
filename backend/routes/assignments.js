@@ -65,26 +65,29 @@ router.post('/', async (req, res) => {
 // PUT /api/assignments/:assignmentId - Mettre à jour une assignation
 router.put('/:assignmentId', async (req, res) => {
   try {
+    // Récupérer l'assignation existante pour obtenir l'article_id
+    const existingAssignment = await assignmentsService.getAssignmentById(req.params.assignmentId)
+    if (!existingAssignment) {
+      return res.status(404).json({ error: 'Assignation non trouvée' })
+    }
+
     await assignmentsService.updateAssignment(req.params.assignmentId, req.body)
     
     // Mettre à jour le statut de production si le statut a changé
     if (req.body.status) {
-      const assignment = await assignmentsService.getAssignmentByArticleId(req.body.article_id)
-      if (assignment) {
-        const articleId = assignment.article_id.toString()
-        let orderId, lineItemId
+      const articleId = existingAssignment.article_id.toString()
+      let orderId, lineItemId
 
-        if (articleId.includes('_')) {
-          const parts = articleId.split('_')
-          orderId = parts[0]
-          lineItemId = parts[1]
-        } else {
-          orderId = articleId
-          lineItemId = '1'
-        }
-
-        await productionService.updateProductionStatus(orderId, lineItemId, req.body.status)
+      if (articleId.includes('_')) {
+        const parts = articleId.split('_')
+        orderId = parts[0]
+        lineItemId = parts[1]
+      } else {
+        orderId = articleId
+        lineItemId = '1'
       }
+
+      await productionService.updateProductionStatus(orderId, lineItemId, req.body.status)
     }
 
     res.json({

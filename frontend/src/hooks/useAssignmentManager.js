@@ -118,9 +118,7 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
   const removeAssignment = useCallback(async () => {
     try {
       // Utiliser l'ID de l'assignation existante, pas l'ID de l'article
-      console.log('🔍 localAssignment pour suppression:', localAssignment)
       const assignmentId = localAssignment?.id || localAssignment?._id
-      console.log('🔍 ID d\'assignation à supprimer:', assignmentId)
       if (!assignmentId) {
         console.error('Aucun ID d\'assignation trouvé pour la suppression')
         return
@@ -220,17 +218,20 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       // Utiliser le service de statut pour une mise à jour temps réel
       await statusService.updateStatus(article.orderId, article.line_item_id, status)
       
-      // Debug: vérifier l'ID de l'assignation
-      console.log('🔍 ID assignation pour mise à jour:', updatedAssignment._id, updatedAssignment.id)
-      
-      // Utiliser l'ID correct (priorité à _id, puis id)
+      // Utiliser l'ID MongoDB de l'assignation
       const assignmentId = updatedAssignment._id || updatedAssignment.id
       if (!assignmentId) {
         console.error('Aucun ID d\'assignation trouvé pour la mise à jour')
         return
       }
       
-      await ApiService.assignments.updateAssignment(assignmentId, updatedAssignment)
+      // Envoyer seulement les données nécessaires pour la mise à jour
+      const updateData = {
+        status: status,
+        updated_at: new Date()
+      }
+      
+      await ApiService.assignments.updateAssignment(assignmentId, updateData)
       setLocalAssignment(updatedAssignment)
       
       if (onAssignmentUpdate) { 
