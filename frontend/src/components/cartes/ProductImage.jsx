@@ -35,9 +35,29 @@ const ImagePreloader = {
   },
   
   // Précharger plusieurs images en parallèle (optimisé pour chargement en lot)
-  preloadBatch: (urls) => {
+  preloadBatch: async (urls) => {
+    if (!Array.isArray(urls) || urls.length === 0) return []
+    
     console.log(`🖼️ Préchargement en lot: ${urls.length} images`)
-    return Promise.allSettled(urls.map(url => ImagePreloader.preload(url)))
+    
+    // OPTIMISATION: Limiter à 10 images simultanées pour éviter la surcharge
+    const maxConcurrent = 10
+    const results = []
+    
+    for (let i = 0; i < urls.length; i += maxConcurrent) {
+      const batch = urls.slice(i, i + maxConcurrent)
+      const batchResults = await Promise.allSettled(
+        batch.map(url => ImagePreloader.preload(url))
+      )
+      results.push(...batchResults)
+      
+      // Délai entre les batches pour éviter la surcharge
+      if (i + maxConcurrent < urls.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+    
+    return results
   },
   
   // Précharger toutes les images d'un coup (nouveau)

@@ -19,11 +19,18 @@ const SimpleFlexGrid = ({
   const gridState = useGridState()
   
   const [isLoading, setIsLoading] = useState(true)
-  const [visibleCount, setVisibleCount] = useState(280) // Augmenter la limite initiale
+  const [urgentTick, setUrgentTick] = useState(0) // État pour forcer les re-renders
   const sentinelRef = useRef(null)
-  const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
   const calculEffectue = useRef(false)
-  const [urgentTick, setUrgentTick] = useState(0)
+  
+  // OPTIMISATION: Réduire les états locaux et utiliser des refs pour les valeurs non-critiques
+  const visibleCountRef = useRef(280)
+  const lastNonEmptyArticlesRef = useRef([])
+  const urgentTickRef = useRef(0)
+  
+  // États dérivés avec useMemo pour éviter les re-renders
+  const visibleCount = useMemo(() => visibleCountRef.current, [])
+  const lastNonEmptyArticles = useMemo(() => lastNonEmptyArticlesRef.current, [])
 
   // Les assignations et tricoteuses sont maintenant gérées par useGridState
 
@@ -44,14 +51,21 @@ const SimpleFlexGrid = ({
 
   // Re-trier immédiatement quand un article est marqué urgent
   useEffect(() => {
-    const handleUrgent = () => setUrgentTick((t) => t + 1)
+    const handleUrgent = () => {
+      urgentTickRef.current += 1
+      // Forcer un re-render seulement si nécessaire
+      if (urgentTickRef.current % 5 === 0) {
+        // Re-render seulement tous les 5 urgents pour éviter les re-renders excessifs
+        setUrgentTick(urgentTickRef.current)
+      }
+    }
     window.addEventListener('mc-mark-urgent', handleUrgent)
     return () => window.removeEventListener('mc-mark-urgent', handleUrgent)
   }, [])
 
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
   useEffect(() => {
-    setVisibleCount(280) // Afficher tous les articles par défaut
+    visibleCountRef.current = 280 // Afficher tous les articles par défaut
   }, [filteredArticles.length, productionType, searchTerm])
 
   // Observer pour le chargement progressif (virtualisation simple)
@@ -61,7 +75,7 @@ const SimpleFlexGrid = ({
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0]
       if (entry.isIntersecting) {
-        setVisibleCount((prev) => Math.min(prev + 40, filteredArticles.length))
+        visibleCountRef.current = Math.min(visibleCountRef.current + 40, filteredArticles.length)
       }
     }, { root: null, rootMargin: '600px', threshold: 0 })
     observer.observe(sentinel)
@@ -72,16 +86,16 @@ const SimpleFlexGrid = ({
   useEffect(() => {
     if (filteredArticles.length > 0) {
       setIsLoading(false)
-      setLastNonEmptyArticles(filteredArticles)
+      lastNonEmptyArticlesRef.current = filteredArticles
     } else {
       // Si on perd temporairement les articles, continuer d'afficher la dernière liste connue
-      setIsLoading(lastNonEmptyArticles.length === 0)
+      setIsLoading(lastNonEmptyArticlesRef.current.length === 0)
     }
-  }, [filteredArticles, filteredArticles.length, productionType, lastNonEmptyArticles.length])
+  }, [filteredArticles, filteredArticles.length, productionType, lastNonEmptyArticlesRef.current.length])
 
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
-    const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticles)
+    const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticlesRef.current)
     // Prioriser les urgents en tête selon le flag
     const arranged = prioritizeUrgent
       ? [...source].sort((a, b) => {

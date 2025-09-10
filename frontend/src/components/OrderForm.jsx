@@ -61,7 +61,10 @@ const OrderForm = () => {
     setMessage({ type: '', text: '' })
     
     try {
-      const response = await fetch(`${config.wordpressUrl}/wp-json/wc/v3/products?consumer_key=${config.consumerKey}&consumer_secret=${config.consumerSecret}`)
+      // OPTIMISATION: Test de connexion léger au lieu de charger tous les produits
+      const response = await fetch(`${config.wordpressUrl}/wp-json/wc/v3/products?consumer_key=${config.consumerKey}&consumer_secret=${config.consumerSecret}&per_page=1&_fields=id`, {
+        signal: AbortSignal.timeout(10000) // 10s timeout
+      })
       
       if (response.ok) {
         setMessage({ type: 'success', text: 'Connexion réussie ! L\'API WordPress est accessible.' })

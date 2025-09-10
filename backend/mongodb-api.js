@@ -392,48 +392,56 @@ app.post('/api/woocommerce/products/permalink/batch', async (req, res) => {
     const results = []
     const errors = []
     
-    // Traiter les produits en parallèle avec un délai pour éviter la surcharge
-    for (let i = 0; i < productIds.length; i++) {
-      const productId = productIds[i]
-      
-      try {
-        // Délai entre les requêtes pour éviter la surcharge
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-        
-        const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,permalink`
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-          signal: AbortSignal.timeout(3000)
-        })
-        
-        if (response.ok) {
-          const product = await response.json()
-          if (product?.permalink) {
-            results.push({
+    // OPTIMISATION: Traitement en chunks parallèles au lieu de séquentiel
+    const chunkSize = 10 // Chunks plus petits pour éviter les timeouts
+    const chunks = []
+    for (let i = 0; i < productIds.length; i += chunkSize) {
+      chunks.push(productIds.slice(i, i + chunkSize))
+    }
+
+    // Traiter chaque chunk en parallèle
+    await Promise.all(chunks.map(async (chunk, chunkIndex) => {
+      // Délai entre les chunks pour éviter la surcharge
+      if (chunkIndex > 0) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+
+      // Traiter les produits du chunk en parallèle
+      await Promise.all(chunk.map(async (productId) => {
+        try {
+          const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/products/${productId}?${authParams}&_fields=id,permalink`
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(5000) // Timeout augmenté à 5s
+          })
+          
+          if (response.ok) {
+            const product = await response.json()
+            if (product?.permalink) {
+              results.push({
+                product_id: parseInt(productId),
+                permalink: product.permalink
+              })
+            }
+          } else {
+            errors.push({
               product_id: parseInt(productId),
-              permalink: product.permalink
+              error: `HTTP ${response.status}`,
+              status: response.status
             })
           }
-        } else {
+        } catch (error) {
           errors.push({
             product_id: parseInt(productId),
-            error: `HTTP ${response.status}`,
-            status: response.status
+            error: error.message,
+            type: error.name
           })
         }
-      } catch (error) {
-        errors.push({
-          product_id: parseInt(productId),
-          error: error.message,
-          type: error.name
-        })
-      }
-    }
+      }))
+    }))
     
     res.json({ 
       success: true,
@@ -905,68 +913,77 @@ app.get('/api/orders', async (req, res) => {
       })
     }
     
-    // Traiter les commandes par lots pour éviter les timeouts
-    const BATCH_SIZE = 50
-    const ordersWithDetails = []
-    
-    for (let i = 0; i < orders.length; i += BATCH_SIZE) {
-      const batch = orders.slice(i, i + BATCH_SIZE)
-      
-      const batchResults = await Promise.all(batch.map(async (order) => {
-        try {
-          const items = await itemsCollection.find({ order_id: order.order_id })
-            .maxTimeMS(10000) // 10 secondes max par commande
-            .toArray()
-          
-          // Ajouter les statuts de production à chaque article
-          const itemsWithStatus = await Promise.all(items.map(async (item) => {
-            try {
-              const status = await statusCollection.findOne({
-                order_id: order.order_id,
-                line_item_id: item.line_item_id
-              }, { maxTimeMS: 5000 })
-              
-              return {
-                ...item,
-                production_status: status || {
-                  status: 'a_faire',
-                  production_type: null,
-                  assigned_to: null
-                }
-              }
-            } catch (itemError) {
-              console.error(`❌ Erreur statut article ${item.line_item_id}:`, itemError.message)
-              return {
-                ...item,
-                production_status: {
-                  status: 'a_faire',
-                  production_type: null,
-                  assigned_to: null
-                }
-              }
+    // OPTIMISATION: Utiliser des agrégations MongoDB au lieu de requêtes N+1
+    const ordersWithDetails = await ordersCollection.aggregate([
+      { $match: filter },
+      { $lookup: {
+        from: 'order_items',
+        localField: 'order_id',
+        foreignField: 'order_id',
+        as: 'items'
+      }},
+      { $lookup: {
+        from: 'production_status',
+        let: { orderId: '$order_id', items: '$items' },
+        pipeline: [
+          { $match: {
+            $expr: {
+              $and: [
+                { $eq: ['$order_id', '$$orderId'] },
+                { $in: ['$line_item_id', { $map: { input: '$$items', as: 'item', in: '$$item.line_item_id' } }] }
+              ]
             }
-          }))
-          
-          return {
-            ...order,
-            items: itemsWithStatus
-          }
-        } catch (orderError) {
-          console.error(`❌ Erreur commande ${order.order_number}:`, orderError.message)
-          return {
-            ...order,
-            items: []
+          }}
+        ],
+        as: 'statuses'
+      }},
+      { $addFields: {
+        items: {
+          $map: {
+            input: '$items',
+            as: 'item',
+            in: {
+              $mergeObjects: [
+                '$$item',
+                {
+                  production_status: {
+                    $let: {
+                      vars: {
+                        matchingStatus: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: '$statuses',
+                                cond: { $eq: ['$$this.line_item_id', '$$item.line_item_id'] }
+                              }
+                            },
+                            0
+                          ]
+                        }
+                      },
+                      in: {
+                        $cond: {
+                          if: { $ne: ['$$matchingStatus', null] },
+                          then: '$$matchingStatus',
+                          else: {
+                            status: 'a_faire',
+                            production_type: null,
+                            assigned_to: null
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
-      }))
-      
-      ordersWithDetails.push(...batchResults)
-      
-      // Petite pause entre les lots pour éviter de surcharger MongoDB
-      if (i + BATCH_SIZE < orders.length) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-    }
+      }},
+      { $sort: { [sortBy]: sortOrder } },
+      { $skip: skip },
+      { $limit: limit }
+    ]).toArray()
     
     // Garantir un tri croissant par date dans la réponse (ou ajuster selon besoin UI)
     ordersWithDetails.sort((a, b) => new Date(a.order_date || 0) - new Date(b.order_date || 0))
@@ -1851,28 +1868,29 @@ async function syncOrderItem(orderId, item) {
     return { created: false, updated: false }
   }
 
-  // Récupérer le permalink et l'image depuis WooCommerce via notre API
+  // OPTIMISATION: Utiliser l'endpoint batch pour récupérer les données du produit
   let permalink = null
   let imageUrl = null
   try {
     if (WOOCOMMERCE_CONSUMER_KEY && WOOCOMMERCE_CONSUMER_SECRET) {
-      const authParams = `consumer_key=${WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${WOOCOMMERCE_CONSUMER_SECRET}`
-      const url = `${WOOCOMMERCE_URL}/wp-json/wc/v3/products/${item.product_id}?${authParams}&_fields=id,permalink,images`
-      
-      const response = await fetch(url, {
+      // Utiliser l'endpoint batch optimisé au lieu d'une requête individuelle
+      const batchResponse = await fetch(`${WOOCOMMERCE_URL}/wp-json/wc/v3/products?${authParams}&include=${item.product_id}&_fields=id,permalink,images`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(5000)
       })
       
-      if (response.ok) {
-        const product = await response.json()
-        permalink = product?.permalink || null
-        // Récupérer l'URL de la première image si disponible
-        if (product?.images && product.images.length > 0) {
-          imageUrl = product.images[0].src || null
+      if (batchResponse.ok) {
+        const products = await batchResponse.json()
+        const product = products.find(p => p.id === item.product_id)
+        if (product) {
+          permalink = product?.permalink || null
+          // Récupérer l'URL de la première image si disponible
+          if (product?.images && product.images.length > 0) {
+            imageUrl = product.images[0].src || null
+          }
         }
       }
     }
