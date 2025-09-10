@@ -34,19 +34,49 @@ const SimpleFlexGrid = ({
 
   // Les assignations et tricoteuses sont maintenant gérées par useGridState
 
+  // État pour forcer le re-render des cartes
+  const [cardsUpdateTrigger, setCardsUpdateTrigger] = useState(0)
+  
   // Fonction de mise à jour ciblée pour éviter les re-renders complets
   const updateAssignment = useCallback((articleId, newAssignment) => {
-    // Les assignations sont gérées par useGridState
+    console.log('🔍 updateAssignment appelée:', articleId, newAssignment)
+    // Mettre à jour l'état local immédiatement
+    if (newAssignment) {
+      gridState.setAssignments(prev => {
+        const updated = {
+          ...prev,
+          [articleId]: newAssignment
+        }
+        console.log('🔍 Assignations mises à jour:', updated)
+        return updated
+      })
+    } else {
+      gridState.setAssignments(prev => {
+        const updated = { ...prev }
+        delete updated[articleId]
+        console.log('🔍 Assignation supprimée:', updated)
+        return updated
+      })
+    }
+    
+    // Forcer le re-render des cartes
+    setCardsUpdateTrigger(prev => prev + 1)
+    
+    // Puis recharger les données pour synchroniser
     gridState.refreshData()
   }, [gridState])
 
   // La date limite est maintenant gérée par useGridState
 
-  // Écouter les mises à jour globales des tricoteuses pour recharger la liste sans refresh
+  // Écouter les mises à jour globales des tricoteuses et assignations
   useEffect(() => {
     const handler = () => gridState.refreshData()
     window.addEventListener('mc-tricoteuses-updated', handler)
-    return () => window.removeEventListener('mc-tricoteuses-updated', handler)
+    window.addEventListener('mc-assignment-updated', handler)
+    return () => {
+      window.removeEventListener('mc-tricoteuses-updated', handler)
+      window.removeEventListener('mc-assignment-updated', handler)
+    }
   }, [gridState])
 
   // Re-trier immédiatement quand un article est marqué urgent
@@ -128,6 +158,9 @@ const SimpleFlexGrid = ({
         (article.product_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
       
+      // Debug: vérifier les IDs
+      console.log('🔍 Article ID:', article.line_item_id, 'Assignations disponibles:', Object.keys(gridState.assignments))
+      
       // Ajouter la carte
       cards.push(
         <div 
@@ -146,6 +179,9 @@ const SimpleFlexGrid = ({
             searchTerm={searchTerm}
             productionType={productionType} // Passer le type de production
             assignment={gridState.assignments[article.line_item_id]} // Passer l'assignation directement
+            // Debug: vérifier l'ID utilisé
+            data-debug-assignment-id={article.line_item_id}
+            data-debug-assignments-keys={Object.keys(gridState.assignments).join(',')}
             tricoteusesProp={gridState.tricoteuses}
             onAssignmentUpdate={(articleId, assignment) => updateAssignment(articleId, assignment)} // Fonction pour rafraîchir les assignations
             isEnRetard={isArticleEnRetard(article)}
@@ -199,7 +235,8 @@ const SimpleFlexGrid = ({
     urgentTick,
     gridState.tricoteuses,
     prioritizeUrgent,
-    gridState.dateLimite
+    gridState.dateLimite,
+    cardsUpdateTrigger // Forcer le re-render des cartes
   ])
 
   // Afficher le loading pendant les changements d'onglets

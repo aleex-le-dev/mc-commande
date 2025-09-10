@@ -23,7 +23,11 @@ export const useGridState = () => {
       data.forEach(assignment => {
         assignmentsMap[assignment.article_id] = assignment
       })
-      setAssignments(assignmentsMap)
+      // Fusionner avec les assignations existantes pour préserver les modifications locales
+      setAssignments(prevAssignments => ({
+        ...prevAssignments,
+        ...assignmentsMap
+      }))
     } catch (error) {
       console.error('Erreur chargement assignations:', error)
     } finally {
@@ -81,6 +85,7 @@ export const useGridState = () => {
 
   return {
     assignments,
+    setAssignments,
     assignmentsLoading,
     tricoteuses,
     tricoteusesLoading,

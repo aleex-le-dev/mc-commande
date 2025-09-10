@@ -18,6 +18,7 @@ const BottomBar = ({
   compact = false,
   disableAssignmentModal = false
 }) => {
+  console.log('🔍 BottomBar localAssignment:', localAssignment)
   // Coller la barre à la bordure inférieure
   const bottomClass = 'bottom-0'
 

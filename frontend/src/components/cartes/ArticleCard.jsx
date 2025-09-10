@@ -84,6 +84,23 @@ const ArticleCard = forwardRef(({
     estApresDateLimite,
     localUrgent, setLocalUrgent,
   } = useArticleCard({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite })
+  
+  // État pour forcer le re-render
+  const [forceUpdate, setForceUpdate] = useState(0)
+  
+  console.log('🔍 ArticleCard assignment:', assignment, 'localAssignment:', localAssignment)
+  
+  // Écouter les mises à jour d'assignation pour forcer le re-render
+  useEffect(() => {
+    const handleAssignmentUpdate = () => {
+      console.log('🔍 Événement mc-assignment-updated reçu')
+      setForceUpdate(prev => prev + 1)
+    }
+    
+    window.addEventListener('mc-assignment-updated', handleAssignmentUpdate)
+    return () => window.removeEventListener('mc-assignment-updated', handleAssignmentUpdate)
+  }, [])
+  
   // Fonction utilitaire: dispatcher l'événement de menu contextuel
   const dispatchContextMenu = useCallback((clientX, clientY) => {
     try {
