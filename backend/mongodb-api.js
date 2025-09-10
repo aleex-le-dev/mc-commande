@@ -2747,6 +2747,54 @@ app.post('/api/assignments', async (req, res) => {
   }
 })
 
+// PUT /api/assignments/:assignmentId - Mettre à jour une assignation
+app.put('/api/assignments/:assignmentId', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Base de données non connectée' })
+    }
+    
+    const { assignmentId } = req.params
+    const updateData = req.body
+    const assignmentsCollection = db.collection('article_assignments')
+    
+    // Vérifier que l'ID est un ObjectId valide
+    if (!ObjectId.isValid(assignmentId)) {
+      return res.status(400).json({ error: 'ID d\'assignation invalide' })
+    }
+    
+    // Vérifier que l'assignation existe
+    const existingAssignment = await assignmentsCollection.findOne({ _id: new ObjectId(assignmentId) })
+    if (!existingAssignment) {
+      return res.status(404).json({ error: 'Aucune assignation trouvée avec cet ID' })
+    }
+    
+    // Mettre à jour l'assignation
+    const result = await assignmentsCollection.updateOne(
+      { _id: new ObjectId(assignmentId) },
+      { 
+        $set: {
+          ...updateData,
+          updated_at: new Date()
+        }
+      }
+    )
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Assignation non trouvée' })
+    }
+    
+    res.json({
+      success: true,
+      message: 'Assignation mise à jour avec succès',
+      data: { ...existingAssignment, ...updateData }
+    })
+  } catch (error) {
+    console.error('Erreur mise à jour assignation:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // DELETE /api/assignments/:assignmentId - Supprimer une assignation
 app.delete('/api/assignments/:assignmentId', async (req, res) => {
   try {

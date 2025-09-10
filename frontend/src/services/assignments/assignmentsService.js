@@ -37,7 +37,14 @@ export const AssignmentsService = {
       HttpCacheService.set('assignments', assignments)
       
       // Debug: vérifier que l'_id est présent
-      console.log('🔍 Assignations chargées avec _id:', assignments.map(a => ({ article_id: a.article_id, _id: a._id })))
+      console.log('🔍 Assignations chargées avec _id:', assignments.map(a => ({ article_id: a.article_id, _id: a._id, id: a.id })))
+      
+      // S'assurer que chaque assignation a un _id
+      assignments.forEach(assignment => {
+        if (!assignment._id && !assignment.id) {
+          console.error('Assignation sans ID:', assignment)
+        }
+      })
       
       return assignments
     } catch (error) {

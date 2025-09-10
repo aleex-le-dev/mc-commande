@@ -220,11 +220,22 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       // Utiliser le service de statut pour une mise à jour temps réel
       await statusService.updateStatus(article.orderId, article.line_item_id, status)
       
-      await ApiService.assignments.updateAssignment(updatedAssignment._id, updatedAssignment)
+      // Debug: vérifier l'ID de l'assignation
+      console.log('🔍 ID assignation pour mise à jour:', updatedAssignment._id, updatedAssignment.id)
+      
+      // Utiliser l'ID correct (priorité à _id, puis id)
+      const assignmentId = updatedAssignment._id || updatedAssignment.id
+      if (!assignmentId) {
+        console.error('Aucun ID d\'assignation trouvé pour la mise à jour')
+        return
+      }
+      
+      await ApiService.assignments.updateAssignment(assignmentId, updatedAssignment)
       setLocalAssignment(updatedAssignment)
       
       if (onAssignmentUpdate) { 
-        onAssignmentUpdate() 
+        // Passer l'assignation mise à jour et le nouveau statut
+        onAssignmentUpdate(article.line_item_id, updatedAssignment)
       }
       closeTricoteuseModal()
       
