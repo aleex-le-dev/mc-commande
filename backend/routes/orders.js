@@ -85,4 +85,34 @@ router.get('/stats', async (req, res) => {
   }
 })
 
+// GET /api/orders/production/couture - Commandes pour la production couture
+router.get('/production/couture', async (req, res) => {
+  try {
+    const result = await ordersService.getOrders(req.query)
+    res.json({
+      success: true,
+      data: result.orders,
+      pagination: result.pagination
+    })
+  } catch (error) {
+    console.error('Erreur récupération commandes couture:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// GET /api/orders/production/maille - Commandes pour la production maille
+router.get('/production/maille', async (req, res) => {
+  try {
+    const result = await ordersService.getOrders(req.query)
+    res.json({
+      success: true,
+      data: result.orders,
+      pagination: result.pagination
+    })
+  } catch (error) {
+    console.error('Erreur récupération commandes maille:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 module.exports = router
