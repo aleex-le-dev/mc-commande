@@ -69,9 +69,12 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
         console.warn('Erreur récupération commandes pour préchargement:', error)
       }
       
-      // Toast succès
+      // OPTIMISATION: Toast succès avec cleanup
       setToast({ visible: true, message: 'Synchronisation terminée ✅', variant: 'success' })
-      setTimeout(() => setToast({ visible: false, message: '', variant: 'success' }), 5000)
+      const successTimeoutId = setTimeout(() => setToast({ visible: false, message: '', variant: 'success' }), 5000)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(successTimeoutId)
     } catch (e) {
       console.error('❌ [SYNC] Échec de la synchronisation:', e)
       
@@ -86,7 +89,11 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       }
       
       setToast({ visible: true, message: errorMessage, variant: 'error' })
-      setTimeout(() => setToast({ visible: false, message: '', variant: 'error' }), 5000)
+      // OPTIMISATION: Toast erreur avec cleanup
+      const errorTimeoutId = setTimeout(() => setToast({ visible: false, message: '', variant: 'error' }), 5000)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(errorTimeoutId)
     } finally {
       setIsSyncing(false)
       if (typeof onDone === 'function') onDone()

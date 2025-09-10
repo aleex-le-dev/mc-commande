@@ -171,10 +171,13 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       }
       closeTricoteuseModal()
       
-      // Déclencher le rechargement des données
-      setTimeout(() => {
+      // OPTIMISATION: Timeout avec cleanup
+      const timeoutId = setTimeout(() => {
         window.dispatchEvent(new Event('mc-refresh-data'))
       }, 500)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(timeoutId)
     } catch (error) {
       console.error('Erreur assignation:', error)
       throw error

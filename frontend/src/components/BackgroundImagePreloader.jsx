@@ -101,19 +101,19 @@ const BackgroundImagePreloader = ({ currentPage, allPages = ['couture', 'maille'
       }
     }
 
-    // Délai pour charger l'interface d'abord, puis les images des autres pages
+    // OPTIMISATION: Délai pour charger l'interface d'abord, puis les images des autres pages
     const timeoutId = setTimeout(preloadOtherPages, 8000)
     
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [currentPage, allPages])
 
-  // Nettoyer le cache périodiquement
+  // OPTIMISATION: Nettoyer le cache périodiquement avec cleanup
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       ImageOptimizationService.cleanupCache()
     }, 60000) // Toutes les minutes
-
-    return () => clearInterval(cleanupInterval)
+    
+    return () => clearInterval(cleanupInterval) // ✅ Cleanup déjà présent
   }, [])
 
   return null // Composant invisible

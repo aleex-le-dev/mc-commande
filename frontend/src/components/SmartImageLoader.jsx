@@ -89,10 +89,10 @@ const SmartImageLoader = ({ pageName, priority = false }) => {
       }
     }
 
-    // Délai pour charger l'interface d'abord, puis les images
+    // OPTIMISATION: Délai pour charger l'interface d'abord, puis les images
     const timeoutId = setTimeout(loadArticlesAndImages, priority ? 1000 : 3000)
     
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [pageName, priority])
 
   // Afficher un indicateur de progression discret

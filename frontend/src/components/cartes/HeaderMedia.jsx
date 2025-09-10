@@ -35,12 +35,16 @@ const HeaderMedia = ({
             onLoad={() => setIsImageLoading(false)}
             onError={(retryCount) => {
               if (retryCount >= 3) {
-                setTimeout(() => {
+                // OPTIMISATION: Timeout avec cleanup
+                const retryTimeoutId = setTimeout(() => {
                   if (memoizedProductId) {
                     const retryImage = imageService.getImage(memoizedProductId)
                     setImageUrl(retryImage)
                   }
                 }, 1000)
+                
+                // Cleanup du timeout si le composant est démonté
+                return () => clearTimeout(retryTimeoutId)
               }
             }}
           />

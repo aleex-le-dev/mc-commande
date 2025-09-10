@@ -9,14 +9,22 @@ const NoteExpander = ({ note }) => {
     if (isAnimating) return
     setIsAnimating(true)
     setIsExpanded(!isExpanded)
-    setTimeout(() => setIsAnimating(false), 300)
+    // OPTIMISATION: Timeout avec cleanup
+    const toggleTimeoutId = setTimeout(() => setIsAnimating(false), 300)
+    
+    // Cleanup du timeout si le composant est démonté
+    return () => clearTimeout(toggleTimeoutId)
   }
 
   const closeNote = () => {
     if (isAnimating) return
     setIsAnimating(true)
     setIsExpanded(false)
-    setTimeout(() => setIsAnimating(false), 300)
+    // OPTIMISATION: Timeout avec cleanup
+    const closeTimeoutId = setTimeout(() => setIsAnimating(false), 300)
+    
+    // Cleanup du timeout si le composant est démonté
+    return () => clearTimeout(closeTimeoutId)
   }
 
   return (

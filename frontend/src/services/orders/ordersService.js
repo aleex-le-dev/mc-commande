@@ -57,7 +57,7 @@ export const OrdersService = {
   /**
    * Récupérer les commandes avec pagination
    */
-  async getOrdersPaginated(page = 1, limit = 50, status = 'all', search = '', sortBy = 'order_date', sortOrder = 'desc') {
+  async getOrdersPaginated(page = 1, limit = 50, status = 'all', search = '', sortBy = 'order_date', sortOrder = 'desc', productionType = 'all') {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -68,13 +68,24 @@ export const OrdersService = {
         sortOrder
       })
       
-      const response = await HttpClientService.get(`/orders?${params}`)
+      // Si on filtre par type de production, utiliser l'endpoint spécialisé
+      const endpoint = productionType !== 'all' ? `/orders/production/${productionType}` : '/orders'
+      const response = await HttpClientService.get(`${endpoint}?${params}`)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
       
       // Adapter la réponse pour correspondre au format attendu
+      // Si l'endpoint retourne déjà un objet pagination, l'utiliser directement
+      if (data.pagination) {
+        return {
+          orders: data.orders || [],
+          pagination: data.pagination
+        }
+      }
+      
+      // Sinon, construire la pagination manuellement
       return {
         orders: data.orders || data || [],
         pagination: {

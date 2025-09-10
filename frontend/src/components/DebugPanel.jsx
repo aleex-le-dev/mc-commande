@@ -18,7 +18,7 @@ const DebugPanel = () => {
     updateMetrics()
     const interval = setInterval(updateMetrics, 2000) // Mise à jour toutes les 2 secondes
 
-    return () => clearInterval(interval)
+    return () => clearInterval(interval) // ✅ Cleanup déjà présent
   }, [])
 
   const resetCircuitBreaker = () => {

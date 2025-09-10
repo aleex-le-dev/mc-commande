@@ -14,13 +14,16 @@ const ImagePreloader = ({ articles, onPreloadComplete }) => {
       setIsPreloading(true)
       hasShownRef.current = true
       
-      // Chargement instantané
-      setTimeout(() => {
+      // OPTIMISATION: Chargement instantané avec cleanup
+      const timeoutId = setTimeout(() => {
         setIsPreloading(false)
         if (onPreloadComplete) {
           onPreloadComplete()
         }
       }, 100)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(timeoutId)
     }
   }, [articles, onPreloadComplete])
 

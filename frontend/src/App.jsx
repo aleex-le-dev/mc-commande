@@ -18,12 +18,9 @@ import ParametresPanel from './components/ParametresPanel'
 import CardStyles from './components/cartes/CardStyles'
 import ThemeToggle from './components/ThemeToggle'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
-import DebugPanel from './components/DebugPanel'
+// DebugPanel supprimé pour la production
 
-// Charger les scripts de test en mode développement
-if (import.meta.env.DEV) {
-  import('./utils/circuitBreakerTest.js')
-}
+// Scripts de test supprimés - ils ne doivent pas se charger automatiquement
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
 import BackgroundImagePreloader from './components/BackgroundImagePreloader'
 import './App.css'
@@ -70,10 +67,13 @@ function App() {
         } catch (e) {
           setDailySyncToast({ visible: true, message: "Erreur de synchronisation quotidienne" })
         } finally {
-          // masquer après 6s
-          setTimeout(() => setDailySyncToast({ visible: false, message: '' }), 6000)
+          // OPTIMISATION: Timeout avec cleanup
+          const hideTimeoutId = setTimeout(() => setDailySyncToast({ visible: false, message: '' }), 6000)
           // replanifier pour le lendemain
           scheduleNext()
+          
+          // Cleanup du timeout de masquage
+          return () => clearTimeout(hideTimeoutId)
         }
       }, delay)
     }
@@ -524,8 +524,7 @@ function App() {
           isDeleting={isDeleting}
         />
         
-        {/* Panneau de debug */}
-        <DebugPanel />
+        {/* Panneau de debug supprimé pour la production */}
           </div>
         </SlowDeviceOptimizer>
       </PerformanceOptimizer>

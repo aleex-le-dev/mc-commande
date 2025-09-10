@@ -15,6 +15,9 @@ async function fetchWithRetry(url, options = {}, retries = 0) {
     controller.abort()
   }, options.timeoutMs || baseTimeout)
   
+  // OPTIMISATION: Cleanup du timeout après utilisation
+  const cleanup = () => clearTimeout(timeout)
+  
   try {
       const res = await fetch(url, { 
         credentials: 'include', 
@@ -219,6 +222,9 @@ class DelaiService {
       // Utiliser notre API backend qui fait le proxy vers l'API gouvernementale
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), import.meta.env.DEV ? 10000 : 15000) // 10s local, 15s prod
+      
+      // OPTIMISATION: Cleanup du timeout après utilisation
+      const cleanup = () => clearTimeout(timeoutId)
       
       const response = await fetch(`${API_BASE_URL}/delais/jours-feries/${annee}`, { 
         credentials: 'include',

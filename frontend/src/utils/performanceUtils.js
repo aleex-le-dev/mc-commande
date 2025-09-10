@@ -249,8 +249,8 @@ export const initializePerformanceOptimizations = () => {
   //   console.log('🎨 Animations réduites activées')
   // }
   
-  // Surveiller la mémoire
-  setInterval(() => {
+  // OPTIMISATION: Créer des intervalles avec cleanup
+  const memoryInterval = setInterval(() => {
     MemoryManager.cleanupIfNeeded(() => {
       // Nettoyer les caches
       SmartCache.cleanup('images')
@@ -259,12 +259,21 @@ export const initializePerformanceOptimizations = () => {
   }, PERFORMANCE_CONFIG.MEMORY_CHECK_INTERVAL)
   
   // Optimisations spécifiques pour appareils lents
+  let slowDeviceInterval = null
   if (isSlowDevice) {
     // Réduire la fréquence de nettoyage
-    setInterval(() => {
+    slowDeviceInterval = setInterval(() => {
       SmartCache.cleanup('images')
       SmartCache.cleanup('api')
     }, 15000) // Toutes les 15 secondes au lieu de 30
+  }
+  
+  // Retourner une fonction de cleanup
+  return () => {
+    clearInterval(memoryInterval)
+    if (slowDeviceInterval) {
+      clearInterval(slowDeviceInterval)
+    }
   }
 }
 

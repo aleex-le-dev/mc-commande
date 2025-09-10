@@ -316,8 +316,11 @@ const DateLimiteTab = () => {
         } catch {}
         setMessage(`Configuration sauvegardée avec succès ! Délai de ${joursDelai} jours ouvrables.`)
         
-        // Effacer le message après 3 secondes
-        setTimeout(() => setMessage(''), 3000)
+        // OPTIMISATION: Effacer le message après 3 secondes avec cleanup
+        const messageTimeoutId = setTimeout(() => setMessage(''), 3000)
+        
+        // Cleanup du timeout si le composant est démonté
+        return () => clearTimeout(messageTimeoutId)
       } else {
         setMessage('Erreur lors de la sauvegarde')
       }

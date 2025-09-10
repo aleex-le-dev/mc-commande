@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { ApiService } from '../services/apiService.js'
+import { logger } from '../utils/logger'
 
 export const useAssignments = () => {
   const [assignments, setAssignments] = useState([])
@@ -18,7 +19,7 @@ export const useAssignments = () => {
       return
     }
     
-    console.log('🔄 Début chargement assignations...')
+    logger.service.start('Chargement assignations')
     setIsFetching(true)
     setLoading(true)
     setError(null)
@@ -26,9 +27,9 @@ export const useAssignments = () => {
     try {
       const data = await ApiService.assignments.getAssignments()
       setAssignments(data)
-      console.log('✅ Assignations chargées avec succès')
+      logger.service.success('Chargement assignations')
     } catch (err) {
-      console.error('Erreur chargement assignations:', err)
+      logger.service.error('Chargement assignations', err)
       setError(err)
       
       // Fallback: mode offline
@@ -41,12 +42,12 @@ export const useAssignments = () => {
   }, [isFetching])
 
   useEffect(() => {
-    // Délai pour éviter les appels multiples
+    // OPTIMISATION: Délai pour éviter les appels multiples avec cleanup
     const timeoutId = setTimeout(() => {
       fetchAssignments()
     }, 150)
     
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [])
 
   const assignArticle = useCallback(async (articleId, tricoteuseId) => {

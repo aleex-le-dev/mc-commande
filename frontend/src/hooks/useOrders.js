@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ApiService } from '../services/apiService.js'
+import { logger } from '../utils/logger'
 
 export const useOrders = (options = {}) => {
   const {
@@ -12,7 +13,8 @@ export const useOrders = (options = {}) => {
     status = 'all',
     search = '',
     sortBy = 'order_date',
-    sortOrder = 'desc'
+    sortOrder = 'desc',
+    productionType = 'all'
   } = options
 
   const [data, setData] = useState({
@@ -37,7 +39,7 @@ export const useOrders = (options = {}) => {
       return
     }
     
-    console.log('🔄 Début chargement commandes...')
+    logger.service.start('Chargement commandes')
     setIsFetching(true)
     setLoading(true)
     setError(null)
@@ -49,14 +51,17 @@ export const useOrders = (options = {}) => {
         status,
         search,
         sortBy,
-        sortOrder
+        sortOrder,
+        productionType
       )
 
       setData(result)
-      console.log('✅ Commandes chargées avec succès')
-      console.log('🔍 Structure des données reçues:', result)
+      logger.service.success('Chargement commandes')
+      if (import.meta.env.DEV) {
+        console.log('🔍 Structure des données reçues:', result)
+      }
     } catch (err) {
-      console.error('Erreur chargement commandes:', err)
+      logger.service.error('Chargement commandes', err)
       setError(err)
       
       // Fallback: mode offline avec pagination
@@ -64,7 +69,7 @@ export const useOrders = (options = {}) => {
         const offlineData = await ApiService.orders.getOrdersFromDatabase(page, limit)
         setData(offlineData)
       } catch (offlineErr) {
-        console.error('Erreur fallback offline:', offlineErr)
+        logger.service.error('Fallback offline', offlineErr)
       }
     } finally {
       setLoading(false)
@@ -73,13 +78,13 @@ export const useOrders = (options = {}) => {
   }, [page, limit, status, search, sortBy, sortOrder, isFetching])
 
   useEffect(() => {
-    // Délai pour éviter les appels multiples
+    // OPTIMISATION: Délai pour éviter les appels multiples avec cleanup
     const timeoutId = setTimeout(() => {
       fetchOrders()
     }, 100)
     
-    return () => clearTimeout(timeoutId)
-  }, [page, limit, status, search, sortBy, sortOrder])
+    return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
+  }, [page, limit, status, search, sortBy, sortOrder, productionType])
 
   const refetch = useCallback(() => {
     fetchOrders()

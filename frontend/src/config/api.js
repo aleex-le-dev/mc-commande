@@ -25,7 +25,7 @@ export const getBackendUrl = () => {
   const env = import.meta.env.DEV ? 'development' : 'production'
   const config = API_CONFIG[env]
   
-  console.log(`🔗 Backend: ${config.description} (${config.backend})`)
+  // console.log(`🔗 Backend: ${config.description} (${config.backend})`) // Log désactivé pour la production
   return config.backend
 }
 
@@ -69,6 +69,8 @@ export const testBackendConnection = async () => {
         }
       })
       
+      // OPTIMISATION: Cleanup du timeout
+      // OPTIMISATION: Cleanup du timeout
       clearTimeout(timeoutId)
       
       if (response.ok) {
@@ -115,6 +117,7 @@ export const apiCallWithRetry = async (endpoint, options = {}) => {
         }
       })
       
+      // OPTIMISATION: Cleanup du timeout
       clearTimeout(timeoutId)
       
       if (response.ok) {

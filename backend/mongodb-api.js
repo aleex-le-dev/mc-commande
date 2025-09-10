@@ -868,6 +868,7 @@ app.get('/api/orders', async (req, res) => {
     const search = req.query.search || ''
     const sortBy = req.query.sortBy || 'order_date'
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1
+    const productionType = req.query.productionType || 'all'
     
     // Construire le filtre
     let filter = {}
@@ -875,6 +876,11 @@ app.get('/api/orders', async (req, res) => {
     // Filtre par statut
     if (status !== 'all') {
       filter['items.production_status.status'] = status
+    }
+    
+    // Filtre par type de production
+    if (productionType !== 'all') {
+      filter['items.production_status.production_type'] = productionType
     }
     
     // Filtre de recherche
@@ -886,18 +892,68 @@ app.get('/api/orders', async (req, res) => {
       ]
     }
     
-    // Compter le total
-    const total = await ordersCollection.countDocuments(filter)
-    const totalPages = Math.ceil(total / limit)
-    const skip = (page - 1) * limit
+    // Si on filtre par type de production, utiliser une aggregation
+    let orders, total
     
-    // Récupérer les commandes avec pagination
-    const orders = await ordersCollection.find(filter)
-      .sort({ [sortBy]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .maxTimeMS(30000) // 30 secondes max
-      .toArray()
+    if (productionType !== 'all') {
+      // Pipeline d'aggregation pour filtrer par type de production
+      const pipeline = [
+        {
+          $match: {
+            ...filter,
+            'items.production_status.production_type': productionType
+          }
+        },
+        {
+          $addFields: {
+            filteredItems: {
+              $filter: {
+                input: '$items',
+                cond: { $eq: ['$$this.production_status.production_type', productionType] }
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            filteredItems: { $ne: [] }
+          }
+        },
+        {
+          $project: {
+            filteredItems: 0
+          }
+        }
+      ]
+      
+      // Compter le total avec aggregation
+      const countPipeline = [...pipeline, { $count: 'total' }]
+      const countResult = await ordersCollection.aggregate(countPipeline).toArray()
+      total = countResult.length > 0 ? countResult[0].total : 0
+      
+      // Récupérer les commandes avec pagination
+      const skip = (page - 1) * limit
+      orders = await ordersCollection.aggregate([
+        ...pipeline,
+        { $sort: { [sortBy]: sortOrder } },
+        { $skip: skip },
+        { $limit: limit }
+      ]).toArray()
+    } else {
+      // Compter le total normal
+      total = await ordersCollection.countDocuments(filter)
+      const skip = (page - 1) * limit
+      
+      // Récupérer les commandes avec pagination
+      orders = await ordersCollection.find(filter)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .maxTimeMS(30000) // 30 secondes max
+        .toArray()
+    }
+    
+    const totalPages = Math.ceil(total / limit)
     
     if (orders.length === 0) {
       return res.json({ 
@@ -1311,6 +1367,14 @@ app.get('/api/orders/production/:type', async (req, res) => {
     const statusCollection = db.collection('production_status')
     const itemsCollection = db.collection('order_items')
     
+    // Paramètres de pagination
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 15
+    const status = req.query.status || 'all'
+    const search = req.query.search || ''
+    const sortBy = req.query.sortBy || 'order_date'
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1
+    
     // Récupérer les articles assignés à ce type de production
     const assignedItems = await statusCollection.find({
       production_type: type
@@ -1375,10 +1439,65 @@ app.get('/api/orders/production/:type', async (req, res) => {
       }
     }))
     
-    // Trier les commandes par date (anciennes vers récentes)
-    ordersWithDetails.sort((a, b) => new Date(a.order_date) - new Date(b.order_date))
+    // Appliquer les filtres
+    let filteredOrders = ordersWithDetails
     
-    res.json({ orders: ordersWithDetails })
+    // Filtre par statut
+    if (status !== 'all') {
+      filteredOrders = filteredOrders.filter(order => 
+        order.items.some(item => item.production_status?.status === status)
+      )
+    }
+    
+    // Filtre de recherche
+    if (search) {
+      filteredOrders = filteredOrders.filter(order => 
+        order.order_number?.toLowerCase().includes(search.toLowerCase()) ||
+        order.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+        order.items.some(item => item.product_name?.toLowerCase().includes(search.toLowerCase()))
+      )
+    }
+    
+    // Trier les commandes
+    filteredOrders.sort((a, b) => {
+      const aValue = a[sortBy]
+      const bValue = b[sortBy]
+      if (sortOrder === 1) {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+    
+    // Pagination
+    const total = filteredOrders.length
+    const totalPages = Math.ceil(total / limit)
+    const skip = (page - 1) * limit
+    const paginatedOrders = filteredOrders.slice(skip, skip + limit)
+    
+    console.log(`📊 ${type} - Pagination debug:`, {
+      assignedItems: assignedItems.length,
+      ordersWithDetails: ordersWithDetails.length,
+      filteredOrders: filteredOrders.length,
+      total,
+      totalPages,
+      page,
+      limit,
+      paginatedOrders: paginatedOrders.length
+    })
+    
+    res.json({ 
+      orders: paginatedOrders,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      },
+      total: total
+    })
   } catch (error) {
     console.error('Erreur GET /orders/production/:type:', error)
     res.status(500).json({ error: 'Erreur serveur' })

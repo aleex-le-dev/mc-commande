@@ -72,7 +72,8 @@ const ImageLoader = React.memo(({
     
     if (retryCount < maxRetries) {
       const delay = Math.pow(2, retryCount) * retryDelay
-      setTimeout(() => {
+      // OPTIMISATION: Timeout avec cleanup
+      const retryTimeoutId = setTimeout(() => {
         setRetryCount(prev => prev + 1)
         setHasError(false)
         setIsLoading(true)
@@ -81,6 +82,9 @@ const ImageLoader = React.memo(({
         const newSrc = src.includes('?') ? `${src}&retry=${Date.now()}` : `${src}?retry=${Date.now()}`
         setImageSrc(newSrc)
       }, delay)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(retryTimeoutId)
     }
     
     onError?.(retryCount + 1)

@@ -62,7 +62,7 @@ export const useImageLoader = (imageUrl, productId, options = {}) => {
       setIsLoading(false)
       onError?.(error, retryCount)
       
-      // Retry automatique si activé
+      // OPTIMISATION: Retry automatique si activé avec cleanup
       if (enableAutoRetry && retryCount < maxRetries) {
         const delay = Math.pow(2, retryCount) * retryDelay
         retryTimeoutRef.current = setTimeout(() => {

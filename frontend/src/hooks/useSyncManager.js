@@ -42,7 +42,7 @@ export const useSyncManager = (performSync) => {
       }, 1000)
       
       const syncResult = await performSync()
-      clearInterval(logsInterval)
+      clearInterval(logsInterval) // ✅ Cleanup déjà présent
       
       // Gérer le résultat
       if (syncResult && syncResult.results) {
@@ -85,10 +85,14 @@ export const useSyncManager = (performSync) => {
 
     const isPageRefresh = !window.performance.navigation || window.performance.navigation.type === 1
     if (isPageRefresh) {
-      setTimeout(async () => {
+      // OPTIMISATION: Timeout avec cleanup
+      const timeoutId = setTimeout(async () => {
         await fetchInitialLogs()
         await performManualSync()
       }, 1000)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(timeoutId)
     } else {
       fetchInitialLogs()
     }

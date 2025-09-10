@@ -280,14 +280,35 @@ export const CacheService = {
   releaseSlot
 }
 
-// Nettoyage automatique du cache toutes les 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of memoryCache.entries()) {
-    if (!isCacheValid(entry, CACHE_CONFIG.MEMORY_TTL)) {
-      memoryCache.delete(key)
-    }
+// OPTIMISATION: Nettoyage automatique du cache avec cleanup
+let cacheCleanupInterval = null
+
+const startCacheCleanup = () => {
+  if (cacheCleanupInterval) {
+    clearInterval(cacheCleanupInterval)
   }
-}, 5 * 60 * 1000)
+  
+  cacheCleanupInterval = setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of memoryCache.entries()) {
+      if (!isCacheValid(entry, CACHE_CONFIG.MEMORY_TTL)) {
+        memoryCache.delete(key)
+      }
+    }
+  }, 5 * 60 * 1000) // 5 minutes
+}
+
+const stopCacheCleanup = () => {
+  if (cacheCleanupInterval) {
+    clearInterval(cacheCleanupInterval)
+    cacheCleanupInterval = null
+  }
+}
+
+// Démarrer le nettoyage automatique
+startCacheCleanup()
+
+// Exporter les fonctions de contrôle
+export { startCacheCleanup, stopCacheCleanup }
 
 export default CacheService

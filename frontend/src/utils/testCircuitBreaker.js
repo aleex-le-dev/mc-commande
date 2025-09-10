@@ -3,9 +3,10 @@
  * Utilisez ce script dans la console du navigateur
  */
 
-// Test du circuit breaker
-window.testCircuitBreaker = async () => {
-  console.log('🧪 Test du circuit breaker...')
+// Test du circuit breaker - Seulement en développement
+if (import.meta.env.DEV) {
+  window.testCircuitBreaker = async () => {
+    console.log('🧪 Test du circuit breaker...')
   
   // Import du service
   const { HttpCacheService } = await import('../services/cache/httpCacheService.js')
@@ -52,12 +53,14 @@ window.testCircuitBreaker = async () => {
   HttpCacheService.resetCircuitBreaker()
   console.log('📊 État après reset:', HttpCacheService.getCircuitBreakerState())
   
-  console.log('✅ Test terminé!')
+    console.log('✅ Test terminé!')
+  }
 }
 
-// Test des métriques
-window.testMetrics = async () => {
-  console.log('📊 Test des métriques...')
+// Test des métriques - Seulement en développement
+if (import.meta.env.DEV) {
+  window.testMetrics = async () => {
+    console.log('📊 Test des métriques...')
   
   const { HttpCacheService } = await import('../services/cache/httpCacheService.js')
   
@@ -67,13 +70,15 @@ window.testMetrics = async () => {
   // Afficher l'état du circuit breaker
   console.log('Circuit Breaker:', HttpCacheService.getCircuitBreakerState())
   
-  // Afficher l'état du cache
-  console.log('Cache:', HttpCacheService.getCacheInfo())
+    // Afficher l'état du cache
+    console.log('Cache:', HttpCacheService.getCacheInfo())
+  }
 }
 
-// Test de réinitialisation automatique
-window.testAutoReset = async () => {
-  console.log('🔄 Test de réinitialisation automatique...')
+// Test de réinitialisation automatique - Seulement en développement
+if (import.meta.env.DEV) {
+  window.testAutoReset = async () => {
+    console.log('🔄 Test de réinitialisation automatique...')
   
   const { HttpCacheService } = await import('../services/cache/httpCacheService.js')
   
@@ -87,11 +92,9 @@ window.testAutoReset = async () => {
   // Attendre et tester la réinitialisation automatique
   setTimeout(() => {
     HttpCacheService.autoResetCircuitBreaker()
-    console.log('Après auto-reset:', HttpCacheService.getCircuitBreakerState())
-  }, 5000)
+      console.log('Après auto-reset:', HttpCacheService.getCircuitBreakerState())
+    }, 5000)
+  }
 }
 
-console.log('🧪 Scripts de test chargés!')
-console.log('Utilisez testCircuitBreaker() pour tester le circuit breaker')
-console.log('Utilisez testMetrics() pour voir les métriques')
-console.log('Utilisez testAutoReset() pour tester la réinitialisation automatique')
+// Logs de test supprimés - chargement manuel uniquement

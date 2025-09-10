@@ -42,7 +42,8 @@ export const useArticles = (options = {}) => {
     status,
     search,
     sortBy,
-    sortOrder
+    sortOrder,
+    productionType // Ajouter le type de production dans la requête
   })
   
   const { 
@@ -88,14 +89,15 @@ export const useArticles = (options = {}) => {
   }, [orders, assignments, tricoteuses, getAssignmentByArticleId, getTricoteuseById])
 
   // Filtrage des articles (responsabilité unique)
+  // Note: Le filtrage par productionType est maintenant géré côté serveur
   const filteredArticles = useMemo(() => {
     return applyFilters(articles, {
-      productionType,
-      status,
-      searchTerm: search,
+      productionType: 'all', // Désactivé car géré côté serveur
+      status: 'all', // Désactivé car géré côté serveur
+      searchTerm: '', // Désactivé car géré côté serveur
       showUrgentOnly
     })
-  }, [articles, productionType, status, search, showUrgentOnly])
+  }, [articles, showUrgentOnly])
 
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {

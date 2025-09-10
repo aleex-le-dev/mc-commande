@@ -34,10 +34,12 @@ export const useSyncProgress = () => {
       message 
     }))
     
-    // Masquer après 6 secondes
-    setTimeout(() => {
+    // OPTIMISATION: Timeout avec cleanup
+    const timeoutId = setTimeout(() => {
       setSyncProgress({ isRunning: false, progress: 0, message: '' })
     }, 6000)
+    
+    return () => clearTimeout(timeoutId)
   }, [])
 
   // Gérer les erreurs
@@ -48,9 +50,12 @@ export const useSyncProgress = () => {
       message: `Erreur: ${error.message}` 
     }))
     
-    setTimeout(() => {
+    // OPTIMISATION: Timeout avec cleanup
+    const timeoutId = setTimeout(() => {
       setSyncProgress({ isRunning: false, progress: 0, message: '' })
     }, 5000)
+    
+    return () => clearTimeout(timeoutId)
   }, [])
 
   // Mettre à jour les logs

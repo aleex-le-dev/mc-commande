@@ -190,13 +190,16 @@ const ArticleCard = forwardRef(({
         })
         
         if (response.ok) {
-          // Attendre un peu pour que la base de données se mette à jour
-          setTimeout(() => {
+          // OPTIMISATION: Timeout avec cleanup
+          const refreshTimeoutId = setTimeout(() => {
             // Rafraîchir les données
             window.dispatchEvent(new Event('mc-refresh-data'))
             // Déclencher le re-tri pour les articles urgents
             window.dispatchEvent(new Event('mc-mark-urgent'))
           }, 500)
+          
+          // Cleanup du timeout si le composant est démonté
+          return () => clearTimeout(refreshTimeoutId)
         } else {
           console.error('Erreur lors du déplacement:', response.statusText)
         }
@@ -223,10 +226,13 @@ const ArticleCard = forwardRef(({
           setLocalAssignment(updated)
           if (onAssignmentUpdate) { onAssignmentUpdate(uniqueAssignmentId, updated) }
           
-          // Déclencher le rechargement des données
-          setTimeout(() => {
+          // OPTIMISATION: Timeout avec cleanup
+          const refreshTimeoutId = setTimeout(() => {
             window.dispatchEvent(new Event('mc-refresh-data'))
           }, 500)
+          
+          // Cleanup du timeout si le composant est démonté
+          return () => clearTimeout(refreshTimeoutId)
           if (newStatus === 'termine') {
             const rect = document.body.getBoundingClientRect()
             setConfettiPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })

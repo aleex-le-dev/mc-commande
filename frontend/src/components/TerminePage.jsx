@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import ArticleCard from './cartes/ArticleCard'
+import Pagination from './Pagination'
 import { useArticles } from '../hooks/useArticles'
 import delaiService from '../services/delaiService'
 import SmartImageLoader from './SmartImageLoader'
@@ -17,6 +18,7 @@ const TerminePageRefactored = () => {
   const [openPausedOverlayId, setOpenPausedOverlayId] = useState(null)
   const [openInProgressOverlayId, setOpenInProgressOverlayId] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
 
   // Utiliser le hook unifié pour les articles
   const { 
@@ -26,7 +28,7 @@ const TerminePageRefactored = () => {
     error
   } = useArticles({
     page: currentPage,
-    limit: 15,
+    limit: itemsPerPage,
     status: 'all',
     search: searchTerm,
     sortBy: 'order_date',
@@ -354,31 +356,19 @@ const TerminePageRefactored = () => {
         ))}
       </div>
       
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-6 flex justify-center items-center gap-4">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={!pagination.hasPrev}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
-          >
-            ← Précédent
-          </button>
-          
-          <span className="text-sm text-gray-600">
-            Page {pagination.page} sur {pagination.totalPages} 
-            ({pagination.total} commandes au total)
-          </span>
-          
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
-            disabled={!pagination.hasNext}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
-          >
-            Suivant →
-          </button>
-        </div>
-      )}
+      {/* Pagination avancée */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.total}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage)
+          setCurrentPage(1) // Retourner à la première page
+        }}
+        showItemsPerPage={true}
+      />
     </div>
   )
 }

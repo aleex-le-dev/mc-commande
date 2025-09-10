@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { ApiService } from '../services/apiService.js'
+import { logger } from '../utils/logger'
 
 export const useTricoteuses = () => {
   const [tricoteuses, setTricoteuses] = useState([])
@@ -18,7 +19,7 @@ export const useTricoteuses = () => {
       return
     }
     
-    console.log('🔄 Début chargement tricoteuses...')
+    logger.service.start('Chargement tricoteuses')
     setIsFetching(true)
     setLoading(true)
     setError(null)
@@ -26,9 +27,9 @@ export const useTricoteuses = () => {
     try {
       const data = await ApiService.tricoteuses.getTricoteuses()
       setTricoteuses(data)
-      console.log('✅ Tricoteuses chargées avec succès')
+      logger.service.success('Chargement tricoteuses')
     } catch (err) {
-      console.error('Erreur chargement tricoteuses:', err)
+      logger.service.error('Chargement tricoteuses', err)
       setError(err)
       
       // Fallback: mode offline
@@ -41,12 +42,12 @@ export const useTricoteuses = () => {
   }, [isFetching])
 
   useEffect(() => {
-    // Délai pour éviter les appels multiples
+    // OPTIMISATION: Délai pour éviter les appels multiples avec cleanup
     const timeoutId = setTimeout(() => {
       fetchTricoteuses()
     }, 200)
     
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [])
 
   const getTricoteuseById = useCallback((tricoteuseId) => {

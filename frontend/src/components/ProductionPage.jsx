@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import LoadingSpinner from './LoadingSpinner'
+import Pagination from './Pagination'
 import { useArticles } from '../hooks/useArticles'
 
 /**
@@ -12,6 +13,7 @@ const ProductionPage = ({ productionType, title }) => {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
   
   // Utiliser le hook unifié pour les articles
   const { 
@@ -23,7 +25,7 @@ const ProductionPage = ({ productionType, title }) => {
     error
   } = useArticles({
     page: currentPage,
-    limit: 15,
+    limit: itemsPerPage,
     status: selectedStatus,
     search: searchTerm,
     sortBy: 'order_date',
@@ -32,7 +34,17 @@ const ProductionPage = ({ productionType, title }) => {
     showUrgentOnly
   })
 
-  // logs retirés
+  // Debug pagination (temporaire)
+  if (import.meta.env.DEV) {
+    console.log('🔍 ProductionPage - Pagination data:', {
+      currentPage,
+      itemsPerPage,
+      pagination,
+      articlesCount: filteredArticles?.length,
+      totalPages: pagination?.totalPages,
+      total: pagination?.total
+    })
+  }
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
@@ -76,7 +88,7 @@ const ProductionPage = ({ productionType, title }) => {
   const urgentCount = stats.urgent
 
   if (isLoading) {
-    console.log('⏳ Affichage du spinner...')
+    // Spinner affiché - pas de log nécessaire
     return <LoadingSpinner />
   }
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement: {error.message}</div></div>
@@ -181,30 +193,20 @@ const ProductionPage = ({ productionType, title }) => {
         prioritizeUrgent={true}
       />
       
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-6 flex justify-center items-center gap-4">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={!pagination.hasPrev}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
-          >
-            ← Précédent
-          </button>
-          
-          <span className="text-sm text-gray-600">
-            Page {pagination.page} sur {pagination.totalPages} 
-            ({pagination.total} articles au total)
-          </span>
-          
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
-            disabled={!pagination.hasNext}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
-          >
-            Suivant →
-          </button>
-        </div>
+      {/* Pagination avancée */}
+      {pagination && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={pagination.totalPages || 1}
+          totalItems={pagination.total || filteredArticles?.length || 0}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(newItemsPerPage) => {
+            setItemsPerPage(newItemsPerPage)
+            setCurrentPage(1) // Retourner à la première page
+          }}
+          showItemsPerPage={true}
+        />
       )}
       
       {/* Toast synchro quotidienne */}

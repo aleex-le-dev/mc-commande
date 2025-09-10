@@ -28,8 +28,12 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
     } else {
       setLastLog(null)
     }
+    
+    // OPTIMISATION: Cleanup de l'interval
     return () => {
-      if (intervalId) clearInterval(intervalId)
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
     }
   }, [syncProgress && syncProgress.isRunning])
 

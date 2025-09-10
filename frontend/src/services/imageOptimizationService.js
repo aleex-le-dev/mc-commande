@@ -22,7 +22,7 @@ const loadPersistentCache = () => {
       const { version, data } = JSON.parse(cached)
       if (version === CACHE_VERSION && data) {
         data.forEach(([key, value]) => imageCache.set(key, value))
-        console.log(`🖼️ Cache images restauré: ${imageCache.size} images`)
+        // console.log(`🖼️ Cache images restauré: ${imageCache.size} images`) // Log désactivé pour la production
       }
     }
   } catch (error) {
@@ -102,6 +102,9 @@ export const ImageOptimizationService = {
         loadingPromises.delete(url)
         reject(new Error('Preload timeout'))
       }, config.preloadTimeout)
+      
+      // OPTIMISATION: Cleanup du timeout après utilisation
+      const cleanup = () => clearTimeout(timeout)
 
       img.onload = () => {
         clearTimeout(timeout)

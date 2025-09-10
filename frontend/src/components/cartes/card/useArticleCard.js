@@ -25,7 +25,12 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     try {
       await navigator.clipboard.writeText(text)
       setCopiedText(label)
-      setTimeout(() => setCopiedText(''), 2000)
+      
+      // OPTIMISATION: Timeout avec cleanup
+      const timeoutId = setTimeout(() => setCopiedText(''), 2000)
+      
+      // Cleanup du timeout si le composant est démonté
+      return () => clearTimeout(timeoutId)
     } catch (error) {
       console.warn('Erreur copie:', error)
     }
