@@ -62,6 +62,59 @@ class WordPressAPI {
     return `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`
   }
 
+  // Récupère les permalinks en batch pour optimiser les performances
+  async fetchPermalinksBatch(productIds, baseUrl, authParams) {
+    try {
+      // Diviser en chunks de 50 pour éviter les timeouts
+      const chunkSize = 50
+      const chunks = []
+      for (let i = 0; i < productIds.length; i += chunkSize) {
+        chunks.push(productIds.slice(i, i + chunkSize))
+      }
+
+      const allPermalinks = {}
+      
+      // Traiter chaque chunk en parallèle
+      await Promise.all(chunks.map(async (chunk, chunkIndex) => {
+        try {
+          // Délai entre les chunks pour éviter la surcharge
+          if (chunkIndex > 0) {
+            await new Promise(resolve => setTimeout(resolve, 200))
+          }
+
+          const response = await fetch(`${baseUrl}/products?${authParams}&include=${chunk.join(',')}&_fields=id,permalink`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(20000) // 20s timeout par chunk
+          })
+
+          if (response.ok) {
+            const products = await response.json()
+            products.forEach(product => {
+              if (product.permalink) {
+                allPermalinks[product.id] = product.permalink
+              }
+            })
+            console.log(`✅ Chunk ${chunkIndex + 1}/${chunks.length}: ${products.length} permalinks récupérés`)
+          } else {
+            console.warn(`⚠️ Erreur chunk ${chunkIndex + 1}: ${response.status}`)
+          }
+        } catch (error) {
+          console.warn(`❌ Erreur chunk ${chunkIndex + 1}:`, error.message)
+        }
+      }))
+
+      console.log(`🎯 Total permalinks récupérés: ${Object.keys(allPermalinks).length}/${productIds.length}`)
+      return allPermalinks
+
+    } catch (error) {
+      console.error('Erreur fetchPermalinksBatch:', error)
+      return {}
+    }
+  }
+
   // Récupère la traduction française d'un produit via Google Translate
   async getProductTranslation(productId, currentName) {
     try {
@@ -243,41 +296,46 @@ class WordPressAPI {
 
       const orders = await response.json()
   
-      // Traitement des données pour un affichage optimisé
-      const processedOrders = await Promise.all(orders.map(async order => {
-        const processedLineItems = await Promise.all(order.line_items?.map(async item => {
-          // Récupérer le permalink depuis WooCommerce
+      // OPTIMISATION: Récupérer tous les permalinks en une seule requête batch
+      let permalinksMap = {}
+      if (!skipPermalinks && orders.length > 0) {
+        try {
+          // Extraire tous les product_ids uniques
+          const productIds = [...new Set(
+            orders.flatMap(order => 
+              order.line_items?.map(item => item.product_id) || []
+            )
+          )]
+          
+          if (productIds.length > 0) {
+            console.log(`🚀 Récupération batch de ${productIds.length} permalinks...`)
+            permalinksMap = await this.fetchPermalinksBatch(productIds, baseUrl, authParams)
+          }
+        } catch (error) {
+          console.warn('Erreur récupération batch permalinks, utilisation des liens de base:', error.message)
+        }
+      }
+
+      // Traitement des données optimisé (sans requêtes séquentielles)
+      const processedOrders = orders.map(order => {
+        const processedLineItems = order.line_items?.map(item => {
+          // Utiliser le permalink du cache ou du batch
           let permalink = null
-          try {
-            if (!skipPermalinks) {
-              // Essayer de récupérer le permalink depuis le cache d'abord
-              if (this.productPermalinkCache.has(item.product_id)) {
-                permalink = this.productPermalinkCache.get(item.product_id)
-              } else {
-                // Récupérer le permalink depuis WooCommerce
-                const productResponse = await fetch(`${baseUrl}/products/${item.product_id}?${authParams}`, {
-                  method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                  },
-                  signal: AbortSignal.timeout(15000) // Timeout optimisé pour Render
-                })
-                
-                if (productResponse.ok) {
-                  const product = await productResponse.json()
-                  permalink = product?.permalink || null
-                  if (permalink) {
-                    this.productPermalinkCache.set(item.product_id, permalink)
-                  }
-                }
-              }
+          if (!skipPermalinks) {
+            // Priorité au cache local
+            if (this.productPermalinkCache.has(item.product_id)) {
+              permalink = this.productPermalinkCache.get(item.product_id)
+            } 
+            // Sinon utiliser le résultat du batch
+            else if (permalinksMap[item.product_id]) {
+              permalink = permalinksMap[item.product_id]
+              // Mettre en cache pour les prochaines fois
+              this.productPermalinkCache.set(item.product_id, permalink)
             }
-          } catch (error) {
-            // En cas d'erreur, construire un permalink de base
-            if (this.config.wordpressUrl) {
+            // Fallback: construire un permalink de base
+            else if (this.config.wordpressUrl) {
               permalink = `${this.config.wordpressUrl}/produit/${item.product_id}/`
             }
-            console.warn(`Erreur permalink pour produit ${item.product_id}, utilisation du lien de base:`, error.message)
           }
           
           return {
@@ -291,7 +349,7 @@ class WordPressAPI {
             permalink: permalink,
             meta_data: item.meta_data || []
           }
-        }) || [])
+        }) || []
 
         return {
           id: order.id,
