@@ -4,11 +4,8 @@ const cookieParser = require('cookie-parser')
 const database = require('./services/database')
 const { cors, corsMiddleware } = require('./middleware/cors')
 
-// Import des routes
-const ordersRoutes = require('./routes/orders')
-const assignmentsRoutes = require('./routes/assignments')
-const tricoteusesRoutes = require('./routes/tricoteuses')
-const productionRoutes = require('./routes/production')
+// Import du routeur centralisé
+const apiRoutes = require('./routes')
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -22,29 +19,8 @@ app.use(cookieParser())
 app.use(cors)
 app.use(corsMiddleware)
 
-// Routes
-app.use('/api/orders', ordersRoutes)
-app.use('/api/assignments', assignmentsRoutes)
-app.use('/api/tricoteuses', tricoteusesRoutes)
-app.use('/api/production', productionRoutes)
-
-// Route de santé
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    database: database.isConnected ? 'Connected' : 'Disconnected'
-  })
-})
-
-// Route racine
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'API Maison Cléo - Backend',
-    version: '2.0.0',
-    status: 'Running'
-  })
-})
+// Routes centralisées
+app.use('/api', apiRoutes)
 
 // Gestion des erreurs 404
 app.use('*', (req, res) => {
