@@ -51,16 +51,8 @@ const SimpleFlexGrid = ({
         return updated
       })
       
-      // Mettre à jour le statut de l'article localement
-      setArticles(prev => prev.map(article => {
-        if (article.line_item_id === articleId) {
-          return {
-            ...article,
-            globalStatus: newAssignment.status
-          }
-        }
-        return article
-      }))
+      // Note: Les articles sont gérés par le composant parent via filteredArticles
+      // Pas besoin de les mettre à jour localement ici
     } else {
       gridState.setAssignments(prev => {
         const updated = { ...prev }

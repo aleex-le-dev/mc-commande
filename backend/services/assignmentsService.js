@@ -36,11 +36,11 @@ class AssignmentsService {
   async updateAssignment(assignmentId, updateData) {
     const collection = db.getCollection('article_assignments')
     
-    console.log('🔍 updateAssignment - ID reçu:', assignmentId)
-    console.log('🔍 updateAssignment - Données:', updateData)
-    
+    if (!assignmentId) {
+      throw new Error('ID d\'assignation manquant')
+    }
+
     if (!db.isValidObjectId(assignmentId)) {
-      console.error('❌ ID d\'assignation invalide:', assignmentId)
       throw new Error('ID d\'assignation invalide')
     }
 
@@ -54,10 +54,7 @@ class AssignmentsService {
       }
     )
 
-    console.log('🔍 updateAssignment - Résultat:', result)
-
     if (result.matchedCount === 0) {
-      console.error('❌ Aucune assignation trouvée avec l\'ID:', assignmentId)
       throw new Error('Assignation non trouvée')
     }
 

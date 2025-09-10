@@ -220,6 +220,7 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       
       // Utiliser l'ID MongoDB de l'assignation
       const assignmentId = updatedAssignment._id || updatedAssignment.id
+      
       if (!assignmentId) {
         console.error('Aucun ID d\'assignation trouvé pour la mise à jour')
         return
