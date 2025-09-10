@@ -5,47 +5,13 @@
 
 import { useState, useEffect } from 'react'
 
-// Cache global persistant entre les pages
+// Cache global ultra-simple et instantané
 const imageCache = new Map()
 const preloadQueue = new Set()
 const loadingPromises = new Map()
+const httpCache = new Map() // Cache HTTP persistant
 
-// Cache persistant dans sessionStorage pour éviter les rechargements
-const PERSISTENT_CACHE_KEY = 'mc-image-cache'
-const CACHE_VERSION = '1.0'
-
-// Charger le cache depuis sessionStorage au démarrage
-const loadPersistentCache = () => {
-  try {
-    const cached = sessionStorage.getItem(PERSISTENT_CACHE_KEY)
-    if (cached) {
-      const { version, data } = JSON.parse(cached)
-      if (version === CACHE_VERSION && data) {
-        data.forEach(([key, value]) => imageCache.set(key, value))
-        // console.log(`🖼️ Cache images restauré: ${imageCache.size} images`) // Log désactivé pour la production
-      }
-    }
-  } catch (error) {
-    console.warn('Erreur chargement cache images:', error)
-  }
-}
-
-// Sauvegarder le cache dans sessionStorage
-const savePersistentCache = () => {
-  try {
-    const data = Array.from(imageCache.entries())
-    sessionStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify({
-      version: CACHE_VERSION,
-      data,
-      timestamp: Date.now()
-    }))
-  } catch (error) {
-    console.warn('Erreur sauvegarde cache images:', error)
-  }
-}
-
-// Initialiser le cache persistant
-loadPersistentCache()
+// Cache ultra-simple - pas de persistance complexe
 
 // Configuration optimisée pour Render (chargement progressif)
 const RENDER_CONFIG = {
@@ -81,52 +47,104 @@ const getAdaptiveConfig = () => {
  */
 export const ImageOptimizationService = {
   /**
-   * Précharger une image avec gestion d'erreur
+   * Précharger une image avec cache HTTP optimisé (INSTANTANÉ)
    */
   preloadImage: async (url, priority = false) => {
+    // 1. Vérifier le cache mémoire (instantané)
     if (imageCache.has(url)) {
       return Promise.resolve(imageCache.get(url))
     }
 
+    // 2. Vérifier le cache HTTP persistant
+    if (httpCache.has(url)) {
+      const cachedUrl = httpCache.get(url)
+      imageCache.set(url, cachedUrl)
+      return Promise.resolve(cachedUrl)
+    }
+
+    // 3. Vérifier si déjà en cours de chargement
     if (preloadQueue.has(url)) {
       return loadingPromises.get(url) || Promise.resolve()
     }
 
     preloadQueue.add(url)
     
-    const config = getAdaptiveConfig()
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise(async (resolve, reject) => {
+      try {
+        // 4. Précharger avec une image invisible pour forcer le cache HTTP
       const img = new Image()
-      const timeout = setTimeout(() => {
-        preloadQueue.delete(url)
-        loadingPromises.delete(url)
-        reject(new Error('Preload timeout'))
-      }, config.preloadTimeout)
-      
-      // OPTIMISATION: Cleanup du timeout après utilisation
-      const cleanup = () => clearTimeout(timeout)
 
-      img.onload = () => {
-        clearTimeout(timeout)
-        imageCache.set(url, url)
+        img.onload = () => {
+          // 5. Image chargée et mise en cache HTTP - stocker dans les deux caches
+          imageCache.set(url, url)
+          httpCache.set(url, url) // Cache persistant
+          preloadQueue.delete(url)
+          loadingPromises.delete(url)
+          console.log(`✅ Image mise en cache: ${url.split('/').pop()} (total: ${imageCache.size})`)
+          resolve(url)
+        }
+
+        img.onerror = () => {
+          preloadQueue.delete(url)
+          loadingPromises.delete(url)
+          console.log(`❌ Erreur chargement image: ${url.split('/').pop()}`)
+          reject(new Error('Failed to preload image'))
+        }
+
+        // 6. Forcer le chargement avec cache HTTP et headers optimisés
+        img.crossOrigin = 'anonymous'
+        img.loading = priority ? 'eager' : 'lazy'
+        
+        // Ajouter un timeout pour détecter les images qui ne se chargent pas
+        const timeout = setTimeout(() => {
+          console.log(`⏰ Timeout image: ${url.split('/').pop()}`)
+          preloadQueue.delete(url)
+          loadingPromises.delete(url)
+          reject(new Error('Image loading timeout'))
+        }, 10000) // 10 secondes de timeout
+        
+        img.onload = () => {
+          clearTimeout(timeout)
+          // 5. Image chargée et mise en cache HTTP - stocker dans les deux caches
+          imageCache.set(url, url)
+          httpCache.set(url, url) // Cache persistant
+          preloadQueue.delete(url)
+          loadingPromises.delete(url)
+          console.log(`✅ Image mise en cache: ${url.split('/').pop()} (total: ${imageCache.size})`)
+          resolve(url)
+        }
+        
+        img.onerror = () => {
+          clearTimeout(timeout)
+          preloadQueue.delete(url)
+          loadingPromises.delete(url)
+          console.log(`❌ Erreur chargement image: ${url.split('/').pop()}`)
+          reject(new Error('Failed to preload image'))
+        }
+        
+        img.src = url
+        
+        // 7. Forcer le cache HTTP avec fetch (optionnel)
+        try {
+          const response = await fetch(url, {
+            method: 'HEAD',
+            cache: 'force-cache',
+            headers: {
+              'Cache-Control': 'max-age=31536000'
+            }
+          })
+          if (response.ok) {
+            httpCache.set(url, url)
+          }
+        } catch (e) {
+          // Ignore fetch errors, continue with image loading
+        }
+        
+      } catch (error) {
         preloadQueue.delete(url)
         loadingPromises.delete(url)
-        // Sauvegarder le cache après chaque image chargée
-        savePersistentCache()
-        resolve(url)
+        reject(error)
       }
-
-      img.onerror = () => {
-        clearTimeout(timeout)
-        preloadQueue.delete(url)
-        loadingPromises.delete(url)
-        reject(new Error('Failed to preload image'))
-      }
-
-      // Optimisations pour Render
-      img.loading = priority ? 'eager' : 'lazy'
-      img.decoding = 'async'
-      img.src = url
     })
 
     loadingPromises.set(url, promise)
@@ -134,89 +152,66 @@ export const ImageOptimizationService = {
   },
 
   /**
-   * Précharger un lot d'images simultanément (nouveau)
+   * Précharger un lot d'images simultanément (ULTRA-RAPIDE)
    */
   preloadBatch: async (imageUrls, priority = false) => {
     if (!Array.isArray(imageUrls) || imageUrls.length === 0) return []
     
-    const config = getAdaptiveConfig()
-    const batchSize = config.batchSize || 50
-    const results = []
-    
     console.log(`🖼️ Préchargement en lot: ${imageUrls.length} images`)
     
-    // Traiter par lots pour éviter de surcharger
-    for (let i = 0; i < imageUrls.length; i += batchSize) {
-      const batch = imageUrls.slice(i, i + batchSize)
-      const batchPromises = batch.map(url => this.preloadImage(url, priority))
-      
-      try {
-        const batchResults = await Promise.allSettled(batchPromises)
-        results.push(...batchResults.map(result => 
-          result.status === 'fulfilled' ? result.value : null
-        ).filter(Boolean))
-        
-        console.log(`✅ Lot ${Math.floor(i/batchSize) + 1} terminé: ${batch.length} images`)
-      } catch (error) {
-        console.warn(`⚠️ Erreur lot ${Math.floor(i/batchSize) + 1}:`, error)
-      }
-    }
+    // Précharger toutes les images en parallèle (instantané avec cache HTTP)
+    const promises = imageUrls.map(url => ImageOptimizationService.preloadImage(url, priority))
     
-    console.log(`🎉 Préchargement en lot terminé: ${results.length}/${imageUrls.length} images`)
-    return results
+    try {
+      const results = await Promise.allSettled(promises)
+      const successful = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value)
+      
+      console.log(`🎉 Préchargement terminé: ${successful.length}/${imageUrls.length} images`)
+      return successful
+      } catch (error) {
+      console.warn('Erreur préchargement batch:', error)
+      return []
+    }
   },
 
-  /**
-   * Précharger plusieurs images en parallèle avec limite adaptative
-   */
-  preloadBatch: async (urls, priority = false) => {
-    const config = getAdaptiveConfig()
-    const chunks = []
-    for (let i = 0; i < urls.length; i += config.maxConcurrentPreloads) {
-      chunks.push(urls.slice(i, i + config.maxConcurrentPreloads))
-    }
-
-    const results = []
-    for (const chunk of chunks) {
-      const chunkPromises = chunk.map(url => 
-        ImageOptimizationService.preloadImage(url, priority)
-          .catch(error => ({ error, url }))
-      )
-      const chunkResults = await Promise.allSettled(chunkPromises)
-      results.push(...chunkResults)
-    }
-
-    return results
-  },
 
   /**
-   * Obtenir une image du cache ou la précharger
+   * Obtenir une image du cache ou la précharger (INSTANTANÉ)
    */
   getImage: async (url, priority = false) => {
+    // 1. Vérifier le cache mémoire (instantané)
     if (imageCache.has(url)) {
       return imageCache.get(url)
     }
 
+    // 2. Vérifier le cache HTTP persistant
+    if (httpCache.has(url)) {
+      const cachedUrl = httpCache.get(url)
+      imageCache.set(url, cachedUrl)
+      return cachedUrl
+    }
+
+    // 3. Précharger et retourner l'URL directe
     try {
       return await ImageOptimizationService.preloadImage(url, priority)
     } catch (error) {
       console.warn('Erreur préchargement image:', error)
-      return null
+      return url // Retourner l'URL directe même en cas d'erreur
     }
   },
 
   /**
-   * Nettoyer le cache si nécessaire (adaptatif)
+   * Nettoyer le cache si nécessaire (simple)
    */
   cleanupCache: () => {
-    const config = getAdaptiveConfig()
-    if (imageCache.size > config.cacheSize) {
+    if (imageCache.size > 100) {
       const entries = Array.from(imageCache.entries())
-      const toDelete = entries.slice(0, Math.floor(config.cacheSize * 0.3))
+      const toDelete = entries.slice(0, 20) // Supprimer les 20 plus anciens
       toDelete.forEach(([key]) => imageCache.delete(key))
-      // Sauvegarder après nettoyage
-      savePersistentCache()
     }
+    // Ne pas nettoyer httpCache - il doit persister pour la navigation
   },
 
   /**
@@ -224,6 +219,7 @@ export const ImageOptimizationService = {
    */
   getCacheStats: () => ({
     cacheSize: imageCache.size,
+    httpCacheSize: httpCache.size,
     preloadQueue: preloadQueue.size,
     loadingPromises: loadingPromises.size
   }),
@@ -235,11 +231,106 @@ export const ImageOptimizationService = {
     imageCache.clear()
     preloadQueue.clear()
     loadingPromises.clear()
-    // Nettoyer aussi le cache persistant
-    try {
-      sessionStorage.removeItem(PERSISTENT_CACHE_KEY)
-    } catch (error) {
-      console.warn('Erreur suppression cache persistant:', error)
+    // Ne pas vider httpCache - il doit persister
+  },
+
+  /**
+   * Précharger agressivement toutes les images d'une page (INSTANTANÉ)
+   */
+  preloadPageImages: async (articles = []) => {
+    if (!articles || articles.length === 0) return
+
+    console.log(`🚀 Préchargement agressif pour ${articles.length} articles`)
+    console.log(`🔍 Premier article:`, articles[0])
+    
+    const imageUrls = []
+    articles.forEach((article, index) => {
+      console.log(`📦 Article ${index + 1}:`, {
+        hasItems: !!article.items,
+        itemsLength: article.items?.length || 0,
+        hasProductId: !!article.product_id,
+        product_id: article.product_id,
+        image_url: article.image_url
+      })
+      
+      // Vérifier si l'article a des items (structure imbriquée)
+      if (article.items && Array.isArray(article.items)) {
+        article.items.forEach((item, itemIndex) => {
+          console.log(`  📋 Item ${itemIndex + 1}:`, {
+            product_id: item.product_id,
+            hasProductId: !!item.product_id
+          })
+          
+          if (item.product_id) {
+            const baseUrl = import.meta.env.DEV 
+              ? 'http://localhost:3001' 
+              : 'https://maisoncleo-commande.onrender.com'
+            const imageUrl = `${baseUrl}/api/images/${item.product_id}?w=256&q=75&f=webp`
+            imageUrls.push(imageUrl)
+            console.log(`  ✅ URL ajoutée: ${imageUrl}`)
+          }
+        })
+      } 
+      // Sinon, utiliser directement les propriétés de l'article
+      else if (article.product_id) {
+        const baseUrl = import.meta.env.DEV 
+          ? 'http://localhost:3001' 
+          : 'https://maisoncleo-commande.onrender.com'
+        const imageUrl = `${baseUrl}/api/images/${article.product_id}?w=256&q=75&f=webp`
+        imageUrls.push(imageUrl)
+        console.log(`  ✅ URL directe ajoutée: ${imageUrl}`)
+      }
+    })
+    
+    console.log(`📊 Total URLs générées: ${imageUrls.length}`)
+
+    if (imageUrls.length > 0) {
+      try {
+        console.log(`🔄 Début préchargement de ${imageUrls.length} images...`)
+        
+        // Précharger par lots de 5 pour éviter la surcharge
+        const batchSize = 5
+        const batches = []
+        for (let i = 0; i < imageUrls.length; i += batchSize) {
+          batches.push(imageUrls.slice(i, i + batchSize))
+        }
+        
+        let totalSuccessful = 0
+        let totalFailed = 0
+        
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i]
+          console.log(`📦 Lot ${i + 1}/${batches.length}: ${batch.length} images`)
+          console.log(`🔗 URLs du lot:`, batch.map(url => url.split('/').pop()))
+          
+          const promises = batch.map(url => ImageOptimizationService.preloadImage(url, true))
+          const results = await Promise.allSettled(promises)
+          const successful = results.filter(r => r.status === 'fulfilled').length
+          const failed = results.filter(r => r.status === 'rejected').length
+          
+          totalSuccessful += successful
+          totalFailed += failed
+          
+          console.log(`✅ Lot ${i + 1} terminé: ${successful}/${batch.length} images`)
+          
+          // Afficher le cache après chaque lot
+          const stats = ImageOptimizationService.getCacheStats()
+          console.log(`📊 Cache après lot ${i + 1}: ${stats.cacheSize} images`)
+          
+          // Petite pause entre les lots pour éviter la surcharge
+          if (i < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+        }
+        
+        console.log(`✅ Préchargement terminé: ${totalSuccessful}/${imageUrls.length} images (${totalFailed} échecs)`)
+        
+        // Afficher les stats finales du cache
+        const finalStats = ImageOptimizationService.getCacheStats()
+        console.log(`📊 Cache final: ${finalStats.cacheSize} images en mémoire, ${finalStats.httpCacheSize} en HTTP`)
+      } catch (error) {
+        console.warn('Erreur préchargement agressif:', error)
+      }
     }
   },
 

@@ -4,6 +4,8 @@ import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import LoadingSpinner from './LoadingSpinner'
 import Pagination from './Pagination'
 import { useArticles } from '../hooks/useArticles'
+import ImageOptimizationService from '../services/imageOptimizationService'
+import globalPreloadService from '../services/globalPreloadService'
 
 /**
  * Page générique pour Maille/Couture
@@ -34,6 +36,21 @@ const ProductionPage = ({ productionType, title }) => {
     showUrgentOnly
   })
 
+  // Précharger agressivement toutes les images de la page
+  useEffect(() => {
+    if (articles && articles.length > 0) {
+      // Utiliser le service global pour le préchargement avec le type de page
+      globalPreloadService.preloadPageImages(articles, productionType)
+      
+      // Debug: Afficher les stats du cache après 2 secondes (seulement en dev)
+      if (import.meta.env.DEV) {
+        setTimeout(() => {
+          const stats = globalPreloadService.getStats()
+          console.log(`📊 Service stats:`, stats)
+        }, 2000)
+      }
+    }
+  }, [articles, productionType])
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)

@@ -2114,7 +2114,10 @@ app.get('/api/images/:productId', async (req, res) => {
       }
       const out = await pipeline.toBuffer()
       res.setHeader('Content-Type', contentType)
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
+      // Cache HTTP ultra-optimisé (1 an + immutable)
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      res.setHeader('ETag', `"${productId}-${width}-${quality}-${contentType}"`)
+      res.setHeader('Last-Modified', new Date().toUTCString())
       res.setHeader('X-Resized', 'true')
       res.setHeader('X-Requested-Width', String(width))
       return res.end(out)
@@ -2122,9 +2125,12 @@ app.get('/api/images/:productId', async (req, res) => {
       // Fallback: renvoyer l'original si sharp indisponible/erreur
       console.warn('Sharp non disponible, fallback vers image originale:', e.message)
     res.setHeader('Content-Type', doc.content_type || 'image/jpeg')
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable')
-      res.setHeader('X-Resized', 'false')
-      return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
+    // Cache HTTP ultra-optimisé pour fallback aussi
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('ETag', `"${productId}-original"`)
+    res.setHeader('Last-Modified', new Date().toUTCString())
+    res.setHeader('X-Resized', 'false')
+    return res.end((doc.data && doc.data.buffer) ? doc.data.buffer : (Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data || [])))
     }
   } catch (error) {
     console.error('Erreur GET /api/images/:productId:', error)

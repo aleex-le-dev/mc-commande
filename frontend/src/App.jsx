@@ -43,6 +43,7 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [dailySyncToast, setDailySyncToast] = useState({ visible: false, message: '' })
 
+
   // Planifier une synchro quotidienne à 12:00 locale (optimisée)
   useEffect(() => {
     let timeoutId
