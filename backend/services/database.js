@@ -14,10 +14,7 @@ class DatabaseService {
         throw new Error('MONGO_URI non définie dans les variables d\'environnement')
       }
 
-      this.client = new MongoClient(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      })
+      this.client = new MongoClient(mongoUri)
 
       await this.client.connect()
       this.db = this.client.db('maisoncleo')
