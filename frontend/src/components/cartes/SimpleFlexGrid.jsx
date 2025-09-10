@@ -18,10 +18,11 @@ const SimpleFlexGrid = ({
   // Hook spécialisé pour la gestion d'état
   const gridState = useGridState()
   
-  const [isLoading, setIsLoading] = useState(true)
   const [urgentTick, setUrgentTick] = useState(0) // État pour forcer les re-renders
   const sentinelRef = useRef(null)
   const calculEffectue = useRef(false)
+  
+  // Pas besoin de isLoading local, on utilise directement les données
   
   // OPTIMISATION: Réduire les états locaux et utiliser des refs pour les valeurs non-critiques
   const visibleCountRef = useRef(280)
@@ -58,16 +59,8 @@ const SimpleFlexGrid = ({
         return updated
       })
       
-      // Mettre à jour le statut de l'article localement
-      setArticles(prev => prev.map(article => {
-        if (article.line_item_id === articleId) {
-          return {
-            ...article,
-            globalStatus: 'a_faire'
-          }
-        }
-        return article
-      }))
+      // Note: Les articles sont gérés par le composant parent via filteredArticles
+      // Pas besoin de les mettre à jour localement ici
     }
     
     // Forcer le re-render des cartes
@@ -126,13 +119,9 @@ const SimpleFlexGrid = ({
   // Gérer l'état de loading lors des changements d'onglets
   useEffect(() => {
     if (filteredArticles.length > 0) {
-      setIsLoading(false)
       lastNonEmptyArticlesRef.current = filteredArticles
-    } else {
-      // Si on perd temporairement les articles, continuer d'afficher la dernière liste connue
-      setIsLoading(lastNonEmptyArticlesRef.current.length === 0)
     }
-  }, [filteredArticles, filteredArticles.length, productionType, lastNonEmptyArticlesRef.current.length])
+  }, [filteredArticles, filteredArticles.length, productionType])
 
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
@@ -250,13 +239,22 @@ const SimpleFlexGrid = ({
   ])
 
   // Afficher le loading pendant les changements d'onglets
-  if (isLoading || gridState.assignmentsLoading || gridState.tricoteusesLoading || gridState.dateLimiteLoading) {
+  if (gridState.assignmentsLoading || gridState.tricoteusesLoading || gridState.dateLimiteLoading) {
     return <LoadingSpinner />
   }
 
-  // Si toujours pas d'articles et pas de cache, afficher un loader
+  // Si toujours pas d'articles et pas de cache, afficher un message
   if (filteredArticles.length === 0 && lastNonEmptyArticles.length === 0) {
-    return <LoadingSpinner />
+    return (
+      <div className="w-full text-center py-12">
+        <div className="text-gray-500 text-lg">
+          📋 Aucun article trouvé
+        </div>
+        <div className="text-gray-400 text-sm mt-2">
+          Aucune commande n'a été trouvée pour le moment.
+        </div>
+      </div>
+    )
   }
 
   return (

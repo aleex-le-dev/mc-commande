@@ -22,13 +22,22 @@ const queryClient = new QueryClient({
 const Root = () => {
   // Démarrer le préchargement (sans synchronisation) en arrière-plan, avant l'authentification
   useEffect(() => {
-    const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
-    if (!already) {
-      ApiService.prefetchAppData()
+    let isInitialized = false
+    
+    const initializeServices = async () => {
+      if (isInitialized) return
+      isInitialized = true
+      
+      const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
+      if (!already) {
+        await ApiService.prefetchAppData()
+      }
+      
+      // Initialiser le service de préchargement global
+      await globalPreloadService.initialize()
     }
     
-    // Initialiser le service de préchargement global
-    globalPreloadService.initialize()
+    initializeServices()
   }, [])
 
   // Empreinte console: une seule ligne cliquable

@@ -35,7 +35,6 @@ export const useOrders = (options = {}) => {
   const fetchOrders = useCallback(async () => {
     // Éviter les requêtes multiples
     if (isFetching) {
-      console.log('🔄 Requête déjà en cours, ignorée')
       return
     }
     

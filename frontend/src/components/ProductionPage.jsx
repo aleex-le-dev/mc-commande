@@ -87,11 +87,9 @@ const ProductionPage = ({ productionType, title }) => {
   const urgentCount = stats.urgent
 
   if (isLoading) {
-    // Spinner affiché - pas de log nécessaire
     return <LoadingSpinner />
   }
   if (error) return <div className="max-w-6xl mx-auto"><div className="bg-white rounded-2xl shadow-sm border p-6 text-center text-red-600">Erreur de chargement: {error.message}</div></div>
-
   return (
     <div className="w-full px-4">
       <div className="mb-6">

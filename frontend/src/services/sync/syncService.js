@@ -9,6 +9,7 @@ import { HttpCacheService } from '../cache/httpCacheService.js'
  * Service de synchronisation
  */
 export const SyncService = {
+  isPrefetching: false,
   /**
    * Synchroniser les commandes avec WooCommerce
    */
@@ -87,11 +88,33 @@ export const SyncService = {
    * Précharger les données de l'application
    */
   async prefetchAppData() {
+    // Éviter les appels multiples
+    if (this.isPrefetching) {
+      return false
+    }
+    
+    this.isPrefetching = true
+    
     try {
+      // Vérifier d'abord s'il y a des commandes dans la base
+      const ordersResponse = await HttpClientService.get('/orders?limit=1')
+      if (!ordersResponse.ok) {
+        console.log('🚫 Aucune commande trouvée, préchargement annulé')
+        return false
+      }
+      
+      const ordersData = await ordersResponse.json()
+      const orders = ordersData.orders || []
+      
+      if (orders.length === 0) {
+        console.log('🚫 Aucune commande trouvée, préchargement annulé')
+        return false
+      }
+      
       console.log('🔄 Préchargement des données de l\'application...')
       
       // Précharger les données en parallèle
-      const [tricoteuses, assignments, orders] = await Promise.allSettled([
+      const [tricoteuses, assignments, fullOrders] = await Promise.allSettled([
         HttpClientService.get('/tricoteuses'),
         HttpClientService.get('/assignments'),
         HttpClientService.get('/orders?limit=50')
@@ -108,9 +131,9 @@ export const SyncService = {
         HttpCacheService.set('assignments', assignmentsData.assignments || [])
       }
       
-      if (orders.status === 'fulfilled' && orders.value.ok) {
-        const ordersData = await orders.value.json()
-        HttpCacheService.set('orders', ordersData.orders || [])
+      if (fullOrders.status === 'fulfilled' && fullOrders.value.ok) {
+        const fullOrdersData = await fullOrders.value.json()
+        HttpCacheService.set('orders', fullOrdersData.orders || [])
       }
       
       console.log('✅ Préchargement terminé')
@@ -118,6 +141,8 @@ export const SyncService = {
     } catch (error) {
       console.error('Erreur préchargement données:', error)
       return false
+    } finally {
+      this.isPrefetching = false
     }
   }
 }

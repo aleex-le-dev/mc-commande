@@ -16,14 +16,45 @@ class GlobalPreloadService {
   /**
    * Initialiser le service de préchargement global
    */
-  initialize() {
+  async initialize() {
     if (this.isInitialized) return
     
     this.isInitialized = true
     console.log('🚀 Service de préchargement global initialisé')
     
-    // Démarrer le préchargement intelligent en arrière-plan
-    this.startIntelligentPreloading()
+    // Vérifier s'il y a des articles avant de démarrer le préchargement
+    const hasArticles = await this.checkForArticles()
+    if (hasArticles) {
+      // Démarrer le préchargement intelligent en arrière-plan
+      this.startIntelligentPreloading()
+    } else {
+      console.log('🚫 Aucun article trouvé, préchargement d\'images annulé')
+    }
+  }
+
+  /**
+   * Vérifier s'il y a des articles dans la base de données
+   */
+  async checkForArticles() {
+    try {
+      // Utiliser le cache d'abord
+      const cachedOrders = sessionStorage.getItem('mc-orders-cache')
+      if (cachedOrders) {
+        const orders = JSON.parse(cachedOrders)
+        return orders && orders.length > 0
+      }
+      
+      // Sinon, faire une requête rapide avec l'URL complète du backend
+      const backendUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com'
+      const response = await fetch(`${backendUrl}/api/orders?limit=1`)
+      if (!response.ok) return false
+      
+      const data = await response.json()
+      return data.orders && data.orders.length > 0
+    } catch (error) {
+      console.warn('Erreur vérification articles:', error)
+      return false
+    }
   }
 
   /**
