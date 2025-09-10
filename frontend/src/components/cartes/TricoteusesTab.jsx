@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { ApiService } from '../../services/apiService'
+import useFormState from '../../hooks/useFormState'
 
 const TricoteusesTab = () => {
   const [knitters, setKnitters] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingKnitter, setEditingKnitter] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
+  
+  // Hook spécialisé pour la gestion du formulaire
+  const formState = useFormState({
     firstName: '',
     color: '#f43f5e',
     photoFile: null,
     photoPreview: '',
-    gender: 'feminin' // Par défaut féminin
+    gender: 'feminin'
   })
 
   const palette = [
@@ -38,12 +41,12 @@ const TricoteusesTab = () => {
   }
 
   const resetForm = () => {
-    setFormData({
+    formState.resetForm({
       firstName: '',
       color: '#f43f5e',
       photoFile: null,
       photoPreview: '',
-      gender: 'feminin' // Par défaut féminin
+      gender: 'feminin'
     })
     setEditingKnitter(null)
   }
@@ -54,12 +57,12 @@ const TricoteusesTab = () => {
   }
 
   const openEditModal = (knitter) => {
-    setFormData({
+    formState.updateFields({
       firstName: knitter.firstName,
       color: knitter.color,
       photoFile: null,
       photoPreview: knitter.photoUrl || '',
-      gender: knitter.gender || 'feminin' // Par défaut féminin
+      gender: knitter.gender || 'feminin'
     })
     setEditingKnitter(knitter)
     setShowModal(true)
@@ -74,11 +77,10 @@ const TricoteusesTab = () => {
     const file = e.target.files && e.target.files[0]
     if (file) {
       const url = URL.createObjectURL(file)
-      setFormData(prev => ({
-        ...prev,
+      formState.updateFields({
         photoFile: file,
         photoPreview: url
-      }))
+      })
     }
   }
 
@@ -125,7 +127,7 @@ const TricoteusesTab = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const trimmed = formData.firstName.trim()
+    const trimmed = formState.formData.firstName.trim()
     if (!trimmed) return
 
     try {
@@ -133,9 +135,9 @@ const TricoteusesTab = () => {
       
       // Convertir l'image en base64 si elle existe
       let photoUrl = editingKnitter ? editingKnitter.photoUrl : ''
-      if (formData.photoFile) {
+      if (formState.formData.photoFile) {
         try {
-          photoUrl = await compressAndConvertImage(formData.photoFile)
+          photoUrl = await compressAndConvertImage(formState.formData.photoFile)
         } catch (error) {
           console.error('Erreur compression image:', error)
           alert('Erreur lors de la compression de l\'image. Veuillez réessayer.')
@@ -147,18 +149,18 @@ const TricoteusesTab = () => {
         // Modification
         const updateData = {
           firstName: trimmed,
-          color: formData.color,
+          color: formState.formData.color,
           photoUrl: photoUrl,
-          gender: formData.gender
+          gender: formState.formData.gender
         }
         await ApiService.tricoteuses.updateTricoteuse(editingKnitter._id, updateData)
       } else {
         // Ajout
         const createData = {
           firstName: trimmed,
-          color: formData.color,
+          color: formState.formData.color,
           photoUrl: photoUrl,
-          gender: formData.gender
+          gender: formState.formData.gender
         }
         await ApiService.tricoteuses.createTricoteuse(createData)
       }
@@ -301,35 +303,34 @@ const TricoteusesTab = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Avatar et nom */}
                 <div className="flex items-center gap-4">
-                  {formData.photoPreview && formData.photoPreview.trim() !== '' ? (
+                  {formState.formData.photoPreview && formState.formData.photoPreview.trim() !== '' ? (
                       <img 
-                        src={formData.photoPreview} 
+                        src={formState.formData.photoPreview} 
                         alt="Aperçu" 
                         className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
                         onError={() => {
-                          console.warn('Impossible de charger l\'aperçu de la photo:', formData.photoPreview)
+                          console.warn('Impossible de charger l\'aperçu de la photo:', formState.formData.photoPreview)
                         }}
                         onLoad={() => {
-                          console.log('Aperçu de photo chargé avec succès:', formData.photoPreview)
+                          console.log('Aperçu de photo chargé avec succès:', formState.formData.photoPreview)
                         }}
                       />
                     ) : (
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-semibold text-5xl relative" style={{ backgroundColor: formData.color }}>
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-white font-semibold text-5xl relative" style={{ backgroundColor: formState.formData.color }}>
                         <span className="absolute inset-0 flex items-center justify-center transform -translate-y-1">
-                          {formData.firstName ? formData.firstName[0].toUpperCase() : 'A'}
+                          {formState.formData.firstName ? formState.formData.firstName[0].toUpperCase() : 'A'}
                         </span>
                       </div>
                     )}
               <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
                 <input
-                
                   type="text"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  value={formState.formData.firstName}
+                  onChange={(e) => formState.updateField('firstName', e.target.value)}
                   placeholder="Ex: Alex"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] focus:border-transparent"
-                      required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--rose-clair-text)] focus:border-transparent"
+                  required
                 />
               </div>
             </div>
@@ -342,9 +343,9 @@ const TricoteusesTab = () => {
                   <button
                     type="button"
                         key={`color-${index}-${c}`}
-                        onClick={() => setFormData(prev => ({ ...prev, color: c }))}
+                        onClick={() => formState.updateField('color', c)}
                         className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
-                          formData.color === c 
+                          formState.formData.color === c 
                             ? 'ring-2 ring-offset-2 ring-[var(--rose-clair-text)] border-white' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
@@ -364,12 +365,12 @@ const TricoteusesTab = () => {
                         type="radio"
                         name="gender"
                         value="feminin"
-                        checked={formData.gender === 'feminin'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        checked={formState.formData.gender === 'feminin'}
+                        onChange={(e) => formState.updateField('gender', e.target.value)}
                         className="sr-only"
                       />
                       <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                        formData.gender === 'feminin' 
+                        formState.formData.gender === 'feminin' 
                           ? 'border-[var(--rose-clair-text)] bg-[var(--rose-clair)] bg-opacity-10' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}>
@@ -383,12 +384,12 @@ const TricoteusesTab = () => {
                         type="radio"
                         name="gender"
                         value="masculin"
-                        checked={formData.gender === 'masculin'}
-                        onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                        checked={formState.formData.gender === 'masculin'}
+                        onChange={(e) => formState.updateField('gender', e.target.value)}
                         className="sr-only"
                       />
                       <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                        formData.gender === 'masculin' 
+                        formState.formData.gender === 'masculin' 
                           ? 'border-blue-500 bg-blue-50' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}>
@@ -403,13 +404,13 @@ const TricoteusesTab = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Photo (optionnel)</label>
                   <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 transition-colors">
-                    📷 {formData.photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                    📷 {formState.formData.photoPreview ? 'Changer la photo' : 'Ajouter une photo'}
                 <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </label>
-                  {formData.photoPreview && (
+                  {formState.formData.photoPreview && (
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, photoPreview: '', photoFile: null }))}
+                      onClick={() => formState.updateFields({ photoPreview: '', photoFile: null })}
                       className="ml-2 text-sm text-red-600 hover:text-red-700"
                     >
                       Supprimer

@@ -1,8 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import ArticleCard from './ArticleCard'
 import LoadingSpinner from '../LoadingSpinner'
-import { ApiService } from '../../services/apiService'
-import delaiService from '../../services/delaiService'
+import useGridState from '../../hooks/useGridState'
 
 // Composant simple avec flexbox et flex-wrap pour les cartes
 const SimpleFlexGrid = ({ 
@@ -16,184 +15,32 @@ const SimpleFlexGrid = ({
   productionType = 'unknown', // Ajouter le type de production
   prioritizeUrgent = true
 }) => {
+  // Hook spécialisé pour la gestion d'état
+  const gridState = useGridState()
+  
   const [isLoading, setIsLoading] = useState(true)
-  const [assignments, setAssignments] = useState({})
-  const [assignmentsLoading, setAssignmentsLoading] = useState(true)
-  const [tricoteuses, setTricoteuses] = useState([])
-  const [tricoteusesLoading, setTricoteusesLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(280) // Augmenter la limite initiale
   const sentinelRef = useRef(null)
   const [lastNonEmptyArticles, setLastNonEmptyArticles] = useState([])
-  const [dateLimite, setDateLimite] = useState(null) // État pour la date limite
-  const [dateLimiteLoading, setDateLimiteLoading] = useState(true)
   const calculEffectue = useRef(false)
   const [urgentTick, setUrgentTick] = useState(0)
 
-  // Charger toutes les assignations en une fois
-  const loadAssignments = useCallback(async () => {
-    try {
-      setAssignmentsLoading(true)
-      const response = await ApiService.assignments.getAssignments()
-      const assignmentsMap = {}
-      response.forEach(assignment => {
-        assignmentsMap[assignment.article_id] = assignment
-        // Debug: afficher les assignations en cours (désactivé pour la production)
-        // if (assignment.status === 'en_cours') {
-        //   console.log('🔍 Assignation en cours trouvée:', assignment)
-        // }
-      })
-      setAssignments(assignmentsMap)
-    } catch (error) {
-      console.error('Erreur chargement assignations:', error)
-    } finally {
-      setAssignmentsLoading(false)
-    }
-  }, [])
+  // Les assignations et tricoteuses sont maintenant gérées par useGridState
 
   // Fonction de mise à jour ciblée pour éviter les re-renders complets
   const updateAssignment = useCallback((articleId, newAssignment) => {
-    setAssignments(prev => ({
-      ...prev,
-      [articleId]: newAssignment
-    }))
-  }, [])
+    // Les assignations sont gérées par useGridState
+    gridState.refreshData()
+  }, [gridState])
 
-  // Charger toutes les tricoteuses une seule fois
-  const loadTricoteuses = useCallback(async () => {
-    try {
-      setTricoteusesLoading(true)
-      const data = await ApiService.tricoteuses.getTricoteuses()
-      setTricoteuses(data || [])
-    } catch (error) {
-      console.error('Erreur chargement tricoteuses:', error)
-      setTricoteuses([])
-    } finally {
-      setTricoteusesLoading(false)
-    }
-  }, [])
-
-  // Charger la date limite depuis le service
-  const loadDateLimite = useCallback(async () => {
-    // Éviter les calculs répétés
-    if (calculEffectue.current) { setDateLimiteLoading(false); return }
-    setDateLimiteLoading(true)
-    
-    try {
-      // Récupérer la configuration des délais et les jours fériés
-      const [configResponse, joursFeriesResponse] = await Promise.all([
-        delaiService.getDelai(),
-        delaiService.getJoursFeries()
-      ])
-      
-      if (configResponse.success && configResponse.data) {
-        // Date limite en BDD (logs retirés)
-        
-        const joursDelai = configResponse.data.joursDelai || 21
-        const joursOuvrables = configResponse.data.joursOuvrables || {
-          lundi: true, mardi: true, mercredi: true, jeudi: true, vendredi: true, samedi: false, dimanche: false
-        }
-        const joursFeries = joursFeriesResponse.success ? joursFeriesResponse.joursFeries : {}
-        
-        // Fonction pour vérifier si une date est un jour férié
-        const estJourFerie = (date) => {
-          const dateStr = date.toISOString().split('T')[0]
-          
-          // Vérifier d'abord dans les jours fériés chargés depuis l'API
-          if (joursFeries && joursFeries[dateStr]) {
-            return true
-          }
-          
-          // Si pas de jours fériés depuis l'API, utiliser les jours fériés par défaut
-          if (Object.keys(joursFeries || {}).length === 0) {
-            const anneeActuelle = date.getFullYear()
-            const joursFeriesDefaut = {
-              '1er janvier': `${anneeActuelle}-01-01`,
-              'Lundi de Pâques': `${anneeActuelle}-04-${anneeActuelle === 2025 ? '21' : anneeActuelle === 2024 ? '01' : '22'}`,
-              '1er mai': `${anneeActuelle}-05-01`,
-              '8 mai': `${anneeActuelle}-05-08`,
-              'Ascension': `${anneeActuelle}-05-${anneeActuelle === 2025 ? '29' : anneeActuelle === 2024 ? '09' : '30'}`,
-              'Lundi de Pentecôte': `${anneeActuelle}-06-${anneeActuelle === 2025 ? '09' : anneeActuelle === 2024 ? '17' : '10'}`,
-              '14 juillet': `${anneeActuelle}-07-14`,
-              '15 août': `${anneeActuelle}-08-15`,
-              '1er novembre': `${anneeActuelle}-11-01`,
-              '11 novembre': `${anneeActuelle}-11-11`,
-              '25 décembre': `${anneeActuelle}-12-25`
-            }
-            
-            // Vérifier si la date est dans les jours fériés par défaut
-            return Object.values(joursFeriesDefaut).includes(dateStr)
-          }
-          
-          return false
-        }
-        
-        // Calculer la date limite en remontant depuis aujourd'hui
-        const aujourdhui = new Date()
-        let dateLimite = new Date(aujourdhui)
-        let joursRetires = 0
-        
-        while (joursRetires < joursDelai) {
-          dateLimite.setDate(dateLimite.getDate() - 1)
-          
-          const jourSemaine = dateLimite.getDay()
-          const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
-          const dateStr = dateLimite.toISOString().split('T')[0]
-          
-          // Vérifier si c'est un jour ouvrable ET pas un jour férié
-          if (joursOuvrables[nomJour] && !estJourFerie(dateLimite)) {
-            joursRetires++
-          }
-        }
-        
-        const dateLimiteStr = dateLimite.toISOString().split('T')[0]
-        setDateLimite(dateLimiteStr)
-        
-        // Enregistrer la nouvelle date limite en BDD seulement si elle est différente
-        if (configResponse.data.dateLimite !== dateLimiteStr) {
-          try {
-            await delaiService.saveDelai({
-              ...configResponse.data,
-              dateLimite: dateLimiteStr,
-              derniereModification: new Date().toISOString()
-            })
-            // Date limite sauvegardée (log retiré)
-          } catch (saveError) {
-            console.error('Erreur lors de la sauvegarde de la date limite:', saveError)
-          }
-        }
-        
-        calculEffectue.current = true
-      } else {
-        console.log('⚠️ Pas de configuration de délai disponible')
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement de la date limite:', error)
-    } finally { setDateLimiteLoading(false) }
-  }, [])
-
-  useEffect(() => {
-    // Chargement séquentiel pour éviter la surcharge Render
-    const loadDataSequentially = async () => {
-      try {
-        await loadAssignments()
-        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
-        await loadTricoteuses()
-        await new Promise(resolve => setTimeout(resolve, 100)) // Délai entre requêtes
-        await loadDateLimite()
-      } catch (error) {
-        console.error('Erreur lors du chargement initial:', error)
-      }
-    }
-    
-    loadDataSequentially()
-  }, [loadAssignments, loadTricoteuses, loadDateLimite, productionType]) // Recharger quand on change d'onglet
+  // La date limite est maintenant gérée par useGridState
 
   // Écouter les mises à jour globales des tricoteuses pour recharger la liste sans refresh
   useEffect(() => {
-    const handler = () => loadTricoteuses()
+    const handler = () => gridState.refreshData()
     window.addEventListener('mc-tricoteuses-updated', handler)
     return () => window.removeEventListener('mc-tricoteuses-updated', handler)
-  }, [loadTricoteuses])
+  }, [gridState])
 
   // Re-trier immédiatement quand un article est marqué urgent
   useEffect(() => {
@@ -251,9 +98,9 @@ const SimpleFlexGrid = ({
     
     // Helper: déterminer si l'article est en retard par rapport à la date limite
     const isArticleEnRetard = (article) => {
-      if (!dateLimite || !article.orderDate) return false
+      if (!gridState.dateLimite || !article.orderDate) return false
       const dateCommande = new Date(article.orderDate)
-      const dateLimiteObj = new Date(dateLimite)
+      const dateLimiteObj = new Date(gridState.dateLimite)
       const dc = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
       const dl = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
       return dc <= dl
@@ -284,8 +131,8 @@ const SimpleFlexGrid = ({
             isHighlighted={isHighlighted}
             searchTerm={searchTerm}
             productionType={productionType} // Passer le type de production
-            assignment={assignments[article.line_item_id]} // Passer l'assignation directement
-            tricoteusesProp={tricoteuses}
+            assignment={gridState.assignments[article.line_item_id]} // Passer l'assignation directement
+            tricoteusesProp={gridState.tricoteuses}
             onAssignmentUpdate={(articleId, assignment) => updateAssignment(articleId, assignment)} // Fonction pour rafraîchir les assignations
             isEnRetard={isArticleEnRetard(article)}
           />
@@ -297,9 +144,9 @@ const SimpleFlexGrid = ({
         (subset[index + 1] && subset[index + 1].orderDate !== article.orderDate)
       
       // Si c'est le dernier article de la date limite, ajouter un trait de séparation
-      if (isLastArticleOfDateLimite && article.orderDate && dateLimite) {
+      if (isLastArticleOfDateLimite && article.orderDate && gridState.dateLimite) {
         const dateCommande = new Date(article.orderDate)
-        const dateLimiteObj = new Date(dateLimite)
+        const dateLimiteObj = new Date(gridState.dateLimite)
         
         // Vérifier si la commande est de la date limite calculée
         if (dateCommande.toDateString() === dateLimiteObj.toDateString()) {
@@ -334,14 +181,15 @@ const SimpleFlexGrid = ({
     openOverlayCardId, 
     searchTerm,
     productionType, // Ajouter aux dépendances
-    assignments,
+    gridState.assignments,
     urgentTick,
-    tricoteuses,
-    prioritizeUrgent
+    gridState.tricoteuses,
+    prioritizeUrgent,
+    gridState.dateLimite
   ])
 
   // Afficher le loading pendant les changements d'onglets
-  if (isLoading || assignmentsLoading || tricoteusesLoading || dateLimiteLoading) {
+  if (isLoading || gridState.assignmentsLoading || gridState.tricoteusesLoading || gridState.dateLimiteLoading) {
     return <LoadingSpinner />
   }
 
