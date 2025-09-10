@@ -117,7 +117,16 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
   // Supprimer une assignation
   const removeAssignment = useCallback(async () => {
     try {
-      await ApiService.assignments.deleteAssignment(uniqueAssignmentId)
+      // Utiliser l'ID de l'assignation existante, pas l'ID de l'article
+      console.log('🔍 localAssignment pour suppression:', localAssignment)
+      const assignmentId = localAssignment?.id || localAssignment?._id
+      console.log('🔍 ID d\'assignation à supprimer:', assignmentId)
+      if (!assignmentId) {
+        console.error('Aucun ID d\'assignation trouvé pour la suppression')
+        return
+      }
+      
+      await ApiService.assignments.deleteAssignment(assignmentId)
       
       // Mettre le statut à "a_faire" en BDD
       try {
@@ -128,13 +137,16 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       
       setLocalAssignment(null)
       if (onAssignmentUpdate) {
-        onAssignmentUpdate()
+        // Passer null pour supprimer l'assignation
+        onAssignmentUpdate(article.line_item_id, null)
       }
+      // Déclencher un événement pour forcer le re-render
+      window.dispatchEvent(new Event('mc-assignment-updated'))
       closeTricoteuseModal()
     } catch (error) {
       console.error('Erreur suppression assignation:', error)
     }
-  }, [uniqueAssignmentId, article?.orderId, article?.line_item_id, onAssignmentUpdate, closeTricoteuseModal])
+  }, [localAssignment, article?.orderId, article?.line_item_id, onAssignmentUpdate, closeTricoteuseModal])
 
   // Assigner un article à une tricoteuse
   const assignArticle = useCallback(async (tricoteuse) => {

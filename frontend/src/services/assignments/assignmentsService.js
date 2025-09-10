@@ -14,9 +14,14 @@ export const AssignmentsService = {
    */
   async getAssignments() {
     try {
+      // Vider le cache pour forcer le rechargement
+      HttpCacheService.delete('assignments')
+      
       // Vérifier le cache d'abord
       const cached = HttpCacheService.get('assignments')
       if (cached) {
+        // Debug: vérifier le cache
+        console.log('🔍 Cache assignations:', cached.map(a => ({ article_id: a.article_id, _id: a._id })))
         return cached
       }
 
@@ -26,10 +31,13 @@ export const AssignmentsService = {
       }
       
       const data = await response.json()
-      const assignments = data.assignments || []
+      const assignments = data.data || data.assignments || []
       
       // Mettre en cache
       HttpCacheService.set('assignments', assignments)
+      
+      // Debug: vérifier que l'_id est présent
+      console.log('🔍 Assignations chargées avec _id:', assignments.map(a => ({ article_id: a.article_id, _id: a._id })))
       
       return assignments
     } catch (error) {

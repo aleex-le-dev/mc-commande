@@ -24,10 +24,14 @@ export const useGridState = () => {
         assignmentsMap[assignment.article_id] = assignment
       })
       // Fusionner avec les assignations existantes pour préserver les modifications locales
-      setAssignments(prevAssignments => ({
-        ...prevAssignments,
-        ...assignmentsMap
-      }))
+      setAssignments(prevAssignments => {
+        const merged = {
+          ...prevAssignments,
+          ...assignmentsMap
+        }
+        console.log('🔍 Assignations chargées:', Object.keys(merged))
+        return merged
+      })
     } catch (error) {
       console.error('Erreur chargement assignations:', error)
     } finally {
@@ -71,7 +75,7 @@ export const useGridState = () => {
       loadTricoteuses(),
       loadDateLimite()
     ])
-  }, [loadAssignments, loadTricoteuses, loadDateLimite])
+  }, [])
 
   // Charger au montage
   useEffect(() => {

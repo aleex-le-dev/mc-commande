@@ -351,9 +351,9 @@ const ArticleCard = forwardRef(({
                localAssignment.status === 'termine' ? 'border-status-termine' :
                'border-status-retard') :
             // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
-            (article.status === 'en_cours' ? 'border-status-en-cours' :
-             article.status === 'en_pause' ? 'border-status-en-pause' :
-             article.status === 'termine' ? 'border-status-termine' :
+            (article.globalStatus === 'en_cours' ? 'border-status-en-cours' :
+             article.globalStatus === 'en_pause' ? 'border-status-en-pause' :
+             article.globalStatus === 'termine' ? 'border-status-termine' :
              doitAvoirTraitRouge ? 'border-status-retard' : '')
           )
       }`}

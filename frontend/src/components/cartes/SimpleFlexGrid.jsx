@@ -57,6 +57,17 @@ const SimpleFlexGrid = ({
         console.log('🔍 Assignation supprimée:', updated)
         return updated
       })
+      
+      // Mettre à jour le statut de l'article localement
+      setArticles(prev => prev.map(article => {
+        if (article.line_item_id === articleId) {
+          return {
+            ...article,
+            globalStatus: 'a_faire'
+          }
+        }
+        return article
+      }))
     }
     
     // Forcer le re-render des cartes
