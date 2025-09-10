@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react-swc'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    // Forcer la re-pré-optimisation des dépendances
+    force: true,
+    include: ['date-fns', 'date-fns/locale']
+  },
   server: {
     // Forcer HTTP/1.1 pour éviter les erreurs HTTP/2
     https: false,
