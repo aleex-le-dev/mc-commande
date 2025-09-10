@@ -43,7 +43,7 @@ const TerminePageRefactored = () => {
   useEffect(() => {
     const loadDelaiConfig = async () => {
       try {
-        const config = await delaiService.getDelaiConfig()
+        const config = await delaiService.getDelai()
         setDelaiConfig(config)
         setDateLimiteStr(config?.dateLimite)
       } catch (error) {
