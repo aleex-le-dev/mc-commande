@@ -39,7 +39,6 @@ const SimpleFlexGrid = ({
   
   // Fonction de mise à jour ciblée pour éviter les re-renders complets
   const updateAssignment = useCallback((articleId, newAssignment) => {
-    console.log('🔍 updateAssignment appelée:', articleId, newAssignment)
     // Mettre à jour l'état local immédiatement
     if (newAssignment) {
       gridState.setAssignments(prev => {
@@ -47,7 +46,6 @@ const SimpleFlexGrid = ({
           ...prev,
           [articleId]: newAssignment
         }
-        console.log('🔍 Assignations mises à jour:', updated)
         return updated
       })
       
@@ -57,7 +55,6 @@ const SimpleFlexGrid = ({
       gridState.setAssignments(prev => {
         const updated = { ...prev }
         delete updated[articleId]
-        console.log('🔍 Assignation supprimée:', updated)
         return updated
       })
       
@@ -173,7 +170,6 @@ const SimpleFlexGrid = ({
       )
       
       // Debug: vérifier les IDs
-      console.log('🔍 Article ID:', article.line_item_id, 'Assignations disponibles:', Object.keys(gridState.assignments))
       
       // Ajouter la carte
       cards.push(

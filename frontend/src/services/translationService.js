@@ -334,7 +334,6 @@ class TranslationService {
     if (!text || typeof text !== 'string') return text
     
     try {
-      console.log('🔍 Traduction demandée pour:', text)
       
       // Détecter si le texte est déjà en français (plus strict)
       const frenchPattern = /[àáâãäåçèéêëìíîïòóôõöùúûüýÿœæ]/i
@@ -369,7 +368,6 @@ class TranslationService {
           readyToShipPart = readyToShipMatch[0]
           // Remplacer temporairement par un marqueur unique
           processedText = text.replace(readyToShipMatch[0], 'READY_TOTO_SHIP_PLACEHOLDER_SPECIAL')
-          console.log('🔍 Marqueur placé:', processedText)
         }
       }
 
@@ -380,7 +378,6 @@ class TranslationService {
         if (match) {
           laGateePart = match[0]
           processedText = processedText.replace(match[0], 'BRAND_LA_GATEE_PLACEHOLDER')
-          console.log('🔍 Marqueur LA GÂTÉE placé:', processedText)
         }
       }
       

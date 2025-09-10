@@ -36,17 +36,6 @@ const OrderGrid = ({
     const totalRows = Math.ceil(filteredArticles.length / columnCount)
     const totalHeight = totalRows * rowHeight + 100 // Hauteur calculée + marge
     
-    // Logs détaillés pour diagnostiquer le problème
-    console.log('🔍 === DIAGNOSTIC ORDERGRID ===')
-    console.log('📊 Articles reçus:', filteredArticles.length)
-    console.log('📱 Largeur écran:', window.innerWidth)
-    console.log('📏 Largeur disponible:', availableWidth)
-    console.log('🏗️ Colonnes:', columnCount)
-    console.log('📏 Largeur colonne:', columnWidth)
-    console.log('📏 Hauteur ligne:', rowHeight)
-    console.log('📊 Lignes totales:', totalRows)
-    console.log('📏 Hauteur totale calculée:', totalHeight)
-    console.log('🔍 === FIN DIAGNOSTIC ===')
     
     return (
       <Grid

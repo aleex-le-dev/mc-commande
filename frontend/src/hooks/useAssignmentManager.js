@@ -21,7 +21,6 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
 
   // Synchroniser localAssignment avec assignment
   useEffect(() => {
-    console.log('🔍 Synchronisation assignment -> localAssignment:', assignment)
     if (assignment != null) {
       setLocalAssignment(assignment)
     } else {
@@ -178,16 +177,13 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
         tricoteuse_name: tricoteuse.firstName 
       }
       
-      console.log('🔍 Assignation créée:', enrichedAssignment)
       setLocalAssignment(enrichedAssignment)
       if (onAssignmentUpdate) { 
-        console.log('🔍 Mise à jour assignation:', uniqueAssignmentId, enrichedAssignment)
         onAssignmentUpdate(uniqueAssignmentId, enrichedAssignment) 
       }
       closeTricoteuseModal()
       
       // Forcer la mise à jour immédiate de l'interface
-      console.log('🔍 Déclenchement événement mc-assignment-updated')
       window.dispatchEvent(new Event('mc-assignment-updated'))
       
       // Alternative: forcer le re-render via un timeout

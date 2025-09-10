@@ -384,7 +384,6 @@ export const ImageOptimizationService = {
     if (!articles || articles.length === 0) return
 
     console.log(`🚀 Préchargement agressif pour ${articles.length} articles`)
-    console.log(`🔍 Premier article:`, articles[0])
     
     const imageUrls = []
     articles.forEach((article, index) => {
@@ -425,7 +424,6 @@ export const ImageOptimizationService = {
       }
     })
     
-    console.log(`📊 Total URLs générées: ${imageUrls.length}`)
 
     if (imageUrls.length > 0) {
       try {
@@ -458,7 +456,6 @@ export const ImageOptimizationService = {
           
           // Afficher le cache après chaque lot
           const stats = ImageOptimizationService.getCacheStats()
-          console.log(`📊 Cache après lot ${i + 1}: ${stats.cacheSize} images`)
           
           // Petite pause entre les lots pour éviter la surcharge
           if (i < batches.length - 1) {
@@ -470,7 +467,6 @@ export const ImageOptimizationService = {
         
         // Afficher les stats finales du cache
         const finalStats = ImageOptimizationService.getCacheStats()
-        console.log(`📊 Cache final: ${finalStats.cacheSize} images en mémoire, ${finalStats.httpCacheSize} en HTTP`)
       } catch (error) {
         console.warn('Erreur préchargement agressif:', error)
       }

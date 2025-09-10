@@ -29,7 +29,6 @@ export const useGridState = () => {
           ...prevAssignments,
           ...assignmentsMap
         }
-        console.log('🔍 Assignations chargées:', Object.keys(merged))
         return merged
       })
     } catch (error) {

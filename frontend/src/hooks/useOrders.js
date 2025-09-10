@@ -58,7 +58,6 @@ export const useOrders = (options = {}) => {
       setData(result)
       logger.service.success('Chargement commandes')
       if (import.meta.env.DEV) {
-        console.log('🔍 Structure des données reçues:', result)
       }
     } catch (err) {
       logger.service.error('Chargement commandes', err)

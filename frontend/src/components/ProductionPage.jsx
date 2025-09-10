@@ -42,13 +42,6 @@ const ProductionPage = ({ productionType, title }) => {
       // Utiliser le service global pour le préchargement avec le type de page
       globalPreloadService.preloadPageImages(articles, productionType)
       
-      // Debug: Afficher les stats du cache après 2 secondes (seulement en dev)
-      if (import.meta.env.DEV) {
-        setTimeout(() => {
-          const stats = globalPreloadService.getStats()
-          console.log(`📊 Service stats:`, stats)
-        }, 2000)
-      }
     }
   }, [articles, productionType])
   
