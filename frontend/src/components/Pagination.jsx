@@ -54,9 +54,7 @@ const Pagination = ({
   const startItem = (currentPage - 1) * itemsPerPage + 1
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
-  // Debug: Afficher la pagination même avec 1 page pour le débogage
   if (totalPages <= 1) {
-    console.log('🔍 Pagination cachée - totalPages:', totalPages, 'totalItems:', totalItems)
     return null
   }
 

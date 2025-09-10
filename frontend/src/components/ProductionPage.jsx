@@ -34,17 +34,6 @@ const ProductionPage = ({ productionType, title }) => {
     showUrgentOnly
   })
 
-  // Debug pagination (temporaire)
-  if (import.meta.env.DEV) {
-    console.log('🔍 ProductionPage - Pagination data:', {
-      currentPage,
-      itemsPerPage,
-      pagination,
-      articlesCount: filteredArticles?.length,
-      totalPages: pagination?.totalPages,
-      total: pagination?.total
-    })
-  }
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
@@ -98,7 +87,7 @@ const ProductionPage = ({ productionType, title }) => {
       <div className="mb-6">
         <OrderHeader
           selectedType={productionType}
-          filteredArticlesCount={filteredArticles.length}
+          filteredArticlesCount={pagination?.total || filteredArticles.length}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onGoToEnd={() => {
