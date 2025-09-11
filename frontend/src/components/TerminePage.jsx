@@ -55,7 +55,7 @@ const TerminePage = () => {
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Terminé</span>
         </div>
-        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
+        <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
           {readyOrders.map(({ orderNumber, order, total }) => (
             <div key={orderNumber} className="rounded-xl border border-green-200 bg-green-50 p-1.5 shadow-sm">
               <div className="flex items-center justify-between mb-1">
@@ -85,7 +85,7 @@ const TerminePage = () => {
           <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes en cours</h2>
           <p className="text-[11px] text-gray-500 leading-tight">{inProgressOrders.length} commande(s)</p>
         </div>
-        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
+        <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
           {inProgressOrders.map(({ orderNumber, order, articles }) => {
             const total = articles.length
             const done = articles.filter(a => a.status === 'termine').length
@@ -133,7 +133,7 @@ const TerminePage = () => {
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">En pause</span>
         </div>
-        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
+        <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
           {pausedArticles.map(a => (
             <div key={a.article_id} className="rounded-3xl border-4 border-orange-400 overflow-hidden">
               <ArticleCard
@@ -146,6 +146,7 @@ const TerminePage = () => {
                 disableStatusBorder={true}
                 compact={true}
                 disableAssignmentModal={true}
+                clientOverlayCompact={true}
               />
             </div>
           ))}

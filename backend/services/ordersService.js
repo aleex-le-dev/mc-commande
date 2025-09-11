@@ -129,7 +129,28 @@ class OrdersService {
               }
             },
             { $addFields: { all_line_item_ids: { $map: { input: '$all_items', as: 'it', in: '$$it.line_item_id' } } } },
-            { $addFields: { order_number: { $ifNull: ['$order_number', '$order_id'] }, customer_name: { $ifNull: ['$customer_name', '$customer'] }, customer_email: { $ifNull: ['$customer_email', null] } } },
+            // Récupérer les données client complètes depuis orders_sync
+            {
+              $lookup: {
+                from: 'orders_sync',
+                localField: 'order_id',
+                foreignField: 'order_id',
+                as: 'order_data'
+              }
+            },
+            { $addFields: { 
+              order_data: { $arrayElemAt: ['$order_data', 0] },
+              order_number: { $ifNull: ['$order_number', '$order_id'] }
+            } },
+            { $addFields: { 
+              customer_name: { $ifNull: ['$order_data.customer_name', '$customer_name', '$customer'] },
+              customer_email: { $ifNull: ['$order_data.customer_email', '$customer_email', null] },
+              customer_phone: { $ifNull: ['$order_data.customer_phone', null] },
+              customer_address: { $ifNull: ['$order_data.customer_address', null] },
+              customer_note: { $ifNull: ['$order_data.customer_note', '$customer_note', null] },
+              shipping_method: { $ifNull: ['$order_data.shipping_method_title', '$order_data.shipping_method', null] },
+              shipping_carrier: { $ifNull: ['$order_data.shipping_carrier', null] }
+            } },
             { $addFields: { all_line_item_ids: { $sortArray: { input: '$all_line_item_ids', sortBy: 1 } } } },
             { $project: { all_items: 0 } },
             { $sort: sort },
@@ -220,11 +241,28 @@ class OrdersService {
           items: { $push: '$$ROOT' }
         }
       },
+      // Récupérer les données client complètes depuis orders_sync
+      {
+        $lookup: {
+          from: 'orders_sync',
+          localField: 'order_id',
+          foreignField: 'order_id',
+          as: 'order_data'
+        }
+      },
+      { $addFields: { 
+        order_data: { $arrayElemAt: ['$order_data', 0] },
+        order_number: { $ifNull: ['$order_number', '$order_id'] }
+      } },
       {
         $addFields: {
-          order_number: { $ifNull: ['$order_number', '$order_id'] },
-          customer_name: { $ifNull: ['$customer_name', '$customer'] },
-          customer_email: { $ifNull: ['$customer_email', null] }
+          customer_name: { $ifNull: ['$order_data.customer_name', '$customer_name', '$customer'] },
+          customer_email: { $ifNull: ['$order_data.customer_email', '$customer_email', null] },
+          customer_phone: { $ifNull: ['$order_data.customer_phone', null] },
+          customer_address: { $ifNull: ['$order_data.customer_address', null] },
+          customer_note: { $ifNull: ['$order_data.customer_note', '$customer_note', null] },
+          shipping_method: { $ifNull: ['$order_data.shipping_method_title', '$order_data.shipping_method', null] },
+          shipping_carrier: { $ifNull: ['$order_data.shipping_carrier', null] }
         }
       }
     ]).toArray()

@@ -44,7 +44,8 @@ const ArticleCard = forwardRef(({
   disableStatusBorder = false, // Désactive la bordure de statut (pour affichages spéciaux)
   hideInfoSection = false, // Masque la section d'infos (nom, options)
   compact = false, // Mode compact: hauteur réduite (utilisé en Terminé)
-  disableAssignmentModal = false // Désactive l'ouverture de la modal d'assignation
+  disableAssignmentModal = false, // Désactive l'ouverture de la modal d'assignation
+  clientOverlayCompact = false // Mode compact pour l'overlay client
 }, ref) => {
   const queryClient = useQueryClient()
   // Gestion du long-press mobile pour ouvrir le menu contextuel
@@ -166,10 +167,19 @@ const ArticleCard = forwardRef(({
     }
   }, [])
 
+  const [localOverlayOpen, setLocalOverlayOpen] = useState(false)
+  const actualOverlayOpen = isOverlayOpen !== undefined ? isOverlayOpen : localOverlayOpen
+
   const handleOverlayToggle = useCallback((e) => {
     e.stopPropagation()
-    onOverlayOpen && onOverlayOpen()
-  }, [onOverlayOpen])
+    if (isOverlayOpen !== undefined) {
+      // État géré en externe
+      onOverlayOpen && onOverlayOpen()
+    } else {
+      // État géré localement
+      setLocalOverlayOpen(prev => !prev)
+    }
+  }, [onOverlayOpen, isOverlayOpen])
 
   useEffect(() => {
     const handleMarkUrgent = async (ev) => {
@@ -433,7 +443,7 @@ const ArticleCard = forwardRef(({
         doitAvoirTraitRouge={doitAvoirTraitRouge}
         isUrgent={Boolean(article?.production_status?.urgent === true || localUrgent)}
         handleOverlayToggle={handleOverlayToggle}
-        isOverlayOpen={isOverlayOpen}
+        isOverlayOpen={actualOverlayOpen}
         compact={compact}
         
         
@@ -466,7 +476,7 @@ const ArticleCard = forwardRef(({
 
       {/* Overlay client affiché instantanément sans transition */}
       <ClientOverlay
-        isOpen={isOverlayOpen}
+        isOpen={actualOverlayOpen}
         onClose={handleOverlayToggle}
         article={article}
         searchTerm={searchTerm}
@@ -474,7 +484,7 @@ const ArticleCard = forwardRef(({
         onCopy={handleCopy}
         renderFormattedAddress={renderFormattedAddress}
         highlightText={highlightText}
-        compact={compact}
+        compact={clientOverlayCompact}
       />
 
       {/* Effet de brillance au survol */}
