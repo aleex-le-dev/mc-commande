@@ -99,4 +99,31 @@ router.get('/production/maille', async (req, res) => {
   }
 })
 
+// PUT /api/orders/:id/note - Mettre à jour la note d'une commande
+router.put('/:id/note', async (req, res) => {
+  try {
+    const { note } = req.body
+    const orderId = parseInt(req.params.id)
+    
+    // Accepter les notes vides (pour supprimer une note)
+    if (note === undefined || note === null) {
+      return res.status(400).json({ error: 'Note manquante' })
+    }
+    
+    if (typeof note !== 'string') {
+      return res.status(400).json({ error: 'Note doit être une chaîne de caractères' })
+    }
+    
+    const success = await ordersService.updateOrderNote(orderId, note.trim())
+    if (!success) {
+      return res.status(404).json({ error: 'Commande non trouvée' })
+    }
+    
+    res.json({ success: true, message: 'Note mise à jour avec succès' })
+  } catch (error) {
+    console.error('Erreur mise à jour note commande:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 module.exports = router

@@ -54,8 +54,8 @@ const BottomBar = ({
             }}
             aria-haspopup="dialog"
             aria-expanded={isNoteOpen}
-            aria-label={hasNote ? 'Voir la note' : 'Ajouter une note'}
-            title={hasNote ? 'Voir la note' : 'Ajouter une note'}
+            aria-label={hasNote ? 'Voir/Modifier la note' : 'Ajouter une note'}
+            title={hasNote ? 'Voir/Modifier la note' : 'Ajouter une note'}
           >
             {hasNote ? (
               <>

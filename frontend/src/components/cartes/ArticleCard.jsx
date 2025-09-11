@@ -84,6 +84,10 @@ const ArticleCard = forwardRef(({
     doitAvoirTraitRouge,
     estApresDateLimite,
     localUrgent, setLocalUrgent,
+    toggleNoteEditor,
+    saveNote,
+    closeNoteEditor,
+    openNoteEditor
   } = useArticleCard({ article, assignment, onAssignmentUpdate, tricoteusesProp, productionType, isEnRetard, isAfterDateLimite })
   
   // État pour forcer le re-render
@@ -278,9 +282,22 @@ const ArticleCard = forwardRef(({
     const handleEditNote = (ev) => {
       const { uniqueAssignmentId: targetId } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
-      window.dispatchEvent(new Event('mc-close-notes'))
-      setEditingNote(article.customerNote || '')
-      setIsNoteOpen(true)
+      console.log('handleEditNote appelé - setIsNoteOpen:', typeof setIsNoteOpen, 'openNoteEditor:', typeof openNoteEditor)
+      
+      // Utiliser openNoteEditor si disponible, sinon fallback manuel
+      if (typeof openNoteEditor === 'function') {
+        console.log('Utilisation de openNoteEditor')
+        openNoteEditor()
+      } else {
+        console.log('Fallback manuel - setIsNoteOpen:', typeof setIsNoteOpen)
+        window.dispatchEvent(new Event('mc-close-notes'))
+        setEditingNote(article.customerNote || article.production_status?.notes || '')
+        if (typeof setIsNoteOpen === 'function') {
+          setIsNoteOpen(true)
+        } else {
+          console.error('setIsNoteOpen n\'est pas une fonction:', setIsNoteOpen)
+        }
+      }
     }
     const handleOpenAssign = (ev) => {
       const { uniqueAssignmentId: targetId } = ev.detail || {}
@@ -437,12 +454,7 @@ const ArticleCard = forwardRef(({
         article={article}
         compact={compact}
         isNoteOpen={Boolean(isNoteOpen)}
-        onToggleNote={typeof setIsNoteOpen === 'function' ? () => {
-          try { window.dispatchEvent(new Event('mc-close-notes')) } catch {}
-          const preferredNote = article.customerNote || article.production_status?.notes || ''
-          try { setEditingNote(preferredNote) } catch {}
-          setIsNoteOpen((v) => !v)
-        } : undefined}
+        onToggleNote={toggleNoteEditor}
         noteBtnRef={noteBtnRef}
         hasNote={Boolean(article.customerNote || article.production_status?.notes)}
         displayNote={article.customerNote || article.production_status?.notes || ''}
@@ -474,19 +486,8 @@ const ArticleCard = forwardRef(({
         notePopoverRef={notePopoverRef}
                 initialValue={editingNote}
                 saving={isSavingNote}
-                onClose={() => { setIsNoteOpen(false); setEditingNote(article.customerNote || '') }}
-                onSave={async (content) => {
-                  try {
-                    setIsSavingNote(true)
-                    const ok = await ApiService.orders.updateOrderNote(article.orderId, content)
-                    if (ok) {
-                      article.customerNote = content
-                      setIsNoteOpen(false)
-                    }
-                  } finally {
-                    setIsSavingNote(false)
-                  }
-                }}
+                onClose={closeNoteEditor}
+                onSave={saveNote}
         isTranslated={Boolean(translatedData?.customerNote)}
       />
 

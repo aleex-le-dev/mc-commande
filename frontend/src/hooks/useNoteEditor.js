@@ -38,16 +38,22 @@ export const useNoteEditor = (article) => {
 
   // Ouvrir l'éditeur de note
   const openNoteEditor = useCallback(() => {
-    window.dispatchEvent(new Event('mc-close-notes'))
-    setEditingNote(article?.customerNote || '')
-    setIsNoteOpen(true)
-  }, [article?.customerNote])
+    console.log('openNoteEditor appelé - article:', article?.orderId, 'customerNote:', article?.customerNote)
+    try {
+      window.dispatchEvent(new Event('mc-close-notes'))
+      setEditingNote(article?.customerNote || article?.production_status?.notes || '')
+      setIsNoteOpen(true)
+      console.log('openNoteEditor terminé avec succès')
+    } catch (error) {
+      console.error('Erreur dans openNoteEditor:', error)
+    }
+  }, [article?.customerNote, article?.production_status?.notes])
 
   // Fermer l'éditeur de note
   const closeNoteEditor = useCallback(() => {
     setIsNoteOpen(false)
-    setEditingNote(article?.customerNote || '')
-  }, [article?.customerNote])
+    setEditingNote(article?.customerNote || article?.production_status?.notes || '')
+  }, [article?.customerNote, article?.production_status?.notes])
 
   // Sauvegarder la note
   const saveNote = useCallback(async (content) => {
@@ -79,6 +85,7 @@ export const useNoteEditor = (article) => {
 
   return {
     isNoteOpen,
+    setIsNoteOpen,
     editingNote,
     setEditingNote,
     isSavingNote,

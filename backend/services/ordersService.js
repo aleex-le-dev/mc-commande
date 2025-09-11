@@ -266,6 +266,28 @@ class OrdersService {
       return acc
     }, {})
   }
+
+  async updateOrderNote(orderId, note) {
+    try {
+      const items = db.getCollection('order_items')
+      
+      // Mettre à jour tous les order_items de cette commande avec la note
+      const result = await items.updateMany(
+        { order_id: orderId },
+        { 
+          $set: { 
+            customer_note: note,
+            updated_at: new Date()
+          }
+        }
+      )
+      
+      return result.modifiedCount > 0
+    } catch (error) {
+      console.error('Erreur mise à jour note commande:', error)
+      throw error
+    }
+  }
 }
 
 module.exports = new OrdersService()
