@@ -26,15 +26,16 @@ export const useOrders = (options = {}) => {
       totalPages: 1,
       hasNext: false,
       hasPrev: false
-    }
+    },
+    stats: null
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isFetching, setIsFetching] = useState(false)
 
-  const fetchOrders = useCallback(async () => {
-    // Éviter les requêtes multiples
-    if (isFetching) {
+  const fetchOrders = useCallback(async (force = false) => {
+    // Éviter les requêtes multiples sauf si forcé
+    if (isFetching && !force) {
       return
     }
     
@@ -83,6 +84,19 @@ export const useOrders = (options = {}) => {
     
     return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [page, limit, status, search, sortBy, sortOrder, productionType])
+
+  // Rafraîchir les filtres et compteurs après changement de statut/assignation
+  useEffect(() => {
+    const onDataUpdated = () => fetchOrders(true)
+    window.addEventListener('mc-assignment-updated', onDataUpdated)
+    window.addEventListener('mc-refresh-data', onDataUpdated)
+    window.addEventListener('mc-data-updated', onDataUpdated)
+    return () => {
+      window.removeEventListener('mc-assignment-updated', onDataUpdated)
+      window.removeEventListener('mc-refresh-data', onDataUpdated)
+      window.removeEventListener('mc-data-updated', onDataUpdated)
+    }
+  }, [fetchOrders])
 
   const refetch = useCallback(() => {
     fetchOrders()

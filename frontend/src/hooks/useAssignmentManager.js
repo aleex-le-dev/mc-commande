@@ -240,6 +240,7 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       
       // Forcer la mise à jour immédiate de l'interface
       window.dispatchEvent(new Event('mc-assignment-updated'))
+      window.dispatchEvent(new Event('mc-data-updated'))
     } catch (error) {
       console.error('Erreur changement statut:', error)
       throw error

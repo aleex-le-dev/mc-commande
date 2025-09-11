@@ -34,6 +34,7 @@ export const useArticles = (options = {}) => {
   const { 
     orders, 
     pagination, 
+    stats: serverStats,
     loading: ordersLoading, 
     error: ordersError 
   } = useOrders({
@@ -101,6 +102,17 @@ export const useArticles = (options = {}) => {
 
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {
+    // Utiliser d'abord les stats serveur (sur l'ensemble), fallback sur calcul local
+    if (serverStats && typeof serverStats === 'object') {
+      return {
+        total: serverStats.total ?? articles.length,
+        a_faire: serverStats.a_faire ?? 0,
+        en_cours: serverStats.en_cours ?? 0,
+        en_pause: serverStats.en_pause ?? 0,
+        termine: serverStats.termine ?? 0,
+        urgent: serverStats.urgent ?? 0
+      }
+    }
     return calculateArticleStats(articles)
   }, [articles])
 

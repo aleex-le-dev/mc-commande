@@ -28,48 +28,68 @@ class OrdersService {
     const page = parseInt(filters.page) || 1
     const skip = (page - 1) * limit
 
-    const pipeline = [
+    // Étapes communes au niveau item (avant groupement par commande)
+    const baseItemStages = [
       { $match: match },
-      // Joindre les statuts de production si on filtre par type (couture/maille)
+      {
+        $lookup: {
+          from: 'production_status',
+          let: { oid: '$order_id', lid: '$line_item_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [ { $eq: ['$order_id', '$$oid'] }, { $eq: ['$line_item_id', '$$lid'] } ] } } },
+            { $project: { status: 1, production_type: 1, urgent: 1, updated_at: 1 } }
+          ],
+          as: 'ps'
+        }
+      },
+      { $addFields: { production_status: { $arrayElemAt: ['$ps', 0] } } },
+      { $project: { ps: 0 } },
       ...(filters.productionType && ['couture','maille'].includes(String(filters.productionType))
-        ? [
-            {
-              $lookup: {
-                from: 'production_status',
-                let: { oid: '$order_id', lid: '$line_item_id' },
-                pipeline: [
-                  { $match: { $expr: { $and: [ { $eq: ['$order_id', '$$oid'] }, { $eq: ['$line_item_id', '$$lid'] } ] } } },
-                  { $project: { production_type: 1 } }
-                ],
-                as: 'ps'
-              }
-            },
-            { $match: { ps: { $elemMatch: { production_type: String(filters.productionType) } } } }
-          ]
-        : []),
-      {
-        $group: {
-          _id: '$order_id',
-          order_id: { $first: '$order_id' },
-          order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
-          status: { $first: '$status' },
-          items_count: { $sum: 1 },
-          items: { $push: '$$ROOT' }
-        }
-      },
-      {
-        // Normaliser les champs attendus par le frontend
-        $addFields: {
-          order_number: { $ifNull: ['$order_number', '$order_id'] },
-          customer_name: { $ifNull: ['$customer_name', '$customer'] },
-          customer_email: { $ifNull: ['$customer_email', null] }
-        }
-      },
-      { $sort: sort },
+        ? [ { $match: { 'production_status.production_type': String(filters.productionType) } } ]
+        : [])
+    ]
+
+    const pipeline = [
       {
         $facet: {
-          data: [ { $skip: skip }, { $limit: limit } ],
-          totalCount: [ { $count: 'count' } ]
+          // Données paginées par commande
+          data: [
+            ...baseItemStages,
+            {
+              $group: {
+                _id: '$order_id',
+                order_id: { $first: '$order_id' },
+                order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
+                status: { $first: '$status' },
+                items_count: { $sum: 1 },
+                items: { $push: '$$ROOT' }
+              }
+            },
+            { $addFields: { order_number: { $ifNull: ['$order_number', '$order_id'] }, customer_name: { $ifNull: ['$customer_name', '$customer'] }, customer_email: { $ifNull: ['$customer_email', null] } } },
+            { $sort: sort },
+            { $skip: skip },
+            { $limit: limit }
+          ],
+          // Total de commandes (pour la pagination)
+          totalCount: [
+            ...baseItemStages,
+            { $group: { _id: '$order_id' } },
+            { $count: 'count' }
+          ],
+          // Statistiques globales par statut (sur tous les items)
+          statusCounts: [
+            ...baseItemStages,
+            { $group: { _id: '$production_status.status', count: { $sum: 1 } } }
+          ],
+          urgentCount: [
+            ...baseItemStages,
+            { $match: { 'production_status.urgent': true } },
+            { $count: 'count' }
+          ],
+          totalItems: [
+            ...baseItemStages,
+            { $count: 'count' }
+          ]
         }
       }
     ]
@@ -77,9 +97,19 @@ class OrdersService {
     const agg = await items.aggregate(pipeline).toArray()
     const data = agg[0]?.data || []
     const total = (agg[0]?.totalCount?.[0]?.count) || 0
+    const statusCountsArr = agg[0]?.statusCounts || []
+    const urgentCount = (agg[0]?.urgentCount?.[0]?.count) || 0
+    const totalItems = (agg[0]?.totalItems?.[0]?.count) || 0
+
+    const stats = statusCountsArr.reduce((acc, s) => {
+      const key = s._id || 'a_faire'
+      acc[key] = s.count
+      return acc
+    }, { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0, urgent: urgentCount, total: totalItems })
 
     return {
       orders: data,
+      stats,
       pagination: {
         page,
         limit,

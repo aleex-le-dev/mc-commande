@@ -6,7 +6,7 @@ const router = express.Router()
 router.get('/', async (req, res) => {
   try {
     const result = await ordersService.getOrders(req.query)
-    res.json({ success: true, orders: result.orders, pagination: result.pagination })
+    res.json({ success: true, orders: result.orders, pagination: result.pagination, stats: result.stats })
   } catch (error) {
     console.error('Erreur récupération commandes:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
@@ -81,7 +81,7 @@ router.get('/stats', async (req, res) => {
 router.get('/production/couture', async (req, res) => {
   try {
     const result = await ordersService.getOrders({ ...req.query, productionType: 'couture' })
-    res.json({ success: true, orders: result.orders, pagination: result.pagination })
+    res.json({ success: true, orders: result.orders, pagination: result.pagination, stats: result.stats })
   } catch (error) {
     console.error('Erreur récupération commandes couture:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
@@ -92,7 +92,7 @@ router.get('/production/couture', async (req, res) => {
 router.get('/production/maille', async (req, res) => {
   try {
     const result = await ordersService.getOrders({ ...req.query, productionType: 'maille' })
-    res.json({ success: true, orders: result.orders, pagination: result.pagination })
+    res.json({ success: true, orders: result.orders, pagination: result.pagination, stats: result.stats })
   } catch (error) {
     console.error('Erreur récupération commandes maille:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
