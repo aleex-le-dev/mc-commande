@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { ApiService } from '../../services/apiService'
-import imageService from '../../services/imageService'
 
 const StatusTab = () => {
   const [status, setStatus] = useState('')
@@ -82,7 +81,7 @@ const StatusTab = () => {
       const imageResults = []
       
       for (const productId of testProductIds) {
-        const imageUrl = imageService.getImage(productId)
+        const imageUrl = `https://maisoncleo.fr/wp-content/uploads/products/${productId}.jpg`
         const isPlaceholder = imageUrl.startsWith('data:image/svg+xml')
         
         imageResults.push({

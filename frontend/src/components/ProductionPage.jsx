@@ -4,8 +4,6 @@ import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import LoadingSpinner from './LoadingSpinner'
 import Pagination from './Pagination'
 import { useArticles } from '../hooks/useArticles'
-import ImageOptimizationService from '../services/imageOptimizationService'
-import globalPreloadService from '../services/globalPreloadService'
 
 /**
  * Page générique pour Maille/Couture
@@ -36,13 +34,6 @@ const ProductionPage = ({ productionType, title }) => {
     showUrgentOnly
   })
 
-  // Précharger agressivement toutes les images de la page
-  useEffect(() => {
-    if (productionType === 'fourniture') return
-    if (articles && articles.length > 0) {
-      globalPreloadService.preloadPageImages(articles, productionType)
-    }
-  }, [articles, productionType])
   
   // Gérer l'ouverture des overlays
   const [openOverlayCardId, setOpenOverlayCardId] = useState(null)
@@ -94,7 +85,7 @@ const ProductionPage = ({ productionType, title }) => {
       <div className="mb-6">
         <OrderHeader
           selectedType={productionType}
-          filteredArticlesCount={pagination?.total || filteredArticles.length}
+          filteredArticlesCount={stats.total}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onGoToEnd={() => {
@@ -110,7 +101,7 @@ const ProductionPage = ({ productionType, title }) => {
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           
           <button
-            onClick={() => { setSelectedStatus('all'); setShowUrgentOnly(false); setSearchTerm(''); setOpenOverlayCardId(null) }}
+            onClick={() => { setSelectedStatus('all'); setShowUrgentOnly(false); setOpenOverlayCardId(null) }}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedStatus === 'all' 
                 ? 'bg-blue-100 border-blue-300 text-blue-800' 

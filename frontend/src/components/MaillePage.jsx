@@ -1,6 +1,5 @@
 import React from 'react'
 import ProductionPage from './ProductionPage'
-import SmartImageLoader from './SmartImageLoader'
 
 /**
  * Page Maille - Affiche tous les articles de type "maille"
@@ -11,10 +10,6 @@ const MaillePage = () => {
     <>
       <ProductionPage productionType="maille" title="Maille" />
       {/* Temporairement désactivé - erreurs 502 sur Render */}
-      {/* <SmartImageLoader 
-        pageName="maille" 
-        priority={false} 
-      /> */}
     </>
   )
 }

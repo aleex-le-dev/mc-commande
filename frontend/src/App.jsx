@@ -22,7 +22,6 @@ import PerformanceOptimizer from './components/PerformanceOptimizer'
 
 // Scripts de test supprimés - ils ne doivent pas se charger automatiquement
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
-import BackgroundImagePreloader from './components/BackgroundImagePreloader'
 import './App.css'
 import { useRouteSync, navigateToTab } from './router'
 
@@ -381,8 +380,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <PerformanceOptimizer enablePreloading={true}>
         <SlowDeviceOptimizer>
-          {/* Temporairement désactivé - erreurs 502 sur Render */}
-          {/* <BackgroundImagePreloader currentPage={activeTab} /> */}
           <CardStyles />
           <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
         {/* Navigation principale */}

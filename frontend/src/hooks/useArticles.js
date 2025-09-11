@@ -31,6 +31,7 @@ export const useArticles = (options = {}) => {
   } = options
 
   // Hooks séparés pour chaque responsabilité
+  // Récupérer TOUS les articles sans filtrage côté serveur
   const { 
     orders, 
     pagination, 
@@ -38,13 +39,13 @@ export const useArticles = (options = {}) => {
     loading: ordersLoading, 
     error: ordersError 
   } = useOrders({
-    page,
-    limit,
-    status,
-    search,
+    page: 1,
+    limit: 5000, // Récupérer beaucoup d'articles
+    status: 'all', // Pas de filtre côté serveur
+    search: '', // Pas de filtre côté serveur
     sortBy,
     sortOrder,
-    productionType // Ajouter le type de production dans la requête
+    productionType: 'all' // Pas de filtre côté serveur
   })
   
   const { 
@@ -121,31 +122,33 @@ export const useArticles = (options = {}) => {
   }, [orders])
 
   // Filtrage des articles (responsabilité unique)
-  // Note: Le filtrage par productionType est maintenant géré côté serveur
   const filteredArticles = useMemo(() => {
-    return applyFilters(articles, {
-      productionType: 'all', // Désactivé car géré côté serveur
-      status: 'all', // Désactivé car géré côté serveur
-      searchTerm: '', // Désactivé car géré côté serveur
+    console.log('Filtrage articles:', { productionType, status, search, showUrgentOnly, articlesCount: articles.length })
+    const filtered = applyFilters(articles, {
+      productionType,
+      status,
+      searchTerm: search,
       showUrgentOnly
     })
-  }, [articles, showUrgentOnly])
+    console.log('Articles filtrés:', filtered.length)
+    return filtered
+  }, [articles, productionType, status, search, showUrgentOnly])
 
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {
-    // Utiliser d'abord les stats serveur (sur l'ensemble), fallback sur calcul local
-    if (serverStats && typeof serverStats === 'object') {
-      return {
-        total: serverStats.total ?? articles.length,
-        a_faire: serverStats.a_faire ?? 0,
-        en_cours: serverStats.en_cours ?? 0,
-        en_pause: serverStats.en_pause ?? 0,
-        termine: serverStats.termine ?? 0,
-        urgent: serverStats.urgent ?? 0
-      }
+    // Calculer les stats sur les articles du type de production pour TOUS les compteurs
+    const productionTypeArticles = productionType === 'all' ? articles : articles.filter(a => a.productionType === productionType)
+    const productionStats = calculateArticleStats(productionTypeArticles)
+    
+    return {
+      total: productionStats.total, // Total pour le type de production (maille/couture)
+      a_faire: productionStats.a_faire, // Toujours le total pour ce statut
+      en_cours: productionStats.en_cours, // Toujours le total pour ce statut
+      en_pause: productionStats.en_pause, // Toujours le total pour ce statut
+      termine: productionStats.termine, // Toujours le total pour ce statut
+      urgent: productionStats.urgent // Toujours le total pour ce statut
     }
-    return calculateArticleStats(articles)
-  }, [articles, serverStats])
+  }, [articles, productionType])
 
   // Articles groupés par commande (pour TerminePage)
   const groupedArticles = useMemo(() => {

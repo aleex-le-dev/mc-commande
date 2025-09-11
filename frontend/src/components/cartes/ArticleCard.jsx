@@ -2,18 +2,15 @@ import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'r
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import ImageLoader from './ImageLoader'
 import TopBadges from './TopBadges'
 import BottomBar from './BottomBar'
 import ClientOverlay from './ClientOverlay'
 import NotePopover from './NotePopover'
 import NoteExpander from './NoteExpander'
 import AssignModal from './AssignModal'
-import HeaderMedia from './HeaderMedia'
 import InfoSection from './InfoSection'
 import useArticleCard from './card/useArticleCard'
 import { highlightText, renderFormattedAddress } from '../../utils/textUtils.jsx'
-import imageService from '../../services/imageService'
 import { ApiService } from '../../services/apiService'
 import statusService from '../../services/statusService'
 // Icônes utilisées dans BottomBar uniquement; ArticleCard n'en a plus besoin
@@ -59,9 +56,6 @@ const ArticleCard = forwardRef(({
     isNoteOpen, setIsNoteOpen,
     editingNote, setEditingNote,
     isSavingNote, setIsSavingNote,
-    imageUrl, setImageUrl,
-    isImageLoading, setIsImageLoading,
-    isFromCache, setIsFromCache,
     showTricoteuseModal, openTricoteuseModal, closeTricoteuseModal,
     tricoteuses, isLoadingTricoteuses, isAssigning, setIsAssigning,
     localAssignment, setLocalAssignment,
@@ -72,8 +66,7 @@ const ArticleCard = forwardRef(({
     confettiPosition, setConfettiPosition,
     isRemoved, setIsRemoved,
     noteBtnRef, notePopoverRef,
-    memoizedImageUrl, memoizedProductId, uniqueAssignmentId,
-    displayImageUrl,
+    uniqueAssignmentId,
     handleCopy,
     loadExistingAssignment,
     loadTricoteuses,
@@ -429,25 +422,26 @@ const ArticleCard = forwardRef(({
       onTouchEnd={endTouch}
       onTouchCancel={endTouch}
     >
-
-      <HeaderMedia
-        article={article}
-        displayImageUrl={displayImageUrl}
-        isImageLoading={isImageLoading}
-        isFromCache={isFromCache}
-        imageUrl={imageUrl}
-        memoizedProductId={memoizedProductId}
-        setIsImageLoading={setIsImageLoading}
-        setImageUrl={setImageUrl}
-        imageService={imageService}
-        doitAvoirTraitRouge={doitAvoirTraitRouge}
-        isUrgent={Boolean(article?.production_status?.urgent === true || localUrgent)}
-        handleOverlayToggle={handleOverlayToggle}
-        isOverlayOpen={actualOverlayOpen}
-        compact={compact}
-        
-        
-      />
+      {/* Zone d'image - garde l'emplacement pour les photos */}
+      <div className="relative w-full h-48 sm:h-64 bg-gray-100 overflow-hidden">
+        {article.product_image && (
+          <img 
+            src={article.product_image} 
+            alt={article.product_name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.nextSibling.style.display = 'flex'
+            }}
+          />
+        )}
+        <div 
+          className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-4xl"
+          style={{ display: article.product_image ? 'none' : 'flex' }}
+        >
+          📷
+        </div>
+      </div>
 
       {!hideInfoSection && (
         <InfoSection

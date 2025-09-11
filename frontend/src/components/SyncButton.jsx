@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react'
 import { IoRefreshOutline } from 'react-icons/io5'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiService } from '../services/apiService'
-import { ImageOptimizationService } from '../services/imageOptimizationService'
 
 // Bouton de synchronisation réutilisable (desktop et mobile)
 // Props:
@@ -58,10 +57,7 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
             })
             
             if (recentOrders.length > 0) {
-              console.log(`🔄 Préchargement images pour ${recentOrders.length} commandes récentes`)
-              // Précharger en arrière-plan sans bloquer l'UI
-              ImageOptimizationService.preloadNewOrders(recentOrders)
-                .catch(error => console.warn('Erreur préchargement post-sync:', error))
+              console.log(`🔄 ${recentOrders.length} commandes récentes synchronisées`)
             }
           }
         }

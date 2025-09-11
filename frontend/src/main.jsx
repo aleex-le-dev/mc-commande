@@ -6,7 +6,6 @@ import { ApiService } from './services/apiService.js'
 import AuthGate from './components/AuthGate.jsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './utils/circuitBreakerReset.js'
-import globalPreloadService from './services/globalPreloadService.js'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +32,6 @@ const Root = () => {
         await ApiService.prefetchAppData()
       }
       
-      // Initialiser le service de préchargement global
-      await globalPreloadService.initialize()
     }
     
     initializeServices()

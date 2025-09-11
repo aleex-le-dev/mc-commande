@@ -134,7 +134,6 @@ const TerminePage = () => {
               <div key={orderNumber} className={`rounded-xl border-4 ${randomColor} p-3 shadow-sm w-fit min-w-[200px] max-w-[600px] flex-shrink-0`}>
                 <div className="mb-3 flex items-center justify-between">
                   <div className="font-bold text-gray-900 text-base">Commande #{orderNumber}</div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
                 </div>
                 <div className="mb-2">
                   <div className="font-semibold text-gray-800 text-sm mb-1">{order?.customer_name || 'Client inconnu'}</div>

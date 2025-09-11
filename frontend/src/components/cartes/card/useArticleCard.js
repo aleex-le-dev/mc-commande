@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
 import { ApiService } from '../../../services/apiService'
-import useImageLoader from '../../../hooks/useImageLoader'
 import useNoteEditor from '../../../hooks/useNoteEditor'
 import useConfetti from '../../../hooks/useConfetti'
 import useAssignmentManager from '../../../hooks/useAssignmentManager'
@@ -14,7 +13,6 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   const [localUrgent, setLocalUrgent] = useState(false)
 
   // Hooks spécialisés pour chaque responsabilité
-  const imageData = useImageLoader(article)
   const noteData = useNoteEditor(article)
   const confettiData = useConfetti()
   const assignmentData = useAssignmentManager({ article, assignment, onAssignmentUpdate, tricoteusesProp })
@@ -59,7 +57,6 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     localUrgent, setLocalUrgent,
     
     // Données des hooks spécialisés
-    ...imageData,
     ...noteData,
     ...confettiData,
     ...assignmentData,

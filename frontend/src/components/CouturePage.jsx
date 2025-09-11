@@ -1,6 +1,5 @@
 import React from 'react'
 import ProductionPage from './ProductionPage'
-import SmartImageLoader from './SmartImageLoader'
 
 /**
  * Page Couture - Affiche tous les articles de type "couture"
@@ -11,10 +10,6 @@ const CouturePage = () => {
     <>
       <ProductionPage productionType="couture" title="Couture" />
       {/* Temporairement désactivé - erreurs 502 sur Render */}
-      {/* <SmartImageLoader 
-        pageName="couture" 
-        priority={false} 
-      /> */}
     </>
   )
 }
