@@ -22,6 +22,10 @@ app.use(corsMiddleware)
 // Routes centralisées
 app.use('/api', apiRoutes)
 
+// Routes de debug (temporaires)
+const debugRoutes = require('./routes/debug')
+app.use('/debug', debugRoutes)
+
 // Gestion des erreurs 404
 app.use('*', (req, res) => {
   res.status(404).json({ 
