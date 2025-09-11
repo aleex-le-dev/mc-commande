@@ -19,11 +19,18 @@ const BottomBar = ({
   compact = false,
   disableAssignmentModal = false
 }) => {
-  // Coller la barre à la bordure inférieure
+  // Ajuster la position et le padding si un avatar d'assignation est affiché
+  const hasAvatar = (
+    (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') ||
+    (article.assigned_to || article.assignedTo) ||
+    (localAssignment?.tricoteuse_photo || article?.tricoteuse_photo)
+  )
+  // Toujours collé en bas; on augmente seulement le padding quand un avatar est présent
   const bottomClass = 'bottom-0'
+  const paddingBottomClass = hasAvatar ? 'pb-0' : 'pb-2 sm:pb-3'
 
   return (
-    <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-2 pt-2' : 'px-3 pt-3'} pb-2 sm:pb-3`}>
+    <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-3 pt-2' : 'px-3 pt-3'} ${paddingBottomClass}`}>
       <div className="flex items-center justify-between">
         {/* Date et heure (heure masquée en mobile) */}
         <div className={`flex items-center ${compact ? 'space-x-1 text-[10px]' : 'space-x-2 text-xs'} text-gray-500 font-medium`}>
@@ -62,7 +69,7 @@ const BottomBar = ({
         </div>
 
         {/* Avatar assignation / bouton assigner */}
-        <div className="flex items-end">
+        <div className={`flex items-end ${hasAvatar ? 'pb-1' : ''}`}>
           {isLoadingAssignment ? (
             <div className={`w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center`}>
               <div className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} border-2 border-gray-400 border-t-transparent rounded-full animate-spin`}></div>
