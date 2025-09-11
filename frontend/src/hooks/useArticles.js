@@ -98,6 +98,12 @@ export const useArticles = (options = {}) => {
       return []
     }
     
+    // Marquer que les données sont chargées
+    if (ordersArray.length > 0) {
+      window.mcDataLoaded = true
+      console.log('🔄 [useArticles] Données marquées comme chargées')
+    }
+    
     const allArticles = []
     
     ordersArray.forEach(order => {

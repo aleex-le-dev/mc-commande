@@ -462,24 +462,42 @@ class OrdersService {
         total: parseFloat(wooOrder.total),
         created_at: new Date(wooOrder.date_created),
         updated_at: new Date(wooOrder.date_modified),
-        items: wooOrder.line_items.map(item => ({
-          line_item_id: item.id,
-          product_id: item.product_id,
-          product_name: item.name,
-          quantity: item.quantity,
-          price: parseFloat(item.price),
-          meta_data: item.meta_data || [],
-          image_url: item.image?.src || null,
-          permalink: item.permalink || null,
-          variation_id: item.variation_id || null,
-          production_status: {
-            status: 'a_faire',
-            production_type: 'couture', // Par défaut couture
-            urgent: false,
-            notes: null,
-            updated_at: new Date()
+        items: wooOrder.line_items.map(item => {
+          // Déterminer le type de production selon le nom du produit
+          const productName = item.name.toLowerCase()
+          let productionType = 'couture' // Par défaut
+          
+          // Mots-clés spécifiques pour identifier la maille (tricoté/tricotée/knitted/wool)
+          const mailleKeywords = [
+            'tricoté', 'tricotée', 'knitted', 'wool'
+          ]
+          
+          // Vérifier si le produit contient des mots-clés de maille
+          const isMaille = mailleKeywords.some(keyword => productName.includes(keyword))
+          
+          if (isMaille) {
+            productionType = 'maille'
           }
-        }))
+          
+          return {
+            line_item_id: item.id,
+            product_id: item.product_id,
+            product_name: item.name,
+            quantity: item.quantity,
+            price: parseFloat(item.price),
+            meta_data: item.meta_data || [],
+            image_url: item.image?.src || null,
+            permalink: item.permalink || null,
+            variation_id: item.variation_id || null,
+            production_status: {
+              status: 'a_faire',
+              production_type: productionType,
+              urgent: false,
+              notes: null,
+              updated_at: new Date()
+            }
+          }
+        })
       }
 
       return transformedOrder
