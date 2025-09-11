@@ -94,23 +94,54 @@ const TerminePage = () => {
                   <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
                 </div>
                 <div className="text-xs text-gray-600 mb-3">{order?.customer_name || 'Client inconnu'}</div>
-                <div className="flex gap-2 overflow-x-auto">
-                  {articles.map(a => (
-                    <div key={`${orderNumber}-${a.line_item_id}`} className="rounded-2xl border-2 border-yellow-400 overflow-hidden w-[200px] h-[280px] flex-shrink-0">
-                      <ArticleCard
-                        article={a}
-                        size="small"
-                        color="border-yellow-500 bg-yellow-50"
-                        options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
-                        productionType="all"
-                        prioritizeUrgent={false}
-                        disableStatusBorder={true}
-                        compact={true}
-                        disableAssignmentModal={true}
-                        clientOverlayCompact={true}
-                      />
-                    </div>
-                  ))}
+                <div className="grid gap-2 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${articles.length}, 200px)` }}>
+                  {articles
+                    .sort((a, b) => {
+                      // Priorité : en_cours en premier, puis les autres par statut
+                      const statusOrder = { 'en_cours': 0, 'en_pause': 1, 'termine': 2, 'en_attente': 3, 'a_faire': 4 }
+                      const orderA = statusOrder[a.status] ?? 5
+                      const orderB = statusOrder[b.status] ?? 5
+                      return orderA - orderB
+                    })
+                    .map(a => {
+                    // Déterminer la couleur de bordure selon le statut réel
+                    const getBorderColor = (status) => {
+                      switch (status) {
+                        case 'termine': return 'border-green-400'
+                        case 'en_cours': return 'border-yellow-400'
+                        case 'en_pause': return 'border-orange-400'
+                        case 'en_attente': return 'border-gray-400'
+                        default: return 'border-gray-400'
+                      }
+                    }
+                    
+                    const getBgColor = (status) => {
+                      switch (status) {
+                        case 'termine': return 'bg-green-50'
+                        case 'en_cours': return 'bg-yellow-50'
+                        case 'en_pause': return 'bg-orange-50'
+                        case 'en_attente': return 'bg-gray-50'
+                        default: return 'bg-gray-50'
+                      }
+                    }
+                    
+                    return (
+                      <div key={`${orderNumber}-${a.line_item_id}`} className={`rounded-2xl border-2 ${getBorderColor(a.status)} overflow-hidden w-[200px] h-[280px]`}>
+                        <ArticleCard
+                          article={a}
+                          size="small"
+                          color={`border-${a.status === 'termine' ? 'green' : a.status === 'en_cours' ? 'yellow' : a.status === 'en_pause' ? 'orange' : 'gray'}-500 ${getBgColor(a.status)}`}
+                          options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                          productionType="all"
+                          prioritizeUrgent={false}
+                          disableStatusBorder={true}
+                          compact={true}
+                          disableAssignmentModal={true}
+                          clientOverlayCompact={true}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
