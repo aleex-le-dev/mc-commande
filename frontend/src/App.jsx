@@ -24,12 +24,13 @@ import PerformanceOptimizer from './components/PerformanceOptimizer'
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
 import BackgroundImagePreloader from './components/BackgroundImagePreloader'
 import './App.css'
+import { useRouteSync, navigateToTab } from './router'
 
 // Configuration du client React Query (supprimé car défini dans main.jsx)
 
 function App() {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('couture') // Démarrer directement sur Couture
+  const { activeTab } = useRouteSync()
   
   const [ctxVisible, setCtxVisible] = useState(false)
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })
@@ -198,7 +199,7 @@ function App() {
       setUrgentMap((prev) => ({ ...prev, [uniqueAssignmentId]: urgent }))
       setCtxVisible(false)
     }
-    const handleOpenTermine = () => setActiveTab('termine')
+    const handleOpenTermine = () => navigateToTab('termine')
     window.addEventListener('contextmenu', handleContextMenu, true)
     window.addEventListener('mc-context', handleCardContext, true)
     window.addEventListener('mc-open-termine-for-order', handleOpenTermine, true)
@@ -405,7 +406,7 @@ function App() {
                   {tabs.filter(tab => tab.id !== 'parametres').map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => navigateToTab(tab.id)}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         activeTab === tab.id
                           ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
@@ -431,7 +432,7 @@ function App() {
                 {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => navigateToTab(tab.id)}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
@@ -476,7 +477,7 @@ function App() {
                 {tabs.map((tab) => (
                   <button
                     key={`m-${tab.id}`}
-                    onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false) }}
+                    onClick={() => { navigateToTab(tab.id); setMobileMenuOpen(false) }}
                     className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'
