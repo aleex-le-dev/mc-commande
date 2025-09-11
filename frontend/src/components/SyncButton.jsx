@@ -19,17 +19,13 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
     
     const checkSyncToast = () => {
       try {
-        console.log('🔍 [SyncButton] Vérification toast après rechargement...')
         const storedToast = localStorage.getItem('mc-sync-toast')
-        console.log('🔍 [SyncButton] Toast stocké:', storedToast)
         
         if (storedToast && !toastDisplayed) {
           const toastData = JSON.parse(storedToast)
-          console.log('🔍 [SyncButton] Données toast:', toastData)
           
           // Vérifier que le toast n'est pas trop ancien (moins de 30 secondes)
           const age = Date.now() - toastData.timestamp
-          console.log(`🔍 [SyncButton] Âge du toast: ${age}ms`)
           
           if (age < 30000) {
             // Attendre que les données soient chargées (orders > 0)
@@ -40,32 +36,24 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
                              window.mcDataLoaded
               
               if (hasData || Date.now() - toastData.timestamp > 10000) { // Max 10 secondes d'attente
-                console.log('🔍 [SyncButton] Données chargées, affichage du toast:', toastData.message)
                 setToast({ visible: true, message: toastData.message, variant: toastData.variant })
                 toastDisplayed = true
                 // Auto-hide après 5 secondes
                 setTimeout(() => {
-                  console.log('🔍 [SyncButton] Masquage automatique du toast')
                   setToast({ visible: false, message: '', variant: 'success' })
                   // Supprimer du localStorage seulement après masquage
                   localStorage.removeItem('mc-sync-toast')
                 }, 5000)
               } else {
-                console.log('🔍 [SyncButton] Données pas encore chargées, nouvelle vérification dans 500ms')
                 setTimeout(checkDataLoaded, 500)
               }
             }
             
             checkDataLoaded()
           } else {
-            console.log('🔍 [SyncButton] Toast trop ancien, suppression')
             // Supprimer les anciens toasts
             localStorage.removeItem('mc-sync-toast')
           }
-        } else if (!storedToast) {
-          console.log('🔍 [SyncButton] Aucun toast stocké')
-        } else {
-          console.log('🔍 [SyncButton] Toast déjà affiché')
         }
       } catch (error) {
         console.warn('Erreur lecture toast synchronisation:', error)

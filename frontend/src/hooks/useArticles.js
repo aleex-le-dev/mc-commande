@@ -69,18 +69,11 @@ export const useArticles = (options = {}) => {
   // Écouter l'événement de synchronisation terminée
   useEffect(() => {
     const handleSyncCompleted = () => {
-      console.log('🔄 [useArticles] Événement mc-sync-completed reçu - Re-calcul des articles')
-      setSyncTick(prev => {
-        const newTick = prev + 1
-        console.log(`🔄 [useArticles] syncTick: ${prev} -> ${newTick}`)
-        return newTick
-      })
+      setSyncTick(prev => prev + 1)
     }
     
-    console.log('🔄 [useArticles] Ajout du listener mc-sync-completed')
     window.addEventListener('mc-sync-completed', handleSyncCompleted)
     return () => {
-      console.log('🔄 [useArticles] Suppression du listener mc-sync-completed')
       window.removeEventListener('mc-sync-completed', handleSyncCompleted)
     }
   }, [])
@@ -91,17 +84,13 @@ export const useArticles = (options = {}) => {
     const tick = syncTick
     const ordersArray = orders?.orders || orders
     
-    console.log(`🔄 [useArticles] Re-calcul articles - syncTick: ${tick}, orders: ${ordersArray?.length || 0}`)
-    
     if (!ordersArray || !Array.isArray(ordersArray)) {
-      console.log('🔄 [useArticles] Aucune commande disponible')
       return []
     }
     
     // Marquer que les données sont chargées
     if (ordersArray.length > 0) {
       window.mcDataLoaded = true
-      console.log('🔄 [useArticles] Données marquées comme chargées')
     }
     
     const allArticles = []
@@ -196,7 +185,6 @@ export const useArticles = (options = {}) => {
     const productionTypeArticles = productionType === 'all' ? articles : articles.filter(a => a.productionType === productionType)
     const productionStats = calculateArticleStats(productionTypeArticles)
     
-    console.log(`📊 Stats recalculées - ${productionType}: ${productionStats.total} articles`)
     
     return {
       total: productionStats.total, // Total pour le type de production (maille/couture)
