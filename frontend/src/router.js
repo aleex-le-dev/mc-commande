@@ -17,6 +17,18 @@ export const getTabFromLocation = () => {
   return 'couture'
 }
 
+// Déduire le sous-onglet des paramètres depuis l'URL
+export const getParametresSubTabFromLocation = () => {
+  try {
+    const path = (window.location.hash?.replace(/^#/, '') || window.location.pathname || '').toLowerCase()
+    if (path.includes('/parametres/couturiere') || path.includes('/paramètres/couturière')) return 'tricoteuses'
+    if (path.includes('/parametres/date-limite') || path.includes('/paramètres/date-limite')) return 'dateLimite'
+    if (path.includes('/parametres/stats') || path.includes('/paramètres/stats')) return 'stats'
+    if (path.includes('/parametres/status') || path.includes('/paramètres/status')) return 'status'
+  } catch {}
+  return 'tricoteuses' // Par défaut
+}
+
 // Navigation programmée
 export const navigateToTab = (tabId) => {
   try {
@@ -26,6 +38,21 @@ export const navigateToTab = (tabId) => {
       if (window.location.hash !== `#${path}`) window.location.hash = `#${path}`
     } else {
       if (window.location.pathname !== path) window.history.pushState({ tab: tabId }, '', path)
+    }
+    // Notifier le routeur interne pour mettre à jour l'état immédiatement
+    window.dispatchEvent(new Event('mc-route-update'))
+  } catch {}
+}
+
+// Navigation vers un sous-onglet des paramètres
+export const navigateToParametresSubTab = (subTabId) => {
+  try {
+    const path = `/parametres/${subTabId}`
+    const isHashMode = window.location.hash && window.location.hash.startsWith('#/')
+    if (isHashMode) {
+      if (window.location.hash !== `#${path}`) window.location.hash = `#${path}`
+    } else {
+      if (window.location.pathname !== path) window.history.pushState({ tab: 'parametres', subTab: subTabId }, '', path)
     }
     // Notifier le routeur interne pour mettre à jour l'état immédiatement
     window.dispatchEvent(new Event('mc-route-update'))
@@ -56,6 +83,16 @@ export const useRouteSync = () => {
       if (!hasRoute) {
         navigateToTab('couture')
         setActiveTab('couture')
+      }
+    } catch {}
+  }, [])
+
+  // Rediriger /parametres vers /parametres/couturiere
+  useEffect(() => {
+    try {
+      const path = (window.location.hash?.replace(/^#/, '') || window.location.pathname || '').toLowerCase()
+      if (path === '/parametres' || path === '/paramètres') {
+        navigateToParametresSubTab('couturiere')
       }
     } catch {}
   }, [])

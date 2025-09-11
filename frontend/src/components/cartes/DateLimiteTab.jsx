@@ -190,7 +190,7 @@ const DateLimiteTab = () => {
         const nomJourFerie = (joursFeries && joursFeries[dateStr]) ? joursFeries[dateStr] : getNomJourFerieDefaut(dateStr)
       
         joursFeriesDansPeriode.push({
-          date: parseLocalYMD(dateStr),
+          date: new Date(dateStr),
           nom: nomJourFerie,
           jourSemaine: dateCourante.toLocaleDateString('fr-FR', { weekday: 'long' })
         })
@@ -265,8 +265,13 @@ const DateLimiteTab = () => {
     setIsLoadingJoursFeries(true)
     try {
       const response = await delaiService.getJoursFeries()
-      if (response.success) {
-        setJoursFeries(response.joursFeries)
+      if (response.success && response.data) {
+        // Convertir le format de l'API en format attendu par le composant
+        const joursFeriesFormatted = {}
+        response.data.joursFeries.forEach(jour => {
+          joursFeriesFormatted[jour.date] = jour.nom
+        })
+        setJoursFeries(joursFeriesFormatted)
       }
     } catch (error) {
       console.error('Erreur lors du chargement des jours fériés:', error)

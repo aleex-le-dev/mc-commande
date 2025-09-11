@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getParametresSubTabFromLocation, navigateToParametresSubTab } from '../router'
 
 import TricoteusesTab from './cartes/TricoteusesTab'
 import StatusTab from './cartes/StatusTab'
@@ -7,16 +8,29 @@ import ArchivedTab from './cartes/ArchivedTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
 
 const ParametresPanel = () => {
-  const [activeTab, setActiveTab] = useState('tricoteuses')
+  const [activeTab, setActiveTab] = useState(getParametresSubTabFromLocation())
 
   const tabs = [
-    { id: 'tricoteuses', label: 'Couturières', icon: '🧶' },
-    { id: 'dateLimite', label: 'Date limite', icon: '⏰' },
-    { id: 'stats', label: 'Stats & archives', icon: '📈' },
-    { id: 'status', label: 'Statut et tests', icon: '📊' }
+    { id: 'tricoteuses', label: 'Couturières', icon: '🧶', url: 'couturiere' },
+    { id: 'dateLimite', label: 'Date limite', icon: '⏰', url: 'date-limite' },
+    { id: 'stats', label: 'Stats & archives', icon: '📈', url: 'stats' },
+    { id: 'status', label: 'Statut et tests', icon: '📊', url: 'status' }
   ]
 
   const activeTabMeta = tabs.find(t => t.id === activeTab) || tabs[0]
+
+  // Synchroniser avec l'URL
+  useEffect(() => {
+    const onNav = () => setActiveTab(getParametresSubTabFromLocation())
+    window.addEventListener('popstate', onNav)
+    window.addEventListener('hashchange', onNav)
+    window.addEventListener('mc-route-update', onNav)
+    return () => {
+      window.removeEventListener('popstate', onNav)
+      window.removeEventListener('hashchange', onNav)
+      window.removeEventListener('mc-route-update', onNav)
+    }
+  }, [])
 
   useEffect(() => {
     if (activeTabMeta) {
@@ -58,6 +72,7 @@ const ParametresPanel = () => {
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id)
+                    navigateToParametresSubTab(tab.url)
                   }}
                   className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                     activeTab === tab.id
