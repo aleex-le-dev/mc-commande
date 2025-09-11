@@ -34,10 +34,10 @@ class DatabaseService {
   async createCollectionsAndIndexes() {
     try {
       // Collection des commandes
-      await this.createIndexIfNotExists('orders', { order_id: 1 }, { unique: true })
-      await this.createIndexIfNotExists('orders', { order_date: -1 })
-      await this.createIndexIfNotExists('orders', { status: 1 })
-      await this.createIndexIfNotExists('orders', { customer: 1 })
+      await this.createIndexIfNotExists('order_items', { order_id: 1 }, { unique: true })
+      await this.createIndexIfNotExists('order_items', { order_date: -1 })
+      await this.createIndexIfNotExists('order_items', { status: 1 })
+      await this.createIndexIfNotExists('order_items', { customer: 1 })
 
       // Collection des statuts de production
       await this.createIndexIfNotExists('production_status', { order_id: 1, line_item_id: 1 }, { unique: true })

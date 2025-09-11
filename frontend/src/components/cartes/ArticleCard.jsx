@@ -7,6 +7,7 @@ import TopBadges from './TopBadges'
 import BottomBar from './BottomBar'
 import ClientOverlay from './ClientOverlay'
 import NotePopover from './NotePopover'
+import NoteExpander from './NoteExpander'
 import AssignModal from './AssignModal'
 import HeaderMedia from './HeaderMedia'
 import InfoSection from './InfoSection'
@@ -348,6 +349,8 @@ const ArticleCard = forwardRef(({
     return null
   }
 
+  // Debug ciblé désactivé
+
   return (
     <div 
       className={`group relative rounded-3xl overflow-hidden shadow-lg ${compact ? 'h-[300px] sm:h-[340px]' : 'h-[360px] sm:h-[480px]'} max-w-full ${
@@ -427,18 +430,22 @@ const ArticleCard = forwardRef(({
         />
       )}
 
+      {/* Affichage du cadre de note retiré à la demande: la note n'est plus affichée dans la carte */}
+
             {/* Date / heure / note / assignation */}
       <BottomBar
-            article={article} 
+        article={article}
         compact={compact}
-        isNoteOpen={isNoteOpen}
-        onToggleNote={() => { 
-                    window.dispatchEvent(new Event('mc-close-notes'));
-                    setEditingNote(article.customerNote || '');
-                    setIsNoteOpen(v => !v);
-                  }}
+        isNoteOpen={Boolean(isNoteOpen)}
+        onToggleNote={typeof setIsNoteOpen === 'function' ? () => {
+          try { window.dispatchEvent(new Event('mc-close-notes')) } catch {}
+          const preferredNote = article.customerNote || article.production_status?.notes || ''
+          try { setEditingNote(preferredNote) } catch {}
+          setIsNoteOpen((v) => !v)
+        } : undefined}
         noteBtnRef={noteBtnRef}
-        hasNote={Boolean(article.customerNote)}
+        hasNote={Boolean(article.customerNote || article.production_status?.notes)}
+        displayNote={article.customerNote || article.production_status?.notes || ''}
         localAssignment={localAssignment}
         isLoadingAssignment={isLoadingAssignment}
         onOpenAssignModal={disableAssignmentModal ? () => {} : () => openTricoteuseModal()}

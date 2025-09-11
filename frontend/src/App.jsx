@@ -30,7 +30,7 @@ import { useRouteSync, navigateToTab } from './router'
 
 function App() {
   const queryClient = useQueryClient()
-  const { activeTab } = useRouteSync()
+  const { activeTab } = useRouteSync() 
   
   const [ctxVisible, setCtxVisible] = useState(false)
   const [ctxPosition, setCtxPosition] = useState({ x: 0, y: 0 })

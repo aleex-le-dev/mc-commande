@@ -37,12 +37,65 @@ class OrdersService {
           let: { oid: '$order_id', lid: '$line_item_id' },
           pipeline: [
             { $match: { $expr: { $and: [ { $eq: ['$order_id', '$$oid'] }, { $eq: ['$line_item_id', '$$lid'] } ] } } },
-            { $project: { status: 1, production_type: 1, urgent: 1, updated_at: 1 } }
+            { $project: { status: 1, production_type: 1, urgent: 1, notes: 1, updated_at: 1 } }
           ],
           as: 'ps'
         }
       },
       { $addFields: { production_status: { $arrayElemAt: ['$ps', 0] } } },
+      // Extraire une note potentielle depuis les meta_data de l'item
+      {
+        $addFields: {
+          item_meta_note: {
+            $let: {
+              vars: {
+                notes: {
+                  $filter: {
+                    input: { $ifNull: ['$meta_data', []] },
+                    as: 'm',
+                    cond: {
+                      $regexMatch: {
+                        input: { $toString: '$$m.key' },
+                        regex: '(customer_)?note|order_?note|message|instructions',
+                        options: 'i'
+                      }
+                    }
+                  }
+                }
+              },
+              in: { $arrayElemAt: ['$$notes.value', 0] }
+            }
+          }
+        }
+      },
+      // Rapatrier une note au niveau commande depuis d'autres items de la même commande
+      {
+        $lookup: {
+          from: 'order_items',
+          let: { oid: '$order_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$order_id', '$$oid'] } } },
+            { $project: { customer_note: 1 } }
+          ],
+          as: 'ord'
+        }
+      },
+      // Priorité: note explicite -> meta_data de l'item -> notes de production
+      {
+        $addFields: {
+          order_customer_note: {
+            $let: {
+              vars: { ocn: { $arrayElemAt: ['$ord.customer_note', 0] } },
+              in: {
+                $ifNull: [
+                  '$$ocn',
+                  { $ifNull: ['$item_meta_note', { $ifNull: ['$production_status.notes', null] }] }
+                ]
+              }
+            }
+          }
+        }
+      },
       { $project: { ps: 0 } },
       ...(filters.productionType && ['couture','maille'].includes(String(filters.productionType))
         ? [ { $match: { 'production_status.production_type': String(filters.productionType) } } ]
@@ -61,6 +114,7 @@ class OrdersService {
                 order_id: { $first: '$order_id' },
                 order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
                 status: { $first: '$status' },
+                customer_note: { $first: '$order_customer_note' },
                 items_count: { $sum: 1 },
                 items: { $push: '$$ROOT' }
               }

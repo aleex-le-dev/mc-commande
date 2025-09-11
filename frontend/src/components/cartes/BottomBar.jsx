@@ -11,6 +11,7 @@ const BottomBar = ({
   onToggleNote,
   noteBtnRef,
   hasNote,
+  displayNote,
   localAssignment,
   isLoadingAssignment,
   onOpenAssignModal,
@@ -46,10 +47,17 @@ const BottomBar = ({
             }}
             aria-haspopup="dialog"
             aria-expanded={isNoteOpen}
-            aria-label={hasNote ? 'Lire la note' : 'Ajouter une note'}
-            title={hasNote ? 'Lire la note' : 'Ajouter une note'}
+            aria-label={hasNote ? 'Voir la note' : 'Ajouter une note'}
+            title={hasNote ? 'Voir la note' : 'Ajouter une note'}
           >
-            {hasNote ? (<><RiStickyNoteFill size={compact ? 12 : 16} className="mr-1" /><span className={compact ? 'text-[10px]' : ''}>Note</span></>) : (<RiStickyNoteAddLine size={compact ? 14 : 18} className="cursor-pointer" />)}
+            {hasNote ? (
+              <>
+                <RiStickyNoteFill size={compact ? 12 : 16} className="mr-1" />
+                <span className={compact ? 'text-[10px]' : ''}>Note</span>
+              </>
+            ) : (
+              <RiStickyNoteAddLine size={compact ? 14 : 18} className="cursor-pointer" />
+            )}
           </button>
         </div>
 

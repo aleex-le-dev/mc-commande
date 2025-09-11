@@ -14,6 +14,23 @@
 export const transformItemToArticle = (item, order, assignment = null, tricoteuse = null) => {
   const articleId = item.line_item_id || item.id
   
+  // Extraire une note depuis un tableau de meta_data (order ou item)
+  const extractNoteFromMeta = (meta) => {
+    if (!Array.isArray(meta)) return null
+    const candidates = meta.filter(m => {
+      const k = String(m?.key || '').toLowerCase()
+      return k.includes('note') || k.includes('customer_note') || k.includes('order_note')
+    })
+    for (const cand of candidates) {
+      const val = (typeof cand?.value === 'string') ? cand.value.trim() : null
+      if (val && val.length > 0) return val
+    }
+    return null
+  }
+  
+  const orderLevelMetaNote = extractNoteFromMeta(order?.meta_data)
+  const itemLevelMetaNote = extractNoteFromMeta(item?.meta_data)
+  
   return {
     ...item,
     article_id: articleId,
@@ -24,7 +41,15 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     customerEmail: order.customer_email,
     customerPhone: order.customer_phone,
     customerAddress: order.customer_address,
-    customerNote: order.customer_note,
+    // Note client: récupérer depuis plusieurs sources potentielles
+    customerNote: (
+      (typeof order?.customer_note === 'string' && order.customer_note.trim().length > 0 ? order.customer_note : null) ||
+      (typeof order?.order_customer_note === 'string' && order.order_customer_note.trim().length > 0 ? order.order_customer_note : null) ||
+      (typeof item?.order_customer_note === 'string' && item.order_customer_note.trim().length > 0 ? item.order_customer_note : null) ||
+      (typeof item?.production_status?.notes === 'string' && item.production_status.notes.trim().length > 0 ? item.production_status.notes : null) ||
+      orderLevelMetaNote ||
+      itemLevelMetaNote
+    ),
     shippingMethod: order.shipping_title || order.shipping_method_title || order.shipping_method || 'Livraison gratuite',
     shippingCarrier: order.shipping_carrier || null,
     customerCountry: order.customer_country || null,
