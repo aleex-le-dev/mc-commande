@@ -123,14 +123,12 @@ export const useArticles = (options = {}) => {
 
   // Filtrage des articles (responsabilité unique)
   const filteredArticles = useMemo(() => {
-    console.log('Filtrage articles:', { productionType, status, search, showUrgentOnly, articlesCount: articles.length })
     const filtered = applyFilters(articles, {
       productionType,
       status,
       searchTerm: search,
       showUrgentOnly
     })
-    console.log('Articles filtrés:', filtered.length)
     return filtered
   }, [articles, productionType, status, search, showUrgentOnly])
 

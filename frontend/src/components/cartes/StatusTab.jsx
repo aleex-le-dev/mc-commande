@@ -63,11 +63,9 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, stats: true }))
     try {
       const result = await ApiService.getProductionStats()
-      console.log('🔍 [Frontend] Données reçues de getProductionStats:', result)
       setTestResults(prev => ({ ...prev, stats: { success: true, data: result } }))
       setStatus('Statistiques de la base récupérées avec succès')
     } catch (error) {
-      console.log('🔍 [Frontend] Erreur getProductionStats:', error)
       setTestResults(prev => ({ ...prev, stats: { success: false, error: error.message } }))
       setStatus('Erreur lors de la récupération des statistiques')
     }

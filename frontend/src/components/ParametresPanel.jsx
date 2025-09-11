@@ -7,7 +7,6 @@ import ArchivedTab from './cartes/ArchivedTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
 
 const ParametresPanel = () => {
-  console.log('ParametresPanel rendered')
   const [activeTab, setActiveTab] = useState('tricoteuses')
 
   const tabs = [
@@ -27,7 +26,6 @@ const ParametresPanel = () => {
   }, [activeTabMeta])
 
   const renderTabContent = () => {
-    console.log('renderTabContent - activeTab:', activeTab)
     switch (activeTab) {
       case 'tricoteuses':
         return <TricoteusesTab />
@@ -59,7 +57,6 @@ const ParametresPanel = () => {
                 <button
                   key={tab.id}
                   onClick={() => {
-                    console.log('Tab clicked:', tab.id)
                     setActiveTab(tab.id)
                   }}
                   className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${

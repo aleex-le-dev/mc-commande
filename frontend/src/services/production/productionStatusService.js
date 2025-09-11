@@ -97,11 +97,9 @@ export const ProductionStatusService = {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const result = await response.json()
-      console.log('🔍 [ProductionStatusService] Réponse brute:', result)
       
       // Retourner directement les données si la réponse contient success: true
       if (result.success && result.data) {
-        console.log('🔍 [ProductionStatusService] Données extraites:', result.data)
         return result.data
       }
       

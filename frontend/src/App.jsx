@@ -92,7 +92,6 @@ function App() {
     }
     const handleCardContext = (ev) => {
       const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType, orderNumber, orderId, articles, hasAssignment } = ev.detail || {}
-      console.log('🔍 Menu contextuel - Données reçues:', { currentProductionType, uniqueAssignmentId, orderNumber })
       setCtxPosition({ x, y })
       const items = [
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', category: 'Couturière', icon: hasNote ? <RiStickyNoteFill size={16} /> : <RiStickyNoteAddLine size={16} />, onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
@@ -135,15 +134,11 @@ function App() {
       ]
       
       // Ajouter les options de déplacement selon le type de production actuel
-      console.log('🔍 Type de production actuel:', currentProductionType)
       if (currentProductionType === 'couture') {
-        console.log('✅ Ajout option: Déplacer vers maille')
         items.push({ id: 'move-to-maille', label: '🪡 Déplacer vers maille', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'maille' } })) })
       } else if (currentProductionType === 'maille') {
-        console.log('✅ Ajout option: Déplacer vers couture')
         items.push({ id: 'move-to-couture', label: '🧵 Déplacer vers couture', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-move-production', { detail: { uniqueAssignmentId, newType: 'couture' } })) })
       } else {
-        console.log('⚠️ Type de production non reconnu:', currentProductionType)
       }
       
       // Couturière: si assigné → actions de statut, sinon → ajouter couturière
@@ -358,7 +353,6 @@ function App() {
   ]
 
   const renderContent = () => {
-    console.log('renderContent - activeTab:', activeTab)
     switch (activeTab) {
       case 'couture':
         return <CouturePage />
@@ -369,7 +363,6 @@ function App() {
       case 'fourniture':
         return <FourniturePage />
       case 'parametres':
-        console.log('Rendering ParametresPanel')
         return <ParametresPanel />
       default:
         return <CouturePage />
@@ -432,7 +425,6 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => {
-                      console.log('Paramètres button clicked')
                       navigateToTab(tab.id)
                     }}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${

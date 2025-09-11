@@ -32,38 +32,16 @@ class ProductionService {
   async getProductionStats() {
     const db = require('./database')
     
-    console.log('🔍 [getProductionStats] Début du calcul des statistiques')
-    
-    // Vérifier la connexion à la base
-    console.log('🔍 [getProductionStats] Connexion DB:', db.isConnected)
-    
     // Compter les commandes uniques depuis order_items
     const orderItemsCollection = db.getCollection('order_items')
-    console.log('🔍 [getProductionStats] Collection order_items:', orderItemsCollection ? 'OK' : 'ERREUR')
-    
-    const totalOrders = await orderItemsCollection.distinct('order_id').then(ids => {
-      console.log('🔍 [getProductionStats] IDs de commandes distincts:', ids.length, ids.slice(0, 5))
-      return ids.length
-    })
+    const totalOrders = await orderItemsCollection.distinct('order_id').then(ids => ids.length)
     
     // Compter tous les articles
     const totalItems = await orderItemsCollection.countDocuments()
-    console.log('🔍 [getProductionStats] Total articles:', totalItems)
     
     // Compter les statuts de production
     const productionStatusCollection = db.getCollection('production_status')
-    console.log('🔍 [getProductionStats] Collection production_status:', productionStatusCollection ? 'OK' : 'ERREUR')
-    
     const totalStatuses = await productionStatusCollection.countDocuments()
-    console.log('🔍 [getProductionStats] Total statuts:', totalStatuses)
-    
-    // Lister toutes les collections disponibles
-    try {
-      const collections = await db.db.listCollections().toArray()
-      console.log('🔍 [getProductionStats] Collections disponibles:', collections.map(c => c.name))
-    } catch (error) {
-      console.log('🔍 [getProductionStats] Erreur listage collections:', error.message)
-    }
     
     // Statistiques par statut
     const statusStats = await productionStatusCollection.aggregate([
@@ -74,7 +52,6 @@ class ProductionService {
         }
       }
     ]).toArray()
-    console.log('🔍 [getProductionStats] Stats par statut:', statusStats)
     
     // Statistiques par type de production
     const statusesByType = await productionStatusCollection.aggregate([
@@ -85,9 +62,8 @@ class ProductionService {
         }
       }
     ]).toArray()
-    console.log('🔍 [getProductionStats] Stats par type:', statusesByType)
 
-    const result = {
+    return {
       totalOrders,
       totalItems,
       totalStatuses,
@@ -97,9 +73,6 @@ class ProductionService {
       }, {}),
       statusesByType
     }
-    
-    console.log('🔍 [getProductionStats] Résultat final:', result)
-    return result
   }
 
   async getProductionByStatus(status) {

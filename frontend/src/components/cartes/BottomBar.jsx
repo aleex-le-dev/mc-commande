@@ -29,7 +29,6 @@ const BottomBar = ({
   const bottomClass = 'bottom-0'
   const paddingBottomClass = hasAvatar ? 'pb-0' : 'pb-2 sm:pb-3'
 
-  console.log('BottomBar render - hasAvatar:', hasAvatar, 'localAssignment:', localAssignment)
   
   return (
     <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-3 pt-2' : 'px-3 pt-3'} ${paddingBottomClass}`}>

@@ -25,8 +25,6 @@ const TerminePage = () => {
   const { tricoteuses, getTricoteuseById } = useTricoteuses()
   
   // Debug pour vérifier les assignations
-  console.log('Assignments dans TerminePage:', assignments)
-  console.log('Tricoteuses dans TerminePage:', tricoteuses)
 
   const readyArticles = useMemo(() => {
     return (articles || []).filter(a => a.status === 'termine')
