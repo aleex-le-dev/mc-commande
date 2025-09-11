@@ -9,7 +9,6 @@ const StatusTab = () => {
     wordpressProducts: false,
     database: false,
     stats: false,
-    images: false,
     joursFeries: false
   })
 
@@ -73,47 +72,6 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, stats: false }))
   }
 
-  const testImages = async () => {
-    setLoadingStates(prev => ({ ...prev, images: true }))
-    try {
-      // Test de la nouvelle approche des images (affichage direct MongoDB)
-      const testProductIds = [1, 2, 3, 4, 5]
-      const imageResults = []
-      
-      for (const productId of testProductIds) {
-        const imageUrl = `https://maisoncleo.fr/wp-content/uploads/products/${productId}.jpg`
-        const isPlaceholder = imageUrl.startsWith('data:image/svg+xml')
-        
-        imageResults.push({
-          productId,
-          url: imageUrl,
-          isPlaceholder,
-          success: true
-        })
-      }
-      
-      setTestResults(prev => ({ 
-        ...prev, 
-        images: { 
-          success: true, 
-          data: imageResults,
-          method: 'Affichage direct MongoDB',
-          performance: 'Ultra-simple'
-        } 
-      }))
-      setStatus('Test des images réussi - Approche ultra-simple')
-    } catch (error) {
-      setTestResults(prev => ({ 
-        ...prev, 
-        images: { 
-          success: false, 
-          error: error.message 
-        } 
-      }))
-      setStatus('Erreur lors du test des images')
-    }
-    setLoadingStates(prev => ({ ...prev, images: false }))
-  }
 
   const testJoursFeriesAPI = async () => {
     setLoadingStates(prev => ({ ...prev, joursFeries: true }))
@@ -216,19 +174,6 @@ const StatusTab = () => {
               </div>
             </div>
 
-            {/* Tests Images */}
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-              <h3 className="text-lg font-medium text-purple-900 mb-3">🖼️ Test des images</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={testImages}
-                  disabled={loadingStates.images}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
-                >
-                  {loadingStates.images ? 'Test en cours...' : 'Lancer le test'}
-                </button>
-              </div>
-            </div>
 
             {/* Tests APIs Externes */}
             <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
@@ -361,29 +306,6 @@ const StatusTab = () => {
                         )}
                       </div>
                     )}
-                                            {testResults.images && (
-                          <div className={`p-3 rounded-md ${testResults.images.success ? 'bg-green-50' : 'bg-red-50'}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-purple-600"></div>
-                                <span className="font-medium">🖼️ Images</span>
-                              </div>
-                              <span className={`text-sm ${testResults.images.success ? 'text-green-800' : 'text-red-800'}`}>
-                                {testResults.images.success ? '✅ Succès' : '❌ Échec'}
-                              </span>
-                            </div>
-                            {!testResults.images.success && (
-                              <p className="text-sm text-red-700 mt-1">{testResults.images.error}</p>
-                            )}
-                            {testResults.images.success && testResults.images.data && (
-                              <div className="mt-2 text-sm text-green-700">
-                                <p className="font-semibold">🖼️ Méthode: {testResults.images.method}</p>
-                                <p className="font-semibold">🚀 Performance: {testResults.images.performance}</p>
-                                <p className="font-semibold">🏷️ Statut: {testResults.images.success ? '✅ Succès' : '❌ Échec'}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
                         {testResults.joursFeries && (
                           <div className={`p-3 rounded-md ${testResults.joursFeries.success ? 'bg-green-50' : 'bg-red-50'}`}>
                             <div className="flex items-center justify-between">

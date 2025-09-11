@@ -134,6 +134,29 @@ export const useArticles = (options = {}) => {
     return filtered
   }, [articles, productionType, status, search, showUrgentOnly])
 
+  // Pagination côté client pour les articles filtrés
+  const paginatedArticles = useMemo(() => {
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    return filteredArticles.slice(startIndex, endIndex)
+  }, [filteredArticles, page, limit])
+
+  // Calcul de la pagination pour les articles filtrés
+  const clientPagination = useMemo(() => {
+    const totalItems = filteredArticles.length
+    const totalPages = Math.ceil(totalItems / limit)
+    
+    return {
+      total: totalItems,
+      totalPages,
+      pages: totalPages,
+      currentPage: page,
+      itemsPerPage: limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  }, [filteredArticles.length, page, limit])
+
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {
     // Calculer les stats sur les articles du type de production pour TOUS les compteurs
@@ -161,10 +184,10 @@ export const useArticles = (options = {}) => {
   return {
     // Données
     articles,
-    filteredArticles,
+    filteredArticles: paginatedArticles, // Utiliser les articles paginés
     groupedArticles,
     stats,
-    pagination,
+    pagination: clientPagination, // Utiliser la pagination côté client
     
     // État
     isLoading,

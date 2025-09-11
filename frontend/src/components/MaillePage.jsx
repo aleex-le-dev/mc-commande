@@ -9,7 +9,6 @@ const MaillePage = () => {
   return (
     <>
       <ProductionPage productionType="maille" title="Maille" />
-      {/* Temporairement désactivé - erreurs 502 sur Render */}
     </>
   )
 }

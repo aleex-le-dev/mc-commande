@@ -9,7 +9,6 @@ const CouturePage = () => {
   return (
     <>
       <ProductionPage productionType="couture" title="Couture" />
-      {/* Temporairement désactivé - erreurs 502 sur Render */}
     </>
   )
 }

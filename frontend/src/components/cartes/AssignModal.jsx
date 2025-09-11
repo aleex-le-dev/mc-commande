@@ -73,8 +73,7 @@ const AssignModal = ({
                       <div className="flex flex-col items-center justify-center">
                         {isValidPhotoUrl(t.photoUrl) ? (
                           <div className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
-                            <img src={t.photoUrl} alt={`Photo de ${t.firstName}`} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-                            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-2xl" style={{ display: 'none' }}>👤</div>
+                            <img src={t.photoUrl} alt={`Photo de ${t.firstName}`} className="w-full h-full object-cover" />
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm" style={{ backgroundColor: t.color || '#6b7280' }}>
