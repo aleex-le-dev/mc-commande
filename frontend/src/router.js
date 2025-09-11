@@ -26,6 +26,8 @@ export const navigateToTab = (tabId) => {
     } else {
       if (window.location.pathname !== path) window.history.pushState({ tab: tabId }, '', path)
     }
+    // Notifier le routeur interne pour mettre à jour l'état immédiatement
+    window.dispatchEvent(new Event('mc-route-update'))
   } catch {}
 }
 
@@ -37,9 +39,11 @@ export const useRouteSync = () => {
     const onNav = () => setActiveTab(getTabFromLocation())
     window.addEventListener('popstate', onNav)
     window.addEventListener('hashchange', onNav)
+    window.addEventListener('mc-route-update', onNav)
     return () => {
       window.removeEventListener('popstate', onNav)
       window.removeEventListener('hashchange', onNav)
+      window.removeEventListener('mc-route-update', onNav)
     }
   }, [])
 

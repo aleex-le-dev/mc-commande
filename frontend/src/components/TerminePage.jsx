@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import OrderHeader from './cartes/OrderHeader'
 import ArticleCard from './cartes/ArticleCard'
-import Pagination from './Pagination'
+// Pagination retirée pour la page Terminé
 import { useArticles } from '../hooks/useArticles'
 import delaiService from '../services/delaiService'
 import SmartImageLoader from './SmartImageLoader'
@@ -17,8 +17,9 @@ const TerminePageRefactored = () => {
   const [openReadyOverlayId, setOpenReadyOverlayId] = useState(null)
   const [openPausedOverlayId, setOpenPausedOverlayId] = useState(null)
   const [openInProgressOverlayId, setOpenInProgressOverlayId] = useState(null)
+  // Afficher tout: pas de pagination sur la page Terminé
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [itemsPerPage, setItemsPerPage] = useState(5000)
 
   // Utiliser le hook unifié pour les articles
   const { 
@@ -364,19 +365,7 @@ const TerminePageRefactored = () => {
         ))}
       </div>
       
-      {/* Pagination avancée */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={pagination.totalPages}
-        totalItems={pagination.total}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={(newItemsPerPage) => {
-          setItemsPerPage(newItemsPerPage)
-          setCurrentPage(1) // Retourner à la première page
-        }}
-        showItemsPerPage={true}
-      />
+      {/* Pagination supprimée pour tout charger */}
     </div>
   )
 }
