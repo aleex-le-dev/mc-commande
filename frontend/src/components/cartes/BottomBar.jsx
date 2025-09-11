@@ -29,6 +29,8 @@ const BottomBar = ({
   const bottomClass = 'bottom-0'
   const paddingBottomClass = hasAvatar ? 'pb-0' : 'pb-2 sm:pb-3'
 
+  console.log('BottomBar render - hasAvatar:', hasAvatar, 'localAssignment:', localAssignment)
+  
   return (
     <div className={`absolute left-0 right-0 z-10 ${bottomClass} ${compact ? 'px-3 pt-2' : 'px-3 pt-3'} ${paddingBottomClass}`}>
       <div className="flex items-center justify-between">
@@ -94,12 +96,12 @@ const BottomBar = ({
               onClick={disableAssignmentModal ? undefined : (e) => { e.stopPropagation(); onOpenAssignModal(); }}
               className={`group relative transition-all duration-300 shadow-md ${disableAssignmentModal ? 'cursor-default' : 'hover:shadow-xl'} bg-gradient-to-r from-rose-400 to-pink-500 text-white ${disableAssignmentModal ? '' : 'hover:from-rose-500 hover:to-pink-600'}
                 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white
-                sm:w-auto sm:h-auto sm:rounded-xl sm:flex sm:items-center sm:justify-start ${compact ? 'sm:px-2 sm:py-1 sm:space-x-1 sm:text-[10px]' : 'sm:px-3 sm:py-2 sm:space-x-2 sm:text-xs'}`}
+                ${compact ? 'sm:w-8 sm:h-8 sm:rounded-full' : 'sm:w-auto sm:h-auto sm:rounded-xl sm:flex sm:items-center sm:justify-start sm:px-3 sm:py-2 sm:space-x-2 sm:text-xs'}`}
               title={disableAssignmentModal ? "Assignation désactivée" : "Assigner à une couturière"}
               aria-label={disableAssignmentModal ? "Assignation désactivée" : "Assigner à une couturière"}
             >
-              <span className="hidden sm:inline font-semibold">Assigner</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`w-3 h-3 ${compact ? 'sm:w-2.5 sm:h-2.5' : 'sm:w-3 sm:h-3'}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <span className={`font-semibold ${compact ? 'hidden' : 'hidden sm:inline'}`}>Assigner</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`w-3 h-3 ${compact ? 'sm:w-3 sm:h-3' : 'sm:w-3 sm:h-3'}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21a8 8 0 0 0-16 0" />
                 <circle cx="12" cy="7" r="4" />
               </svg>

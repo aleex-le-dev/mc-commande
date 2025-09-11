@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
 import { useArticles } from '../hooks/useArticles'
+import { useAssignments } from '../hooks/useAssignments'
+import { useTricoteuses } from '../hooks/useTricoteuses'
 import ArticleCard from './cartes/ArticleCard'
 
 const TerminePage = () => {
@@ -12,6 +14,13 @@ const TerminePage = () => {
     sortOrder: 'desc',
     productionType: 'all'
   })
+  
+  const { assignments, getAssignmentByArticleId } = useAssignments()
+  const { tricoteuses, getTricoteuseById } = useTricoteuses()
+  
+  // Debug pour vérifier les assignations
+  console.log('Assignments dans TerminePage:', assignments)
+  console.log('Tricoteuses dans TerminePage:', tricoteuses)
 
   const readyArticles = useMemo(() => {
     return (articles || []).filter(a => a.status === 'termine')
@@ -26,11 +35,30 @@ const TerminePage = () => {
   }, [groupedArticles])
 
   const inProgressOrders = useMemo(() => {
-    if (!groupedArticles) return []
-    return Object.entries(groupedArticles)
-      .map(([orderNumber, group]) => ({ orderNumber, ...group }))
-      .filter(({ articles }) => Array.isArray(articles) && articles.some(a => a.status === 'en_cours'))
-  }, [groupedArticles])
+    if (!articles) return []
+    
+    // Grouper les articles par commande
+    const ordersMap = new Map()
+    
+    articles.forEach(article => {
+      if (article.status === 'en_cours' || article.status === 'en_pause' || article.status === 'termine' || article.status === 'en_attente' || article.status === 'a_faire') {
+        const orderNumber = article.orderNumber || article.order_id
+        if (!ordersMap.has(orderNumber)) {
+          ordersMap.set(orderNumber, {
+            orderNumber,
+            order: { customer_name: article.customer },
+            articles: []
+          })
+        }
+        ordersMap.get(orderNumber).articles.push(article)
+      }
+    })
+    
+    // Filtrer pour ne garder que les commandes qui ont au moins un article en_cours
+    return Array.from(ordersMap.values()).filter(({ articles }) => 
+      articles.some(a => a.status === 'en_cours')
+    )
+  }, [articles])
 
   const pausedArticles = useMemo(() => {
     return (articles || []).filter(a => a.status === 'en_pause')
@@ -48,16 +76,16 @@ const TerminePage = () => {
     <div className="max-w-6xl mx-auto px-4 space-y-8">
       {/* Commandes prêtes à expédier */}
       <section>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes prêtes à expédier</h2>
-            <p className="text-[11px] text-gray-500 leading-tight">{readyOrders.length} commande(s)</p>
+            <h2 className="text-lg font-bold leading-tight text-gray-900 border-b-2 border-gray-300 pb-2">Commandes prêtes à expédier</h2>
+            <p className="text-sm text-gray-600 leading-tight mt-1">{readyOrders.length} commande(s)</p>
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Terminé</span>
         </div>
         <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
           {readyOrders.map(({ orderNumber, order, total }) => (
-            <div key={orderNumber} className="rounded-xl border border-green-200 bg-green-50 p-1.5 shadow-sm">
+            <div key={orderNumber} className="rounded-xl border-4 border-green-300 bg-green-50 p-1.5 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <div className="font-medium text-gray-900 text-xs truncate">Commande #{orderNumber}</div>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Prête</span>
@@ -81,19 +109,37 @@ const TerminePage = () => {
 
       {/* Commandes en cours */}
       <section>
-        <div className="mb-2">
-          <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes en cours</h2>
-          <p className="text-[11px] text-gray-500 leading-tight">{inProgressOrders.length} commande(s)</p>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold leading-tight text-gray-900 border-b-2 border-gray-300 pb-2">Commandes en cours</h2>
+          <p className="text-sm text-gray-600 leading-tight mt-1">{inProgressOrders.length} commande(s)</p>
         </div>
         <div className="p-1 flex flex-wrap gap-4">
           {inProgressOrders.map(({ orderNumber, order, articles }) => {
+            // Générer une couleur aléatoire pour chaque commande
+            const colors = [
+              'bg-blue-50 border-blue-300',
+              'bg-green-50 border-green-300', 
+              'bg-purple-50 border-purple-300',
+              'bg-pink-50 border-pink-300',
+              'bg-indigo-50 border-indigo-300',
+              'bg-cyan-50 border-cyan-300',
+              'bg-amber-50 border-amber-300',
+              'bg-emerald-50 border-emerald-300',
+              'bg-rose-50 border-rose-300',
+              'bg-violet-50 border-violet-300'
+            ]
+            const randomColor = colors[orderNumber % colors.length]
+            
             return (
-              <div key={orderNumber} className="rounded-xl border-2 border-blue-200 bg-blue-50 p-3 shadow-sm w-fit min-w-[200px] max-w-[600px] flex-shrink-0">
+              <div key={orderNumber} className={`rounded-xl border-4 ${randomColor} p-3 shadow-sm w-fit min-w-[200px] max-w-[600px] flex-shrink-0`}>
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="font-medium text-gray-900 text-sm">Commande #{orderNumber}</div>
+                  <div className="font-bold text-gray-900 text-base">Commande #{orderNumber}</div>
                   <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
                 </div>
-                <div className="text-xs text-gray-600 mb-3">{order?.customer_name || 'Client inconnu'}</div>
+                <div className="mb-2">
+                  <div className="font-semibold text-gray-800 text-sm mb-1">{order?.customer_name || 'Client inconnu'}</div>
+                  <div className="text-sm font-medium text-gray-700">{articles.length} article(s)</div>
+                </div>
                 <div className="grid gap-2 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${articles.length}, 200px)` }}>
                   {articles
                     .sort((a, b) => {
@@ -107,11 +153,12 @@ const TerminePage = () => {
                     // Déterminer la couleur de bordure selon le statut réel
                     const getBorderColor = (status) => {
                       switch (status) {
-                        case 'termine': return 'border-green-400'
-                        case 'en_cours': return 'border-yellow-400'
-                        case 'en_pause': return 'border-orange-400'
-                        case 'en_attente': return 'border-gray-400'
-                        default: return 'border-gray-400'
+                        case 'termine': return 'border-green-500'
+                        case 'en_cours': return 'border-yellow-500'
+                        case 'en_pause': return 'border-orange-500'
+                        case 'en_attente': return 'border-gray-500'
+                        case 'a_faire': return 'border-0'
+                        default: return 'border-0'
                       }
                     }
                     
@@ -126,12 +173,14 @@ const TerminePage = () => {
                     }
                     
                     return (
-                      <div key={`${orderNumber}-${a.line_item_id}`} className={`rounded-2xl border-2 ${getBorderColor(a.status)} overflow-hidden w-[200px] h-[280px]`}>
+                      <div key={`${orderNumber}-${a.line_item_id}`} className={`rounded-3xl ${getBorderColor(a.status) === 'border-0' ? 'border-0' : 'border-4'} ${getBorderColor(a.status)} overflow-hidden`}>
                         <ArticleCard
                           article={a}
+                          assignment={a.assignment}
+                          tricoteusesProp={tricoteuses}
                           size="small"
                           color={`border-${a.status === 'termine' ? 'green' : a.status === 'en_cours' ? 'yellow' : a.status === 'en_pause' ? 'orange' : 'gray'}-500 ${getBgColor(a.status)}`}
-                          options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                          options={{ showAssignButton: true, showStatusButton: false, showNoteButton: false, showClientButton: true }}
                           productionType="all"
                           prioritizeUrgent={false}
                           disableStatusBorder={true}
@@ -154,21 +203,23 @@ const TerminePage = () => {
 
       {/* Articles en pause */}
       <section>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold leading-tight text-gray-800">Articles en pause</h2>
-            <p className="text-[11px] text-gray-500 leading-tight">{pausedArticles.length} article(s)</p>
+            <h2 className="text-lg font-bold leading-tight text-gray-900 border-b-2 border-gray-300 pb-2">Articles en pause</h2>
+            <p className="text-sm text-gray-600 leading-tight mt-1">{pausedArticles.length} article(s)</p>
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">En pause</span>
         </div>
         <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
           {pausedArticles.map(a => (
-            <div key={a.article_id} className="rounded-3xl border-4 border-orange-400 overflow-hidden">
+            <div key={a.article_id} className="rounded-3xl border-4 border-orange-500 overflow-hidden">
               <ArticleCard
                 article={a}
+                assignment={a.assignment}
+                tricoteusesProp={tricoteuses}
                 size="small"
                 color="border-yellow-500 bg-yellow-50"
-                options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                options={{ showAssignButton: true, showStatusButton: false, showNoteButton: false, showClientButton: true }}
                 productionType="all"
                 prioritizeUrgent={false}
                 disableStatusBorder={true}
