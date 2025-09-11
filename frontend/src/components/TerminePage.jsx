@@ -80,7 +80,7 @@ const TerminePage = () => {
     if (isDeleting) return
     
     const confirmed = window.confirm(
-      `Confirmer l'envoi de la commande #${orderNumber} ?\n\nCette action supprimera définitivement la commande de la base de données.`
+      `Confirmer l'envoi de la commande #${orderNumber} ?\n\nCette action archivera la commande dans les archives.`
     )
     
     if (!confirmed) return
@@ -89,8 +89,8 @@ const TerminePage = () => {
     
     try {
       const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const response = await fetch(`${base}/api/orders/${orderId}`, {
-        method: 'DELETE'
+      const response = await fetch(`${base}/api/orders/${orderId}/archive`, {
+        method: 'POST'
       })
       
       if (response.ok) {
@@ -110,7 +110,7 @@ const TerminePage = () => {
         // Afficher le toast de succès
         setToast({ 
           visible: true, 
-          message: `Commande #${orderNumber} supprimée avec succès ✅`, 
+          message: `Commande #${orderNumber} archivée avec succès ✅`, 
           type: 'success' 
         })
         

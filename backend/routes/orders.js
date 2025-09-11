@@ -13,6 +13,17 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/orders/archived - Récupérer les commandes archivées
+router.get('/archived', async (req, res) => {
+  try {
+    const result = await ordersService.getArchivedOrders(req.query)
+    res.json({ success: true, orders: result.orders, pagination: result.pagination })
+  } catch (error) {
+    console.error('Erreur récupération commandes archivées:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // GET /api/orders/:id - Récupérer une commande par ID
 router.get('/:id', async (req, res) => {
   try {
@@ -122,6 +133,23 @@ router.put('/:id/note', async (req, res) => {
     res.json({ success: true, message: 'Note mise à jour avec succès' })
   } catch (error) {
     console.error('Erreur mise à jour note commande:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// POST /api/orders/:id/archive - Archiver une commande
+router.post('/:id/archive', async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id)
+    const success = await ordersService.archiveOrder(orderId)
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Commande non trouvée' })
+    }
+    
+    res.json({ success: true, message: 'Commande archivée avec succès' })
+  } catch (error) {
+    console.error('Erreur archivage commande:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
   }
 })

@@ -207,6 +207,22 @@ export const OrdersService = {
   },
 
   /**
+   * Archiver une commande
+   */
+  async archiveOrder(orderId) {
+    try {
+      const response = await HttpClientService.post(`/orders/${orderId}/archive`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Erreur archivage commande:', error)
+      throw error
+    }
+  },
+
+  /**
    * Récupérer les statistiques des commandes
    */
   async getOrdersStats() {

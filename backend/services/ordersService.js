@@ -326,6 +326,82 @@ class OrdersService {
       throw error
     }
   }
+
+  async getArchivedOrders(filters = {}) {
+    try {
+      const archivedOrders = db.getCollection('archived_orders')
+      
+      const match = {}
+      
+      if (filters.search) {
+        match.$or = [
+          { order_number: { $regex: filters.search, $options: 'i' } },
+          { customer: { $regex: filters.search, $options: 'i' } },
+          { order_id: isNaN(parseInt(filters.search)) ? undefined : parseInt(filters.search) }
+        ].filter(Boolean)
+      }
+
+      const sort = { archived_date: -1 } // Trier par date d'archivage
+      const limit = parseInt(filters.limit) || 50
+      const page = parseInt(filters.page) || 1
+      const skip = (page - 1) * limit
+
+      const [orders, totalCount] = await Promise.all([
+        archivedOrders.find(match).sort(sort).skip(skip).limit(limit).toArray(),
+        archivedOrders.countDocuments(match)
+      ])
+
+      return {
+        orders,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      }
+    } catch (error) {
+      console.error('Erreur récupération commandes archivées:', error)
+      throw error
+    }
+  }
+
+  async archiveOrder(orderId) {
+    try {
+      const items = db.getCollection('order_items')
+      const archivedOrders = db.getCollection('archived_orders')
+      
+      // Récupérer tous les articles de la commande
+      const orderItems = await items.find({ order_id: orderId }).toArray()
+      
+      if (orderItems.length === 0) {
+        return false // Commande non trouvée
+      }
+
+      // Créer l'objet commande archivée
+      const firstItem = orderItems[0]
+      const archivedOrder = {
+        order_id: orderId,
+        order_number: firstItem.order_number,
+        customer: firstItem.customer,
+        order_date: firstItem.order_date,
+        archived_date: new Date(),
+        items: orderItems,
+        total_items: orderItems.length
+      }
+
+      // Sauvegarder dans les archives
+      await archivedOrders.insertOne(archivedOrder)
+
+      // Supprimer de la collection active
+      await items.deleteMany({ order_id: orderId })
+
+      return true
+    } catch (error) {
+      console.error('Erreur archivage commande:', error)
+      throw error
+    }
+  }
 }
 
 module.exports = new OrdersService()
