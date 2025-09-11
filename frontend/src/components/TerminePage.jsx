@@ -85,36 +85,33 @@ const TerminePage = () => {
           <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes en cours</h2>
           <p className="text-[11px] text-gray-500 leading-tight">{inProgressOrders.length} commande(s)</p>
         </div>
-        <div className="p-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-1">
+        <div className="p-1 flex flex-wrap gap-4">
           {inProgressOrders.map(({ orderNumber, order, articles }) => {
-            const total = articles.length
-            const done = articles.filter(a => a.status === 'termine').length
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0
             return (
-              <div key={orderNumber} className="rounded-xl border shadow-sm bg-white p-1.5">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="font-medium text-gray-900 text-xs truncate">Commande #{orderNumber}</div>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
+              <div key={orderNumber} className="rounded-xl border-2 border-blue-200 bg-blue-50 p-3 shadow-sm w-fit min-w-[200px] max-w-[600px] flex-shrink-0">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="font-medium text-gray-900 text-sm">Commande #{orderNumber}</div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
                 </div>
-                <div className="text-[10px] text-gray-600 mb-1 truncate">{order?.customer_name || 'Client inconnu'}</div>
-                {/* Avatars tricoteuses inline, sans ouverture de modal */}
-                <div className="flex items-center gap-1 mb-1">
-                  {articles.slice(0, 3).map((art) => (
-                    <div key={`${orderNumber}-${art.line_item_id}`} className="w-6 h-6 rounded-full overflow-hidden border border-white shadow-sm">
-                      {art?.assignment?.tricoteuse_photo ? (
-                        <img src={art.assignment.tricoteuse_photo} alt={art.assignment.tricoteuse_name || 'Couturière'} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] font-semibold bg-gray-300 text-gray-700">
-                          {(art?.assignedTo || '?').charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                <div className="text-xs text-gray-600 mb-3">{order?.customer_name || 'Client inconnu'}</div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {articles.map(a => (
+                    <div key={`${orderNumber}-${a.line_item_id}`} className="rounded-2xl border-2 border-yellow-400 overflow-hidden w-[200px] h-[280px] flex-shrink-0">
+                      <ArticleCard
+                        article={a}
+                        size="small"
+                        color="border-yellow-500 bg-yellow-50"
+                        options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                        productionType="all"
+                        prioritizeUrgent={false}
+                        disableStatusBorder={true}
+                        compact={true}
+                        disableAssignmentModal={true}
+                        clientOverlayCompact={true}
+                      />
                     </div>
                   ))}
                 </div>
-                <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-1 bg-blue-500" style={{ width: `${percent}%` }} />
-                </div>
-                <div className="mt-1 text-[10px] text-gray-700">{done}/{total} terminé(s)</div>
               </div>
             )
           })}
