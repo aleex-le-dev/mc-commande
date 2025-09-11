@@ -165,7 +165,7 @@ class DelaiService {
       const dateLimite = await this.calculerDateLimite(
         new Date().toISOString(),
         configuration.data.joursOuvrables,
-        configuration.data.delaiJours
+        configuration.data.joursDelai
       )
       
       this.isLoadingDateLimite = false
@@ -280,28 +280,28 @@ class DelaiService {
     }
   }
 
-  // Calculer une date limite avec prise en compte des jours fériés
+  // Calculer une date limite en remontant depuis aujourd'hui
   async calculerDateLimite(dateCommande, joursOuvrables, configurationJours) {
     try {
-      const dateCommandeObj = new Date(dateCommande)
-      let dateLimite = new Date(dateCommandeObj)
-      let joursAjoutes = 0
+      const aujourdhui = new Date(dateCommande)
+      let dateLimite = new Date(aujourdhui)
+      let joursRetires = 0
       
-      while (joursAjoutes < configurationJours) {
-        dateLimite.setDate(dateLimite.getDate() + 1)
+      // Remonter en arrière jusqu'à avoir retiré le bon nombre de jours ouvrables
+      while (joursRetires < configurationJours) {
+        dateLimite.setDate(dateLimite.getDate() - 1)
         
         const jourSemaine = dateLimite.getDay()
         const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
         
         // Vérifier si c'est un jour ouvrable configuré ET pas un jour férié
         if (joursOuvrables[nomJour] && !(await this.estJourFerie(dateLimite))) {
-          joursAjoutes++
+          joursRetires++
         }
       }
       
       return { success: true, dateLimite: dateLimite.toISOString().split('T')[0] }
     } catch (error) {
-      /* log désactivé */
       return { success: false, error: error.message }
     }
   }

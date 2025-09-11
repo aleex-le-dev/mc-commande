@@ -233,24 +233,31 @@ const DateLimiteTab = () => {
 
   const loadDelai = async () => {
     try {
-      const response = await delaiService.getDelai()
+      // Utiliser getDateLimiteActuelle() qui calcule la vraie date limite
+      const response = await delaiService.getDateLimiteActuelle()
       if (response.success && response.data) {
         // Log de contrôle: valeurs chargées depuis la BDD
         try {
           const todayLocal = toLocalYMD(new Date())
           const fromDbLocal = response.data.dateLimite ? toLocalYMD(new Date(response.data.dateLimite)) : 'N/A'
           console.log(`📥 Delais BDD → today=${todayLocal}, dateLimite=${fromDbLocal}`)
+          console.log(`📅 Date limite brute depuis BDD:`, response.data.dateLimite)
         } catch {}
-        setJoursDelai(response.data.joursDelai?.toString() || '21')
-        setJoursOuvrables(response.data.joursOuvrables || {
-          lundi: true,
-          mardi: true,
-          mercredi: true,
-          jeudi: true,
-          vendredi: true,
-          samedi: false,
-          dimanche: false
-        })
+        
+        // Charger aussi la configuration pour les jours ouvrables
+        const configResponse = await delaiService.getDelai()
+        if (configResponse.success && configResponse.data) {
+          setJoursDelai(configResponse.data.joursDelai?.toString() || '21')
+          setJoursOuvrables(configResponse.data.joursOuvrables || {
+            lundi: true,
+            mardi: true,
+            mercredi: true,
+            jeudi: true,
+            vendredi: true,
+            samedi: false,
+            dimanche: false
+          })
+        }
       }
     } catch (error) {
       console.error('Erreur lors du chargement du délai:', error)

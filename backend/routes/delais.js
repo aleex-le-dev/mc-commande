@@ -15,19 +15,49 @@ router.get('/configuration', async (req, res) => {
         vendredi: true,
         samedi: false,
         dimanche: false
-      },
-      dateLimite: null
+      }
+    }
+
+    // Calculer la date limite actuelle
+    const aujourdhui = new Date()
+    const dateLimite = calculerDateLimite(aujourdhui, defaultConfig.joursOuvrables, defaultConfig.joursDelai)
+    
+    const configAvecDateLimite = {
+      ...defaultConfig,
+      dateLimite: dateLimite
     }
 
     res.json({
       success: true,
-      data: defaultConfig
+      data: configAvecDateLimite
     })
   } catch (error) {
     console.error('Erreur récupération configuration délais:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
   }
 })
+
+// Fonction pour calculer la date limite en remontant depuis aujourd'hui
+function calculerDateLimite(dateCommande, joursOuvrables, joursDelai) {
+  const aujourdhui = new Date(dateCommande)
+  let dateLimite = new Date(aujourdhui)
+  let joursRetires = 0
+  
+  // Remonter en arrière jusqu'à avoir retiré le bon nombre de jours ouvrables
+  while (joursRetires < joursDelai) {
+    dateLimite.setDate(dateLimite.getDate() - 1)
+    
+    const jourSemaine = dateLimite.getDay()
+    const nomJour = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][jourSemaine]
+    
+    // Vérifier si c'est un jour ouvrable configuré
+    if (joursOuvrables[nomJour]) {
+      joursRetires++
+    }
+  }
+  
+  return dateLimite.toISOString().split('T')[0]
+}
 
 // PUT /api/delais/configuration - Mettre à jour la configuration des délais
 router.put('/configuration', async (req, res) => {
