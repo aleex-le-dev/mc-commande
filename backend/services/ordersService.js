@@ -4,7 +4,7 @@ class OrdersService {
   async getOrders(filters = {}) {
     // Lecture depuis order_items, agrégé par order_id
     const items = db.getCollection('order_items')
-
+    
     const match = {}
     if (filters.status && filters.status !== 'all') {
       match.status = filters.status
@@ -30,16 +30,39 @@ class OrdersService {
 
     const pipeline = [
       { $match: match },
+      // Joindre les statuts de production si on filtre par type (couture/maille)
+      ...(filters.productionType && ['couture','maille'].includes(String(filters.productionType))
+        ? [
+            {
+              $lookup: {
+                from: 'production_status',
+                let: { oid: '$order_id', lid: '$line_item_id' },
+                pipeline: [
+                  { $match: { $expr: { $and: [ { $eq: ['$order_id', '$$oid'] }, { $eq: ['$line_item_id', '$$lid'] } ] } } },
+                  { $project: { production_type: 1 } }
+                ],
+                as: 'ps'
+              }
+            },
+            { $match: { ps: { $elemMatch: { production_type: String(filters.productionType) } } } }
+          ]
+        : []),
       {
         $group: {
           _id: '$order_id',
           order_id: { $first: '$order_id' },
-          order_number: { $first: '$order_number' },
-          customer: { $first: '$customer' },
-          order_date: { $min: '$order_date' },
+          order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
           status: { $first: '$status' },
           items_count: { $sum: 1 },
           items: { $push: '$$ROOT' }
+        }
+      },
+      {
+        // Normaliser les champs attendus par le frontend
+        $addFields: {
+          order_number: { $ifNull: ['$order_number', '$order_id'] },
+          customer_name: { $ifNull: ['$customer_name', '$customer'] },
+          customer_email: { $ifNull: ['$customer_email', null] }
         }
       },
       { $sort: sort },
@@ -61,7 +84,9 @@ class OrdersService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
       }
     }
   }
@@ -76,12 +101,17 @@ class OrdersService {
         $group: {
           _id: '$order_id',
           order_id: { $first: '$order_id' },
-          order_number: { $first: '$order_number' },
-          customer: { $first: '$customer' },
-          order_date: { $min: '$order_date' },
+          order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
           status: { $first: '$status' },
           items_count: { $sum: 1 },
           items: { $push: '$$ROOT' }
+        }
+      },
+      {
+        $addFields: {
+          order_number: { $ifNull: ['$order_number', '$order_id'] },
+          customer_name: { $ifNull: ['$customer_name', '$customer'] },
+          customer_email: { $ifNull: ['$customer_email', null] }
         }
       }
     ]).toArray()

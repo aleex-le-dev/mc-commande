@@ -16,8 +16,9 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
 
   // ID unique pour l'assignation
   const uniqueAssignmentId = useMemo(() => {
-    return article?.line_item_id || `${article?.product_id}_${article?.orderNumber}_${article?.customer}`
-  }, [article?.line_item_id, article?.product_id, article?.orderNumber, article?.customer])
+    // Lier l'assignation de façon fiable au line_item_id
+    return String(article?.line_item_id || article?.id)
+  }, [article?.line_item_id, article?.id])
 
   // Synchroniser localAssignment avec assignment
   useEffect(() => {
@@ -161,7 +162,7 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
     }
     
     try {
-      await ApiService.assignments.createAssignment(assignmentData)
+      const created = await ApiService.assignments.createAssignment(assignmentData)
       
       // Synchroniser le statut initial avec production_status en BDD
       try { 
@@ -177,13 +178,13 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
         tricoteuse_name: tricoteuse.firstName 
       }
       
-      setLocalAssignment(enrichedAssignment)
+      setLocalAssignment({ ...enrichedAssignment, _id: created?.data?._id || created?._id || localAssignment?._id })
       if (onAssignmentUpdate) { 
         onAssignmentUpdate(uniqueAssignmentId, enrichedAssignment) 
       }
       closeTricoteuseModal()
       
-      // Forcer la mise à jour immédiate de l'interface
+      // Forcer la mise à jour immédiate de l'interface et refetch des assignations
       window.dispatchEvent(new Event('mc-assignment-updated'))
       
       // Alternative: forcer le re-render via un timeout
@@ -194,7 +195,7 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
       // OPTIMISATION: Timeout avec cleanup
       const timeoutId = setTimeout(() => {
         window.dispatchEvent(new Event('mc-refresh-data'))
-      }, 500)
+      }, 300)
       
       // Cleanup du timeout si le composant est démonté
       return () => clearTimeout(timeoutId)

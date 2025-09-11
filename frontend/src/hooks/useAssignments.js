@@ -12,10 +12,13 @@ export const useAssignments = () => {
   const [error, setError] = useState(null)
   const [isFetching, setIsFetching] = useState(false)
 
-  const fetchAssignments = useCallback(async () => {
-    // Éviter les requêtes multiples
-    if (isFetching) {
-      console.log('🔄 Assignations déjà en cours, ignorées')
+  const fetchAssignments = useCallback(async (force = false) => {
+    // Éviter les requêtes multiples, mais planifier un refetch immédiat si une requête est en cours
+    if (isFetching && !force) {
+      setTimeout(() => {
+        // Forcer un refetch juste après la fin probable du précédent cycle
+        fetchAssignments(true)
+      }, 150)
       return
     }
     
@@ -26,7 +29,13 @@ export const useAssignments = () => {
 
     try {
       const data = await ApiService.assignments.getAssignments()
-      setAssignments(data)
+      // Normaliser: s'assurer que tricoteuse_name est présent
+      const normalized = data.map(a => ({
+        ...a,
+        article_id: String(a.article_id),
+        tricoteuse_name: a.tricoteuse_name || a.tricoteuse?.firstName || a.tricoteuse_id || a.tricoteuse
+      }))
+      setAssignments(normalized)
       logger.service.success('Chargement assignations')
     } catch (err) {
       logger.service.error('Chargement assignations', err)
@@ -49,6 +58,17 @@ export const useAssignments = () => {
     
     return () => clearTimeout(timeoutId) // ✅ Cleanup déjà présent
   }, [])
+
+  // Réagir aux événements globaux pour refetch après assignation/changement
+  useEffect(() => {
+    const onUpdated = () => fetchAssignments(true)
+    window.addEventListener('mc-assignment-updated', onUpdated)
+    window.addEventListener('mc-refresh-data', onUpdated)
+    return () => {
+      window.removeEventListener('mc-assignment-updated', onUpdated)
+      window.removeEventListener('mc-refresh-data', onUpdated)
+    }
+  }, [fetchAssignments])
 
   const assignArticle = useCallback(async (articleId, tricoteuseId) => {
     try {
@@ -85,7 +105,8 @@ export const useAssignments = () => {
   }, [fetchAssignments])
 
   const getAssignmentByArticleId = useCallback((articleId) => {
-    return assignments.find(a => a.article_id === articleId)
+    const key = String(articleId)
+    return assignments.find(a => String(a.article_id) === key)
   }, [assignments])
 
   const getActiveAssignments = useCallback(() => {

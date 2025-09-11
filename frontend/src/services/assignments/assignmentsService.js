@@ -14,14 +14,7 @@ export const AssignmentsService = {
    */
   async getAssignments() {
     try {
-      // Vider le cache pour forcer le rechargement
-      HttpCacheService.delete('assignments')
-      
-      // Vérifier le cache d'abord
-      const cached = HttpCacheService.get('assignments')
-      if (cached) {
-        return cached
-      }
+      // Forcer le rechargement à chaque appel après une mutation via invalidation explicite
 
       const response = await HttpClientService.get('/assignments')
       if (!response.ok) {
@@ -29,12 +22,7 @@ export const AssignmentsService = {
       }
       
       const data = await response.json()
-      const assignments = data.data || data.assignments || []
-      
-      // Mettre en cache
-      HttpCacheService.set('assignments', assignments)
-      
-      
+      const assignments = data.assignments || data.data || []
       return assignments
     } catch (error) {
       console.error('Erreur récupération assignations:', error)
@@ -52,7 +40,8 @@ export const AssignmentsService = {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      const newAssignment = await response.json()
+      const created = await response.json()
+      const newAssignment = created.assignment || created.data || created
       
       // Invalider le cache
       HttpCacheService.delete('assignments')

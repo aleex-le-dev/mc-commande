@@ -73,7 +73,7 @@ export const useOrders = (options = {}) => {
       setLoading(false)
       setIsFetching(false)
     }
-  }, [page, limit, status, search, sortBy, sortOrder, isFetching])
+  }, [page, limit, status, search, sortBy, sortOrder, productionType, isFetching])
 
   useEffect(() => {
     // OPTIMISATION: Délai pour éviter les appels multiples avec cleanup

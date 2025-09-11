@@ -76,25 +76,15 @@ export const OrdersService = {
       }
       const data = await response.json()
       
-      // Adapter la réponse pour correspondre au format attendu
-      // Si l'endpoint retourne déjà un objet pagination, l'utiliser directement
-      if (data.pagination) {
-        return {
-          orders: data.orders || [],
-          pagination: data.pagination
-        }
-      }
-      
-      // Sinon, construire la pagination manuellement
       return {
-        orders: data.orders || data || [],
-        pagination: {
-          page: page,
-          limit: limit,
-          total: data.total || (data.orders ? data.orders.length : 0),
-          totalPages: Math.ceil((data.total || (data.orders ? data.orders.length : 0)) / limit),
-          hasNext: page < Math.ceil((data.total || (data.orders ? data.orders.length : 0)) / limit),
-          hasPrev: page > 1
+        orders: data.orders || [],
+        pagination: data.pagination || {
+          page,
+          limit,
+          total: Array.isArray(data.orders) ? data.orders.length : 0,
+          totalPages: Math.ceil((Array.isArray(data.orders) ? data.orders.length : 0) / limit),
+          hasNext: false,
+          hasPrev: false
         }
       }
     } catch (error) {

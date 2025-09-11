@@ -7,10 +7,7 @@ const router = express.Router()
 router.get('/', async (req, res) => {
   try {
     const assignments = await assignmentsService.getAssignments()
-    res.json({
-      success: true,
-      data: assignments
-    })
+    res.json({ success: true, assignments })
   } catch (error) {
     console.error('Erreur récupération assignations:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
@@ -24,7 +21,7 @@ router.get('/:articleId', async (req, res) => {
     if (!assignment) {
       return res.status(404).json({ error: 'Aucune assignation trouvée pour cet article' })
     }
-    res.json({ success: true, data: assignment })
+    res.json({ success: true, assignment })
   } catch (error) {
     console.error('Erreur récupération assignation:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
@@ -34,31 +31,23 @@ router.get('/:articleId', async (req, res) => {
 // POST /api/assignments - Créer une nouvelle assignation
 router.post('/', async (req, res) => {
   try {
-    const assignment = await assignmentsService.createAssignment(req.body)
+    const { article_id, tricoteuse_id, status } = req.body || {}
+    if (!article_id || !tricoteuse_id) {
+      return res.status(400).json({ error: 'article_id et tricoteuse_id requis' })
+    }
+    const assignment = await assignmentsService.createAssignment({ article_id, tricoteuse_id, status: status || 'a_faire' })
     
     // Mettre à jour le statut de production
-    const articleId = assignment.article_id.toString()
-    let orderId, lineItemId
-
-    if (articleId.includes('_')) {
-      const parts = articleId.split('_')
-      orderId = parts[0]
-      lineItemId = parts[1]
-    } else {
-      orderId = articleId
-      lineItemId = '1'
+    const orderId = assignment.order_id
+    const lineItemId = assignment.line_item_id
+    if (orderId && lineItemId) {
+      await productionService.updateProductionStatus(orderId, lineItemId, assignment.status)
     }
 
-    await productionService.updateProductionStatus(orderId, lineItemId, assignment.status)
-
-    res.status(201).json({
-      success: true,
-      message: 'Assignation créée avec succès',
-      data: assignment
-    })
+    res.status(201).json({ success: true, assignment })
   } catch (error) {
     console.error('Erreur création assignation:', error)
-    res.status(500).json({ error: 'Erreur serveur interne' })
+    res.status(500).json({ error: error?.message || 'Erreur serveur interne' })
   }
 })
 

@@ -30,7 +30,7 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     customerCountry: order.customer_country || null,
     status: item.production_status?.status || 'a_faire',
     productionType: item.production_status?.production_type || 'couture',
-    assignedTo: tricoteuse?.name || assignment?.tricoteuse_name || null,
+    assignedTo: tricoteuse?.firstName || assignment?.tricoteuse_name || null,
     urgent: assignment?.urgent || false,
     assignmentId: assignment?._id || null,
     tricoteuseId: assignment?.tricoteuse_id || null

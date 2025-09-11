@@ -194,7 +194,7 @@ const ProductionPage = ({ productionType, title }) => {
       {pagination && (
         <Pagination
           currentPage={currentPage}
-          totalPages={pagination.totalPages || 1}
+          totalPages={pagination.totalPages || pagination.pages || 1}
           totalItems={pagination.total || filteredArticles?.length || 0}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}

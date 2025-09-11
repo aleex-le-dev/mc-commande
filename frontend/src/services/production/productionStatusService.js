@@ -30,9 +30,7 @@ export const ProductionStatusService = {
    */
   async updateArticleStatus(orderId, lineItemId, status, notes = null) {
     try {
-      const response = await HttpClientService.put('/production/status', {
-        order_id: orderId,
-        line_item_id: lineItemId,
+      const response = await HttpClientService.put(`/production/status/${orderId}/${lineItemId}`, {
         status,
         notes
       })
