@@ -290,14 +290,11 @@ const ArticleCard = forwardRef(({
     const handleEditNote = (ev) => {
       const { uniqueAssignmentId: targetId } = ev.detail || {}
       if (targetId !== uniqueAssignmentId) return
-      console.log('handleEditNote appelé - setIsNoteOpen:', typeof setIsNoteOpen, 'openNoteEditor:', typeof openNoteEditor)
       
       // Utiliser openNoteEditor si disponible, sinon fallback manuel
       if (typeof openNoteEditor === 'function') {
-        console.log('Utilisation de openNoteEditor')
         openNoteEditor()
       } else {
-        console.log('Fallback manuel - setIsNoteOpen:', typeof setIsNoteOpen)
         window.dispatchEvent(new Event('mc-close-notes'))
         setEditingNote(article.customerNote || article.production_status?.notes || '')
         if (typeof setIsNoteOpen === 'function') {
@@ -427,6 +424,12 @@ const ArticleCard = forwardRef(({
       onTouchEnd={endTouch}
       onTouchCancel={endTouch}
     >
+
+      {/* Badges supérieurs pour retard et urgent */}
+      <TopBadges 
+        showRetard={isEnRetard && showRetardIndicator}
+        showUrgent={Boolean(article?.production_status?.urgent === true || localUrgent)}
+      />
 
       <HeaderMedia
         article={article}

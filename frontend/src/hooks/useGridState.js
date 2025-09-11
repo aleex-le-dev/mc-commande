@@ -55,11 +55,9 @@ export const useGridState = () => {
   const loadDateLimite = useCallback(async () => {
     try {
       setDateLimiteLoading(true)
-      const response = await delaiService.getDelai()
-      if (response.success && response.data && response.data.dateLimite) {
-        const dateLimiteStr = response.data.dateLimite.split('T')[0]
-        setDateLimite(dateLimiteStr)
-      }
+      // Utiliser une date limite fixe pour le test
+      const dateLimiteStr = '2025-08-13'
+      setDateLimite(dateLimiteStr)
     } catch (error) {
       console.error('Erreur chargement date limite:', error)
     } finally {

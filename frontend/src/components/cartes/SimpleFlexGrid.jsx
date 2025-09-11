@@ -154,12 +154,19 @@ const SimpleFlexGrid = ({
     
     // Helper: déterminer si l'article est en retard par rapport à la date limite
     const isArticleEnRetard = (article) => {
-      if (!gridState.dateLimite || !article.orderDate) return false
+      
+      if (!gridState.dateLimite || !article.orderDate) {
+        return false
+      }
+      
       const dateCommande = new Date(article.orderDate)
       const dateLimiteObj = new Date(gridState.dateLimite)
       const dc = new Date(dateCommande.getFullYear(), dateCommande.getMonth(), dateCommande.getDate())
       const dl = new Date(dateLimiteObj.getFullYear(), dateLimiteObj.getMonth(), dateLimiteObj.getDate())
-      return dc <= dl
+      const isRetard = dc <= dl
+      
+      
+      return isRetard
     }
 
     subset.forEach((article, index) => {
