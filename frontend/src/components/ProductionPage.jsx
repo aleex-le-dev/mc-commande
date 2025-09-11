@@ -118,7 +118,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            📋 Total: <strong>{articles.length}</strong>
+            📋 Total: <strong>{stats.total}</strong>
           </button>
 
           <button
@@ -129,7 +129,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            🚨 Urgentes: <strong>{urgentCount}</strong>
+            🚨 Urgentes: <strong>{stats.urgent}</strong>
           </button>
           
           <button
@@ -140,7 +140,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            🆕 À faire: <strong>{statusCounts.a_faire}</strong>
+            🆕 À faire: <strong>{stats.a_faire}</strong>
           </button>
           
           <button
@@ -151,7 +151,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            🔄 En cours: <strong>{statusCounts.en_cours}</strong>
+            🔄 En cours: <strong>{stats.en_cours}</strong>
           </button>
           
           <button
@@ -162,7 +162,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            ⏸️ En pause: <strong>{statusCounts.en_pause}</strong>
+            ⏸️ En pause: <strong>{stats.en_pause}</strong>
           </button>
           
           <button
@@ -173,7 +173,7 @@ const ProductionPage = ({ productionType, title }) => {
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            ✅ Terminé: <strong>{statusCounts.termine}</strong>
+            ✅ Terminé: <strong>{stats.termine}</strong>
           </button>
         </div>
       </div>

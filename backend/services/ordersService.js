@@ -76,19 +76,37 @@ class OrdersService {
             { $group: { _id: '$order_id' } },
             { $count: 'count' }
           ],
-          // Statistiques globales par statut (sur tous les items)
-          statusCounts: [
+          // Statistiques globales par statut AU NIVEAU COMMANDE (order-level)
+          orderStatusCounts: [
             ...baseItemStages,
-            { $group: { _id: '$production_status.status', count: { $sum: 1 } } }
-          ],
-          urgentCount: [
-            ...baseItemStages,
-            { $match: { 'production_status.urgent': true } },
-            { $count: 'count' }
-          ],
-          totalItems: [
-            ...baseItemStages,
-            { $count: 'count' }
+            { $group: { _id: '$order_id', statuses: { $addToSet: '$production_status.status' }, urgents: { $addToSet: '$production_status.urgent' } } },
+            { $addFields: {
+                uniqueStatuses: { $setUnion: ['$statuses', []] },
+                hasUrgent: {
+                  $anyElementTrue: {
+                    $map: {
+                      input: { $setUnion: ['$urgents', []] },
+                      as: 'u',
+                      in: { $cond: [{ $eq: ['$$u', true] }, true, false] }
+                    }
+                  }
+                }
+              } 
+            },
+            { $addFields: {
+                order_status: {
+                  $switch: {
+                    branches: [
+                      { case: { $setEquals: ['$uniqueStatuses', ['termine']] }, then: 'termine' },
+                      { case: { $in: ['en_cours', '$uniqueStatuses'] }, then: 'en_cours' },
+                      { case: { $in: ['en_pause', '$uniqueStatuses'] }, then: 'en_pause' }
+                    ],
+                    default: 'a_faire'
+                  }
+                }
+              }
+            },
+            { $group: { _id: '$order_status', count: { $sum: 1 }, urgentOrders: { $sum: { $cond: ['$hasUrgent', 1, 0] } } } }
           ]
         }
       }
@@ -97,15 +115,14 @@ class OrdersService {
     const agg = await items.aggregate(pipeline).toArray()
     const data = agg[0]?.data || []
     const total = (agg[0]?.totalCount?.[0]?.count) || 0
-    const statusCountsArr = agg[0]?.statusCounts || []
-    const urgentCount = (agg[0]?.urgentCount?.[0]?.count) || 0
-    const totalItems = (agg[0]?.totalItems?.[0]?.count) || 0
-
-    const stats = statusCountsArr.reduce((acc, s) => {
+    const orderStatusCountsArr = agg[0]?.orderStatusCounts || []
+    const stats = orderStatusCountsArr.reduce((acc, s) => {
       const key = s._id || 'a_faire'
       acc[key] = s.count
       return acc
-    }, { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0, urgent: urgentCount, total: totalItems })
+    }, { a_faire: 0, en_cours: 0, en_pause: 0, termine: 0, urgent: 0, total })
+    // Urgent au niveau commande: sommer les urgentOrders
+    stats.urgent = orderStatusCountsArr.reduce((sum, s) => sum + (s.urgentOrders || 0), 0)
 
     return {
       orders: data,

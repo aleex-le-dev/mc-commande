@@ -114,7 +114,7 @@ export const useArticles = (options = {}) => {
       }
     }
     return calculateArticleStats(articles)
-  }, [articles])
+  }, [articles, serverStats])
 
   // Articles groupés par commande (pour TerminePage)
   const groupedArticles = useMemo(() => {

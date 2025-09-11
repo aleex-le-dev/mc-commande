@@ -85,7 +85,8 @@ export const OrdersService = {
           totalPages: Math.ceil((Array.isArray(data.orders) ? data.orders.length : 0) / limit),
           hasNext: false,
           hasPrev: false
-        }
+        },
+        stats: data.stats || null
       }
     } catch (error) {
       console.error('Erreur récupération commandes paginées:', error)
