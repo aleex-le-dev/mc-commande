@@ -66,7 +66,12 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       }
       
       // OPTIMISATION: Toast succès avec cleanup
-      setToast({ visible: true, message: 'Synchronisation terminée ✅', variant: 'success' })
+      const synchronizedCount = result?.synchronized || 0
+      const message = synchronizedCount === 0 
+        ? 'Synchronisation terminée ✅ - Pas de nouvelles commandes'
+        : `Synchronisation terminée ✅ - ${synchronizedCount} nouvelle${synchronizedCount > 1 ? 's' : ''} commande${synchronizedCount > 1 ? 's' : ''}`
+      
+      setToast({ visible: true, message, variant: 'success' })
       const successTimeoutId = setTimeout(() => setToast({ visible: false, message: '', variant: 'success' }), 5000)
       
       // Cleanup du timeout si le composant est démonté

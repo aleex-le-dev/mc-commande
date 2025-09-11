@@ -415,13 +415,9 @@ class OrdersService {
       const params = new URLSearchParams({
         per_page: options.per_page || 100,
         orderby: 'id',
-        order: 'asc',
+        order: 'desc', // Récupérer les plus récentes en premier
         status: 'processing,completed,on-hold'
       })
-
-      if (options.after) {
-        params.append('after', new Date(options.after * 1000).toISOString())
-      }
 
       const url = `${baseUrl}/wp-json/${apiVersion}/orders?${params.toString()}`
       
