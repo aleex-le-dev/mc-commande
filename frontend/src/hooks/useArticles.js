@@ -62,9 +62,25 @@ export const useArticles = (options = {}) => {
 
   // Tick local pour re-calculer les articles quand on récupère des notes externes
   const [externalNotesTick, setExternalNotesTick] = useState(0)
+  
+  // Tick pour forcer le re-calcul après synchronisation
+  const [syncTick, setSyncTick] = useState(0)
+  
+  // Écouter l'événement de synchronisation terminée
+  useEffect(() => {
+    const handleSyncCompleted = () => {
+      console.log('🔄 Re-calcul des articles après synchronisation')
+      setSyncTick(prev => prev + 1)
+    }
+    
+    window.addEventListener('mc-sync-completed', handleSyncCompleted)
+    return () => window.removeEventListener('mc-sync-completed', handleSyncCompleted)
+  }, [])
 
   // Transformation des commandes en articles (responsabilité unique)
   const articles = useMemo(() => {
+    // Inclure syncTick dans les dépendances pour forcer le re-calcul
+    const tick = syncTick
     const ordersArray = orders?.orders || orders
     
     if (!ordersArray || !Array.isArray(ordersArray)) {
@@ -104,7 +120,7 @@ export const useArticles = (options = {}) => {
     })
     
     return allArticles
-  }, [orders, assignments, tricoteuses, getAssignmentByArticleId, getTricoteuseById, externalNotesTick])
+  }, [orders, assignments, tricoteuses, getAssignmentByArticleId, getTricoteuseById, externalNotesTick, syncTick])
 
   // Récupérer les notes manquantes directement depuis WooCommerce si possible
   useEffect(() => {
@@ -157,9 +173,13 @@ export const useArticles = (options = {}) => {
 
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {
+    // Inclure syncTick pour forcer le re-calcul des stats
+    const tick = syncTick
     // Calculer les stats sur les articles du type de production pour TOUS les compteurs
     const productionTypeArticles = productionType === 'all' ? articles : articles.filter(a => a.productionType === productionType)
     const productionStats = calculateArticleStats(productionTypeArticles)
+    
+    console.log(`📊 Stats recalculées - ${productionType}: ${productionStats.total} articles`)
     
     return {
       total: productionStats.total, // Total pour le type de production (maille/couture)
@@ -169,7 +189,7 @@ export const useArticles = (options = {}) => {
       termine: productionStats.termine, // Toujours le total pour ce statut
       urgent: productionStats.urgent // Toujours le total pour ce statut
     }
-  }, [articles, productionType])
+  }, [articles, productionType, syncTick])
 
   // Articles groupés par commande (pour TerminePage)
   const groupedArticles = useMemo(() => {

@@ -39,6 +39,17 @@ const SimpleFlexGrid = ({
   // État pour forcer le re-render des cartes
   const [cardsUpdateTrigger, setCardsUpdateTrigger] = useState(0)
   
+  // Écouter l'événement de synchronisation terminée
+  useEffect(() => {
+    const handleSyncCompleted = () => {
+      console.log('🔄 Re-render après synchronisation')
+      setCardsUpdateTrigger(prev => prev + 1)
+    }
+    
+    window.addEventListener('mc-sync-completed', handleSyncCompleted)
+    return () => window.removeEventListener('mc-sync-completed', handleSyncCompleted)
+  }, [])
+  
   // Fonction de mise à jour ciblée pour éviter les re-renders complets
   const updateAssignment = useCallback((articleId, newAssignment) => {
     // Mettre à jour l'état local immédiatement
@@ -133,6 +144,8 @@ const SimpleFlexGrid = ({
 
   // Mémoriser les cartes pour éviter les re-renders
   const memoizedCards = useMemo(() => {
+    // Inclure cardsUpdateTrigger dans les dépendances pour forcer le re-render
+    const trigger = cardsUpdateTrigger
     const source = (filteredArticles.length > 0 ? filteredArticles : lastNonEmptyArticlesRef.current)
     // Prioriser les urgents en tête selon le flag
     const arranged = prioritizeUrgent

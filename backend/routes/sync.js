@@ -44,24 +44,39 @@ router.post('/orders', async (req, res) => {
     
     console.log('🔄 Synchronisation des commandes demandée')
     
+    // Récupérer la dernière commande en BDD pour filtrer
+    const orderItemsCollection = database.getCollection('order_items')
+    const lastOrder = await orderItemsCollection
+      .find({})
+      .sort({ order_id: -1 })
+      .limit(1)
+      .toArray()
+    
+    const lastOrderId = lastOrder.length > 0 ? lastOrder[0].order_id : 0
+    console.log('📊 Dernière commande en BDD:', lastOrderId)
+    
     // Récupérer les commandes récentes depuis WooCommerce
-    const newOrders = await ordersService.getOrdersFromWooCommerce({
-      per_page: 50 // Récupérer les 50 commandes les plus récentes
+    const allOrders = await ordersService.getOrdersFromWooCommerce({
+      per_page: 100 // Récupérer plus de commandes pour s'assurer d'avoir les plus récentes
     })
+    
+    // Filtrer pour garder seulement les commandes plus récentes que la dernière en BDD
+    const newOrders = allOrders.filter(order => order.id > lastOrderId)
+    console.log(`🔍 ${newOrders.length} commandes plus récentes que ${lastOrderId}`)
     
     console.log('📦 Nouvelles commandes trouvées:', newOrders.length)
     
     if (newOrders.length === 0) {
       return res.json({
         success: true,
-        message: 'Aucune commande trouvée',
+        message: 'Aucune nouvelle commande à synchroniser',
         synchronized: 0,
+        lastOrderId: lastOrderId,
         timestamp: new Date().toISOString()
       })
     }
     
     // Insérer les commandes en BDD
-    const orderItemsCollection = database.getCollection('order_items')
     const insertedOrders = []
     for (const order of newOrders) {
       try {
@@ -100,7 +115,8 @@ router.post('/orders', async (req, res) => {
             meta_data: item.meta_data,
             image_url: item.image_url,
             permalink: item.permalink,
-            variation_id: item.variation_id
+            variation_id: item.variation_id,
+            production_status: item.production_status
           }
           
           await orderItemsCollection.insertOne(orderItem)
@@ -115,8 +131,9 @@ router.post('/orders', async (req, res) => {
     
     const result = {
       success: true,
-      message: `Synchronisation réussie: ${insertedOrders.length} commandes synchronisées`,
+      message: `Synchronisation réussie: ${insertedOrders.length} nouvelles commandes`,
       synchronized: insertedOrders.length,
+      lastOrderId: lastOrderId,
       newOrders: insertedOrders.map(o => o.order_id),
       timestamp: new Date().toISOString()
     }

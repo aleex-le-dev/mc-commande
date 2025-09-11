@@ -34,10 +34,19 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       queryClient.invalidateQueries(['db-orders'])
       queryClient.invalidateQueries(['production-statuses'])
       queryClient.invalidateQueries(['unified-orders'])
+      queryClient.invalidateQueries(['assignments'])
+      queryClient.invalidateQueries(['tricoteuses'])
       try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = true } catch {}
       
       // Attendre le refetch pour avoir les nouvelles données
-      await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['db-orders'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['assignments'], type: 'active' })
+      ])
+      
+      // Déclencher un événement global pour forcer le re-render des composants
+      window.dispatchEvent(new Event('mc-sync-completed'))
       
       // Précharger les images des nouvelles commandes
       try {

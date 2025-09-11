@@ -471,7 +471,14 @@ class OrdersService {
           meta_data: item.meta_data || [],
           image_url: item.image?.src || null,
           permalink: item.permalink || null,
-          variation_id: item.variation_id || null
+          variation_id: item.variation_id || null,
+          production_status: {
+            status: 'a_faire',
+            production_type: 'couture', // Par défaut couture
+            urgent: false,
+            notes: null,
+            updated_at: new Date()
+          }
         }))
       }
 
