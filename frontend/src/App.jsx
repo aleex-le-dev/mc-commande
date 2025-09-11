@@ -358,6 +358,7 @@ function App() {
   ]
 
   const renderContent = () => {
+    console.log('renderContent - activeTab:', activeTab)
     switch (activeTab) {
       case 'couture':
         return <CouturePage />
@@ -368,6 +369,7 @@ function App() {
       case 'fourniture':
         return <FourniturePage />
       case 'parametres':
+        console.log('Rendering ParametresPanel')
         return <ParametresPanel />
       default:
         return <CouturePage />
@@ -429,7 +431,10 @@ function App() {
                 {tabs.filter(tab => tab.id === 'parametres').map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => navigateToTab(tab.id)}
+                    onClick={() => {
+                      console.log('Paramètres button clicked')
+                      navigateToTab(tab.id)
+                    }}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer ${
                       activeTab === tab.id
                         ? 'bg-[var(--rose-clair)] text-[var(--rose-clair-text)] border border-[var(--rose-clair-border)]'

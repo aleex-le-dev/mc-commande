@@ -11,6 +11,7 @@ export const getTabFromLocation = () => {
     if (path.includes('/maille')) return 'maille'
     if (path.includes('/termine') || path.includes('/terminé')) return 'termine'
     if (path.includes('/fourniture')) return 'fourniture'
+    if (path.includes('/parametres') || path.includes('/paramètres')) return 'parametres'
     if (path.includes('/couture')) return 'couture'
   } catch {}
   return 'couture'
