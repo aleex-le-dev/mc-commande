@@ -59,18 +59,18 @@ const BottomBar = ({
             <div className={`w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full bg-gray-200 animate-pulse flex items-center justify-center`}>
               <div className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} border-2 border-gray-400 border-t-transparent rounded-full animate-spin`}></div>
             </div>
-          ) : (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.status === 'en_cours' && article.assigned_to) ? (
+          ) : ( (localAssignment && localAssignment.tricoteuse_id && localAssignment.tricoteuse_id !== 'unassigned') || (article.assigned_to || article.assignedTo) ) ? (
             <button
               onClick={disableAssignmentModal ? undefined : (e) => { e.stopPropagation(); onOpenAssignModal(); }}
               className={`group relative w-8 h-8 ${compact ? 'sm:w-10 sm:h-10' : 'sm:w-14 sm:h-14'} rounded-full overflow-hidden border-2 border-white shadow-md ${disableAssignmentModal ? 'cursor-default' : 'hover:shadow-xl transition-all duration-300 hover:scale-110 cursor-pointer'}`}
-              title={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
-              aria-label={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to})`}
+              title={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo})`}
+              aria-label={disableAssignmentModal ? `${localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo} (assigné)` : `Modifier l'assignation (${localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo})`}
             >
-              {localAssignment?.tricoteuse_photo ? (
-                <img src={localAssignment.tricoteuse_photo} alt={`Photo de ${localAssignment.tricoteuse_name || article.assigned_to}`} className="w-full h-full object-cover" />
+              {(localAssignment?.tricoteuse_photo || article.tricoteuse_photo) ? (
+                <img src={localAssignment?.tricoteuse_photo || article.tricoteuse_photo} alt={`Photo de ${localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo}`} className="w-full h-full object-cover" />
               ) : (
                 <div className={`w-full h-full flex items-center justify-center text-white ${compact ? 'text-xs sm:text-base' : 'text-sm sm:text-2xl'} font-bold`} style={{ backgroundColor: localAssignment?.tricoteuse_color || '#6b7280' }}>
-                  {(localAssignment?.tricoteuse_name || article.assigned_to)?.charAt(0)?.toUpperCase() || '?'}
+                  {(localAssignment?.tricoteuse_name || article.assigned_to || article.assignedTo)?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
             </button>

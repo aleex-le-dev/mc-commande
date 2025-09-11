@@ -55,9 +55,9 @@ const TerminePage = () => {
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Terminé</span>
         </div>
-        <div className="p-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
           {readyOrders.map(({ orderNumber, order, total }) => (
-            <div key={orderNumber} className="rounded-xl border border-green-200 bg-green-50 p-2 shadow-sm">
+            <div key={orderNumber} className="rounded-xl border border-green-200 bg-green-50 p-1.5 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <div className="font-medium text-gray-900 text-xs truncate">Commande #{orderNumber}</div>
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Prête</span>
@@ -85,18 +85,32 @@ const TerminePage = () => {
           <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes en cours</h2>
           <p className="text-[11px] text-gray-500 leading-tight">{inProgressOrders.length} commande(s)</p>
         </div>
-        <div className="p-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
           {inProgressOrders.map(({ orderNumber, order, articles }) => {
             const total = articles.length
             const done = articles.filter(a => a.status === 'termine').length
             const percent = total > 0 ? Math.round((done / total) * 100) : 0
             return (
-              <div key={orderNumber} className="rounded-xl border shadow-sm bg-white p-2">
+              <div key={orderNumber} className="rounded-xl border shadow-sm bg-white p-1.5">
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-medium text-gray-900 text-xs truncate">Commande #{orderNumber}</div>
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">En cours</span>
                 </div>
-                <div className="text-[11px] text-gray-600 mb-1 truncate">{order?.customer_name || 'Client inconnu'}</div>
+                <div className="text-[10px] text-gray-600 mb-1 truncate">{order?.customer_name || 'Client inconnu'}</div>
+                {/* Avatars tricoteuses inline, sans ouverture de modal */}
+                <div className="flex items-center gap-1 mb-1">
+                  {articles.slice(0, 3).map((art) => (
+                    <div key={`${orderNumber}-${art.line_item_id}`} className="w-6 h-6 rounded-full overflow-hidden border border-white shadow-sm">
+                      {art?.assignment?.tricoteuse_photo ? (
+                        <img src={art.assignment.tricoteuse_photo} alt={art.assignment.tricoteuse_name || 'Couturière'} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] font-semibold bg-gray-300 text-gray-700">
+                          {(art?.assignedTo || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-1 bg-blue-500" style={{ width: `${percent}%` }} />
                 </div>
@@ -119,7 +133,7 @@ const TerminePage = () => {
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">En pause</span>
         </div>
-        <div className="p-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+        <div className="p-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
           {pausedArticles.map(a => (
             <div key={a.article_id} className="rounded-3xl border-4 border-orange-400 overflow-hidden">
               <ArticleCard
@@ -130,6 +144,8 @@ const TerminePage = () => {
                 productionType="all"
                 prioritizeUrgent={false}
                 disableStatusBorder={true}
+                compact={true}
+                disableAssignmentModal={true}
               />
             </div>
           ))}

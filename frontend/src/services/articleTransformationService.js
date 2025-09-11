@@ -31,6 +31,8 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     status: item.production_status?.status || item.status || 'a_faire',
     productionType: item.production_status?.production_type || item.production_type || 'couture',
     assignedTo: tricoteuse?.firstName || assignment?.tricoteuse_name || null,
+    tricoteuse_photo: tricoteuse?.photoUrl || assignment?.tricoteuse_photo || null,
+    tricoteuse_color: tricoteuse?.color || assignment?.tricoteuse_color || null,
     urgent: assignment?.urgent || false,
     assignmentId: assignment?._id || null,
     tricoteuseId: assignment?.tricoteuse_id || null,
