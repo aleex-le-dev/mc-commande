@@ -403,6 +403,7 @@ class OrdersService {
     }
   }
 
+
   // Récupérer les commandes depuis WooCommerce via API REST
   async getOrdersFromWooCommerce(options = {}) {
     try {
