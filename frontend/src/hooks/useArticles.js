@@ -71,6 +71,7 @@ export const useArticles = (options = {}) => {
     
     ordersArray.forEach(order => {
       const orderItems = order.items || order.line_items || []
+      const allIds = (order.all_line_item_ids || []).filter(id => typeof id !== 'undefined' && id !== null)
       
       if (Array.isArray(orderItems)) {
         orderItems.forEach(item => {
@@ -80,7 +81,9 @@ export const useArticles = (options = {}) => {
           const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
           
           // Transformer l'item en article enrichi
-          const article = transformItemToArticle(item, order, assignment, tricoteuse)
+          // Inject per-order ids to compute x/y in transform
+          const itemWithMeta = { ...item, _all_order_line_item_ids: allIds }
+          const article = transformItemToArticle(itemWithMeta, order, assignment, tricoteuse)
           allArticles.push(article)
         })
       }

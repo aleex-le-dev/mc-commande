@@ -33,7 +33,24 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     assignedTo: tricoteuse?.firstName || assignment?.tricoteuse_name || null,
     urgent: assignment?.urgent || false,
     assignmentId: assignment?._id || null,
-    tricoteuseId: assignment?.tricoteuse_id || null
+    tricoteuseId: assignment?.tricoteuse_id || null,
+    // placeholders; computed using _all_order_line_item_ids if provided
+    orderItemPosition: (() => {
+      const ids = item._all_order_line_item_ids
+      if (Array.isArray(ids) && ids.length > 0) {
+        const sorted = [...new Set(ids)].sort((a, b) => (a || 0) - (b || 0))
+        const idx = sorted.indexOf(item.line_item_id)
+        return idx >= 0 ? idx + 1 : null
+      }
+      return null
+    })(),
+    orderItemsTotal: (() => {
+      const ids = item._all_order_line_item_ids
+      if (Array.isArray(ids) && ids.length > 0) {
+        return [...new Set(ids)].length
+      }
+      return null
+    })()
   }
 }
 
@@ -184,6 +201,19 @@ export const groupArticlesByOrder = (articles) => {
       }
     }
     grouped[orderNumber].articles.push(article)
+  })
+  
+  // After grouping, fallback: if not set yet, assign position across ALL types
+  Object.values(grouped).forEach(group => {
+    const uniqueIds = Array.from(new Set(group.articles.map(a => a.line_item_id))).sort((a, b) => (a || 0) - (b || 0))
+    const total = uniqueIds.length
+    group.articles.forEach(art => {
+      if (!art.orderItemPosition || !art.orderItemsTotal) {
+        const pos = uniqueIds.indexOf(art.line_item_id)
+        art.orderItemPosition = (pos >= 0 ? pos + 1 : 1)
+        art.orderItemsTotal = total
+      }
+    })
   })
   
   return grouped

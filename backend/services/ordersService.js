@@ -65,7 +65,19 @@ class OrdersService {
                 items: { $push: '$$ROOT' }
               }
             },
+            // Récupérer TOUTES les lignes de la commande (tous types) pour calculer x/y global
+            {
+              $lookup: {
+                from: 'order_items',
+                localField: 'order_id',
+                foreignField: 'order_id',
+                as: 'all_items'
+              }
+            },
+            { $addFields: { all_line_item_ids: { $map: { input: '$all_items', as: 'it', in: '$$it.line_item_id' } } } },
             { $addFields: { order_number: { $ifNull: ['$order_number', '$order_id'] }, customer_name: { $ifNull: ['$customer_name', '$customer'] }, customer_email: { $ifNull: ['$customer_email', null] } } },
+            { $addFields: { all_line_item_ids: { $sortArray: { input: '$all_line_item_ids', sortBy: 1 } } } },
+            { $project: { all_items: 0 } },
             { $sort: sort },
             { $skip: skip },
             { $limit: limit }

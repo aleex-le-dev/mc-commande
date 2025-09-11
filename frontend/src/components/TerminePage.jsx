@@ -47,11 +47,11 @@ const TerminePage = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 space-y-8">
       {/* Commandes prêtes à expédier */}
-      <section className="bg-white rounded-2xl shadow-sm border">
-        <div className="p-3 border-b flex items-center justify-between">
+      <section>
+        <div className="mb-2 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold leading-tight">Commandes prêtes à expédier</h2>
-            <p className="text-[11px] text-gray-600 leading-tight">{readyOrders.length} commande(s)</p>
+            <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes prêtes à expédier</h2>
+            <p className="text-[11px] text-gray-500 leading-tight">{readyOrders.length} commande(s)</p>
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">Terminé</span>
         </div>
@@ -80,10 +80,10 @@ const TerminePage = () => {
       </section>
 
       {/* Commandes en cours */}
-      <section className="bg-white rounded-2xl shadow-sm border">
-        <div className="p-3 border-b">
-          <h2 className="text-sm font-semibold leading-tight">Commandes en cours</h2>
-          <p className="text-[11px] text-gray-600 leading-tight">{inProgressOrders.length} commande(s)</p>
+      <section>
+        <div className="mb-2">
+          <h2 className="text-sm font-semibold leading-tight text-gray-800">Commandes en cours</h2>
+          <p className="text-[11px] text-gray-500 leading-tight">{inProgressOrders.length} commande(s)</p>
         </div>
         <div className="p-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           {inProgressOrders.map(({ orderNumber, order, articles }) => {
@@ -111,17 +111,17 @@ const TerminePage = () => {
       </section>
 
       {/* Articles en pause */}
-      <section className="bg-white rounded-2xl shadow-sm border">
-        <div className="p-3 border-b flex items-center justify-between">
+      <section>
+        <div className="mb-2 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold leading-tight">Articles en pause</h2>
-            <p className="text-[11px] text-gray-600 leading-tight">{pausedArticles.length} article(s)</p>
+            <h2 className="text-sm font-semibold leading-tight text-gray-800">Articles en pause</h2>
+            <p className="text-[11px] text-gray-500 leading-tight">{pausedArticles.length} article(s)</p>
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">En pause</span>
         </div>
         <div className="p-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
           {pausedArticles.map(a => (
-            <div key={a.article_id} className="transform origin-top-left scale-[0.92]">
+            <div key={a.article_id} className="rounded-3xl border-4 border-orange-400 overflow-hidden">
               <ArticleCard
                 article={a}
                 size="small"
@@ -129,6 +129,7 @@ const TerminePage = () => {
                 options={{ showAssignButton: false, showStatusButton: false, showNoteButton: false, showClientButton: true }}
                 productionType="all"
                 prioritizeUrgent={false}
+                disableStatusBorder={true}
               />
             </div>
           ))}
