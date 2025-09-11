@@ -402,6 +402,88 @@ class OrdersService {
       throw error
     }
   }
+
+  // Récupérer les commandes depuis WooCommerce via API REST
+  async getOrdersFromWooCommerce(options = {}) {
+    try {
+      const baseUrl = process.env.VITE_WORDPRESS_URL
+      const consumerKey = process.env.VITE_WORDPRESS_CONSUMER_KEY
+      const consumerSecret = process.env.VITE_WORDPRESS_CONSUMER_SECRET
+      const apiVersion = process.env.VITE_WORDPRESS_API_VERSION || 'wc/v3'
+      
+      const params = new URLSearchParams({
+        per_page: options.per_page || 100,
+        orderby: 'id',
+        order: 'asc',
+        status: 'processing,completed,on-hold'
+      })
+
+      if (options.after) {
+        params.append('after', new Date(options.after * 1000).toISOString())
+      }
+
+      const url = `${baseUrl}/wp-json/${apiVersion}/orders?${params.toString()}`
+      
+      console.log('🔄 Récupération commandes WooCommerce:', url)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64'),
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur API WooCommerce: ${response.status} ${response.statusText}`)
+      }
+
+      const orders = await response.json()
+      console.log(`📦 ${orders.length} commandes récupérées depuis WooCommerce`)
+      return orders
+    } catch (error) {
+      console.error('Erreur récupération commandes WooCommerce:', error)
+      throw error
+    }
+  }
+
+  // Transformer une commande WooCommerce en format BDD
+  async transformWooCommerceOrder(wooOrder) {
+    try {
+      const transformedOrder = {
+        order_id: wooOrder.id,
+        order_number: wooOrder.number,
+        order_date: new Date(wooOrder.date_created),
+        status: wooOrder.status,
+        customer: wooOrder.billing.first_name + ' ' + wooOrder.billing.last_name,
+        customer_email: wooOrder.billing.email,
+        customer_phone: wooOrder.billing.phone,
+        customer_address: `${wooOrder.billing.address_1}, ${wooOrder.billing.address_2}, ${wooOrder.billing.city}, ${wooOrder.billing.postcode}, ${wooOrder.billing.country}`,
+        customer_note: wooOrder.customer_note || '',
+        shipping_method: wooOrder.shipping_lines?.[0]?.method_title || 'Standard',
+        shipping_carrier: wooOrder.shipping_lines?.[0]?.method_id || 'standard',
+        total: parseFloat(wooOrder.total),
+        created_at: new Date(wooOrder.date_created),
+        updated_at: new Date(wooOrder.date_modified),
+        items: wooOrder.line_items.map(item => ({
+          line_item_id: item.id,
+          product_id: item.product_id,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: parseFloat(item.price),
+          meta_data: item.meta_data || [],
+          image_url: item.image?.src || null,
+          permalink: item.permalink || null,
+          variation_id: item.variation_id || null
+        }))
+      }
+
+      return transformedOrder
+    } catch (error) {
+      console.error('Erreur transformation commande WooCommerce:', error)
+      throw error
+    }
+  }
 }
 
 module.exports = new OrdersService()
