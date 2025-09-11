@@ -22,6 +22,29 @@ export const ApiService = {
   assignments: AssignmentsService,
   sync: SyncService,
   products: ProductsService,
+  fournitures: {
+    async list() {
+      const res = await HttpClientService.get('/fournitures')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      return data.data || []
+    },
+    async create(label, qty) {
+      const res = await HttpClientService.post('/fournitures', { label, qty })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()).data
+    },
+    async update(id, patch) {
+      const res = await HttpClientService.put(`/fournitures/${id}`, patch)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()).data
+    },
+    async remove(id) {
+      const res = await HttpClientService.delete(`/fournitures/${id}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return true
+    }
+  },
   
   // Services utilitaires
   http: HttpClientService,

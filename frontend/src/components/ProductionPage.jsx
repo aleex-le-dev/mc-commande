@@ -38,10 +38,9 @@ const ProductionPage = ({ productionType, title }) => {
 
   // Précharger agressivement toutes les images de la page
   useEffect(() => {
+    if (productionType === 'fourniture') return
     if (articles && articles.length > 0) {
-      // Utiliser le service global pour le préchargement avec le type de page
       globalPreloadService.preloadPageImages(articles, productionType)
-      
     }
   }, [articles, productionType])
   

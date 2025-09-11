@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ApiService } from '../services/apiService'
 
 /*
   Composant "FourniturePage":
@@ -10,40 +11,41 @@ const FourniturePage = () => {
   const storageKey = 'mc-fournitures-v1'
   const [input, setInput] = useState('')
   const [qty, setQty] = useState('')
-  const [items, setItems] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem(storageKey)
-      const parsed = raw ? JSON.parse(raw) : []
-      // Migration légère: ne pas forcer qty par défaut (obligatoire à la saisie)
-      if (Array.isArray(parsed)) {
-        return parsed.map((it, idx) => (
-          typeof it === 'string'
-            ? { id: Date.now() + idx, label: it, qty: null }
-            : { ...it, qty: (typeof it.qty === 'number' ? it.qty : null) }
-        ))
-      }
-      return []
-    } catch {
-      return []
-    }
-  })
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const save = (next) => {
-    setItems(next)
-    try { sessionStorage.setItem(storageKey, JSON.stringify(next)) } catch {}
-  }
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        setLoading(true)
+        const list = await ApiService.fournitures.list()
+        if (mounted) setItems(list)
+      } catch (e) {
+        if (mounted) setError('Impossible de charger les fournitures')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  const save = (next) => { setItems(next) }
 
   const updateItemLabel = (id, nextLabel) => {
     const label = (nextLabel || '').trim()
-    const next = items.map((it) => it.id === id ? { ...it, label } : it)
+    const next = items.map((it) => (it._id || it.id) === id ? { ...it, label } : it)
     save(next)
+    ;(async () => { try { await ApiService.fournitures.update(id, { label }) } catch {} })()
   }
 
   const updateItemQty = (id, nextQty) => {
     const q = parseInt(nextQty, 10)
     const qty = Number.isFinite(q) && q >= 1 ? q : ''
-    const next = items.map((it) => it.id === id ? { ...it, qty } : it)
+    const next = items.map((it) => (it._id || it.id) === id ? { ...it, qty } : it)
     save(next)
+    ;(async () => { try { if (qty !== '') await ApiService.fournitures.update(id, { qty }) } catch {} })()
   }
 
   const addItem = () => {
@@ -51,15 +53,27 @@ const FourniturePage = () => {
     const q = parseInt(qty, 10)
     if (!label) return
     if (!Number.isFinite(q) || q < 1) return
-    const next = [...items, { id: Date.now(), label, qty: q }]
-    save(next)
+    const tempId = `tmp-${Date.now()}`
+    const optimistic = [...items, { _id: tempId, label, qty: q }]
+    save(optimistic)
+    ;(async () => {
+      try {
+        const created = await ApiService.fournitures.create(label, q)
+        save(optimistic.map(it => (it._id === tempId ? created : it)))
+      } catch (e) {
+        // rollback
+        save(items)
+      }
+    })()
     setInput('')
     setQty('')
   }
 
   const removeItem = (id) => {
-    const next = items.filter((it) => it.id !== id)
+    const next = items.filter((it) => (it._id || it.id) !== id)
+    const prev = items
     save(next)
+    ;(async () => { try { await ApiService.fournitures.remove(id) } catch { save(prev) } })()
   }
 
   const canAdd = useMemo(() => {
@@ -117,20 +131,24 @@ const FourniturePage = () => {
         </button>
       </div>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Chargement…</p>
+      ) : error ? (
+        <p className="text-sm text-red-600">{error}</p>
+      ) : items.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
           Aucune fourniture. Ajoutez une note ci-dessus puis validez.
         </p>
       ) : (
         <ul className="space-y-2">
           {items.map((it) => (
-            <li key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-md border"
+            <li key={it._id || it.id} className="flex items-center gap-2 px-3 py-2 rounded-md border"
               style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
             >
               <input
                 type="text"
                 value={it.label}
-                onChange={(e) => updateItemLabel(it.id, e.target.value)}
+                onChange={(e) => updateItemLabel(it._id || it.id, e.target.value)}
                 placeholder="Nom de la fourniture"
                 className="flex-1 px-2 py-1 rounded border text-sm"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
@@ -141,22 +159,41 @@ const FourniturePage = () => {
                 inputMode="numeric"
                 min={1}
                 value={it.qty === '' || typeof it.qty === 'undefined' || it.qty === null ? '' : it.qty}
-                onChange={(e) => updateItemQty(it.id, e.target.value)}
+                onChange={(e) => updateItemQty(it._id || it.id, e.target.value)}
                 placeholder="Qté"
                 className="w-24 px-2 py-1 rounded border text-right text-sm"
                 style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
                 aria-label="Quantité"
               />
-              <button
-                type="button"
-                onClick={() => removeItem(it.id)}
-                className="px-2 py-1 rounded-md text-sm transition-colors duration-200 hover:opacity-80"
-                style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}
-                title="Supprimer"
-                aria-label="Supprimer"
-              >
-                Supprimer
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const id = it._id || it.id
+                    const next = items.map(x => (x._id || x.id) === id ? { ...x, ordered: !x.ordered } : x)
+                    save(next)
+                    try { await ApiService.fournitures.update(id, { ordered: !it.ordered }) } catch {}
+                  }}
+                  className={`px-2 py-1 rounded-md text-sm transition-colors duration-200 cursor-pointer ${
+                    it.ordered
+                      ? 'bg-green-200 text-green-800 hover:bg-green-300 hover:text-green-900'
+                      : 'bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-800'
+                  }`}
+                  title="Marquer comme commandé"
+                  aria-label="Marquer comme commandé"
+                >
+                  Commandé
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeItem(it._id || it.id)}
+                  className="px-2 py-1 rounded-md text-sm transition-colors duration-200 cursor-pointer bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700"
+                  title="Supprimer"
+                  aria-label="Supprimer"
+                >
+                  Supprimer
+                </button>
+              </div>
             </li>
           ))}
         </ul>

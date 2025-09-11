@@ -22,6 +22,16 @@ class GlobalPreloadService {
     this.isInitialized = true
     console.log('🚀 Service de préchargement global initialisé')
     
+    // Ne pas activer le préchargement si on est sur la page fournitures
+    try {
+      const href = (typeof window !== 'undefined') ? (window.location.hash || window.location.pathname || '') : ''
+      const path = String(href).toLowerCase()
+      if (path.includes('fourniture')) {
+        console.log('🚫 Préchargement d\'images désactivé sur la page Fourniture')
+        return
+      }
+    } catch {}
+
     // Vérifier s'il y a des articles avant de démarrer le préchargement
     const hasArticles = await this.checkForArticles()
     if (hasArticles) {

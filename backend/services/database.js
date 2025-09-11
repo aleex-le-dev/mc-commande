@@ -59,6 +59,10 @@ class DatabaseService {
       // Collection des utilisateurs
       await this.createIndexIfNotExists('users', { email: 1 }, { unique: true })
 
+      // Collection des fournitures
+      await this.createIndexIfNotExists('fournitures', { created_at: -1 })
+      await this.createIndexIfNotExists('fournitures', { label: 1 })
+
       console.log('✅ Collections et index créés')
     } catch (error) {
       console.error('❌ Erreur création collections/index:', error)

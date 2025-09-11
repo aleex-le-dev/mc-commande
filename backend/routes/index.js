@@ -7,6 +7,7 @@ const assignmentsRoutes = require('./assignments')
 const tricoteusesRoutes = require('./tricoteuses')
 const productionRoutes = require('./production')
 const delaisRoutes = require('./delais')
+const fournituresRoutes = require('./fournitures')
 
 // Configuration des routes
 router.use('/orders', ordersRoutes)
@@ -14,6 +15,7 @@ router.use('/assignments', assignmentsRoutes)
 router.use('/tricoteuses', tricoteusesRoutes)
 router.use('/production', productionRoutes)
 router.use('/delais', delaisRoutes)
+router.use('/fournitures', fournituresRoutes)
 
 // Route de santé
 router.get('/health', (req, res) => {
