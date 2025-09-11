@@ -155,7 +155,16 @@ const TricoteusesTab = () => {
         }
         await ApiService.tricoteuses.updateTricoteuse(editingKnitter._id, updateData)
       } else {
-        // Ajout
+        // Ajout - Vérifier si le nom existe déjà
+        const existingKnitter = knitters.find(k => 
+          k.firstName.toLowerCase().trim() === trimmed.toLowerCase()
+        )
+        
+        if (existingKnitter) {
+          alert('Une couturière avec ce nom existe déjà. Veuillez choisir un autre nom.')
+          return
+        }
+        
         const createData = {
           firstName: trimmed,
           color: formState.formData.color,
@@ -172,7 +181,19 @@ const TricoteusesTab = () => {
       closeModal()
     } catch (error) {
       console.error('Erreur sauvegarde couturière:', error)
-      alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
+      
+      let errorMessage = 'Erreur lors de la sauvegarde. Veuillez réessayer.'
+      
+      // Gestion spécifique des erreurs HTTP
+      if (error.message.includes('409')) {
+        errorMessage = 'Une couturière avec ce nom existe déjà. Veuillez choisir un autre nom.'
+      } else if (error.message.includes('400')) {
+        errorMessage = 'Données invalides. Vérifiez que tous les champs sont correctement remplis.'
+      } else if (error.message.includes('500')) {
+        errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.'
+      }
+      
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -290,7 +311,7 @@ const TricoteusesTab = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">
-                  {editingKnitter ? `Modifier le/la ${formData.gender === 'masculin' ? 'couturier' : 'couturière'}` : 'Ajouter une couturière'}
+                  {editingKnitter ? `Modifier le/la ${formState.formData.gender === 'masculin' ? 'couturier' : 'couturière'}` : 'Ajouter une couturière'}
                 </h3>
                 <button
                   onClick={closeModal}

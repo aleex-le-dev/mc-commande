@@ -91,12 +91,12 @@ router.delete('/:id', async (req, res) => {
 // POST /api/tricoteuses/authenticate - Authentifier une tricoteuse
 router.post('/authenticate', async (req, res) => {
   try {
-    const { email, password } = req.body
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email et mot de passe requis' })
+    const { firstName, password } = req.body
+    if (!firstName || !password) {
+      return res.status(400).json({ error: 'Nom et mot de passe requis' })
     }
 
-    const tricoteuse = await tricoteusesService.authenticateTricoteuse(email, password)
+    const tricoteuse = await tricoteusesService.authenticateTricoteuse(firstName, password)
     if (!tricoteuse) {
       return res.status(401).json({ error: 'Identifiants invalides' })
     }

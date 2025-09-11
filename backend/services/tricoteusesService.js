@@ -20,10 +20,10 @@ class TricoteusesService {
   async createTricoteuse(tricoteuseData) {
     const collection = db.getCollection('tricoteuses')
     
-    // Vérifier si la tricoteuse existe déjà
-    const existing = await collection.findOne({ email: tricoteuseData.email })
+    // Vérifier si la tricoteuse existe déjà (par nom)
+    const existing = await collection.findOne({ firstName: tricoteuseData.firstName })
     if (existing) {
-      throw new Error('Une tricoteuse avec cet email existe déjà')
+      throw new Error('Une tricoteuse avec ce nom existe déjà')
     }
 
     // Hasher le mot de passe si fourni
@@ -81,9 +81,9 @@ class TricoteusesService {
     return result.deletedCount > 0
   }
 
-  async authenticateTricoteuse(email, password) {
+  async authenticateTricoteuse(firstName, password) {
     const collection = db.getCollection('tricoteuses')
-    const tricoteuse = await collection.findOne({ email })
+    const tricoteuse = await collection.findOne({ firstName })
     
     if (!tricoteuse || !tricoteuse.password) {
       return null
