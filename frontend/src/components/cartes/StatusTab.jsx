@@ -17,7 +17,7 @@ const StatusTab = () => {
     try {
       const result = await ApiService.testConnection()
       setTestResults(prev => ({ ...prev, wordpress: result }))
-      setStatus('Connexion WordPress testée avec succès')
+      setStatus(result.success ? 'Connexion WordPress testée avec succès' : 'Échec de la connexion WordPress')
     } catch (error) {
       setTestResults(prev => ({ ...prev, wordpress: { success: false, error: error.message } }))
       setStatus('Erreur de connexion WordPress')

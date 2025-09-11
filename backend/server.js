@@ -50,11 +50,31 @@ async function startServer() {
     // Connexion à la base de données
     await database.connect()
     
-    // Démarrage du serveur
-    app.listen(PORT, '0.0.0.0', () => {
+    // Démarrage du serveur avec gestion des ports occupés
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`)
       console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`)
       console.log(`🌐 URL: http://localhost:${PORT}`)
+    })
+    
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`⚠️  Port ${PORT} occupé, tentative sur le port ${PORT + 1}`)
+        const newServer = app.listen(PORT + 1, '0.0.0.0', () => {
+          console.log(`🚀 Serveur démarré sur le port ${PORT + 1}`)
+          console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`)
+          console.log(`🌐 URL: http://localhost:${PORT + 1}`)
+        })
+        
+        newServer.on('error', (err2) => {
+          console.error('❌ Impossible de démarrer le serveur sur les ports', PORT, 'et', PORT + 1)
+          console.error('Erreur:', err2.message)
+          process.exit(1)
+        })
+      } else {
+        console.error('❌ Erreur serveur:', err)
+        process.exit(1)
+      }
     })
   } catch (error) {
     console.error('❌ Erreur démarrage serveur:', error)
