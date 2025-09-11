@@ -2,18 +2,19 @@ const db = require('./database')
 
 class OrdersService {
   async getOrders(filters = {}) {
-    const collection = db.getCollection('orders')
-    const query = {}
-    
+    // Lecture depuis order_items, agrégé par order_id
+    const items = db.getCollection('order_items')
+
+    const match = {}
     if (filters.status && filters.status !== 'all') {
-      query.status = filters.status
+      match.status = filters.status
     }
-    
     if (filters.search) {
-      query.$or = [
+      match.$or = [
         { order_number: { $regex: filters.search, $options: 'i' } },
-        { customer: { $regex: filters.search, $options: 'i' } }
-      ]
+        { customer: { $regex: filters.search, $options: 'i' } },
+        { order_id: isNaN(parseInt(filters.search)) ? undefined : parseInt(filters.search) }
+      ].filter(Boolean)
     }
 
     const sort = {}
@@ -24,17 +25,40 @@ class OrdersService {
     }
 
     const limit = parseInt(filters.limit) || 15
-    const skip = ((parseInt(filters.page) || 1) - 1) * limit
+    const page = parseInt(filters.page) || 1
+    const skip = (page - 1) * limit
 
-    const [orders, total] = await Promise.all([
-      collection.find(query).sort(sort).skip(skip).limit(limit).toArray(),
-      collection.countDocuments(query)
-    ])
+    const pipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: '$order_id',
+          order_id: { $first: '$order_id' },
+          order_number: { $first: '$order_number' },
+          customer: { $first: '$customer' },
+          order_date: { $min: '$order_date' },
+          status: { $first: '$status' },
+          items_count: { $sum: 1 },
+          items: { $push: '$$ROOT' }
+        }
+      },
+      { $sort: sort },
+      {
+        $facet: {
+          data: [ { $skip: skip }, { $limit: limit } ],
+          totalCount: [ { $count: 'count' } ]
+        }
+      }
+    ]
+
+    const agg = await items.aggregate(pipeline).toArray()
+    const data = agg[0]?.data || []
+    const total = (agg[0]?.totalCount?.[0]?.count) || 0
 
     return {
-      orders,
+      orders: data,
       pagination: {
-        page: parseInt(filters.page) || 1,
+        page,
         limit,
         total,
         pages: Math.ceil(total / limit)
@@ -43,43 +67,49 @@ class OrdersService {
   }
 
   async getOrderById(orderId) {
-    const collection = db.getCollection('orders')
-    return await collection.findOne({ order_id: parseInt(orderId) })
-  }
+    const id = parseInt(orderId)
+    const items = db.getCollection('order_items')
 
-  async createOrder(orderData) {
-    const collection = db.getCollection('orders')
-    const result = await collection.insertOne({
-      ...orderData,
-      created_at: new Date(),
-      updated_at: new Date()
-    })
-    return result.insertedId
-  }
-
-  async updateOrder(orderId, updateData) {
-    const collection = db.getCollection('orders')
-    const result = await collection.updateOne(
-      { order_id: parseInt(orderId) },
-      { 
-        $set: {
-          ...updateData,
-          updated_at: new Date()
+    const result = await items.aggregate([
+      { $match: { order_id: id } },
+      {
+        $group: {
+          _id: '$order_id',
+          order_id: { $first: '$order_id' },
+          order_number: { $first: '$order_number' },
+          customer: { $first: '$customer' },
+          order_date: { $min: '$order_date' },
+          status: { $first: '$status' },
+          items_count: { $sum: 1 },
+          items: { $push: '$$ROOT' }
         }
       }
-    )
-    return result.modifiedCount > 0
+    ]).toArray()
+
+    return result[0] || null
+  }
+
+  async createOrder() {
+    // Non supporté sur order_items (création multi-lignes requise)
+    throw new Error('createOrder non supporté avec order_items')
+  }
+
+  async updateOrder() {
+    // Non supporté au niveau commande avec order_items
+    throw new Error('updateOrder non supporté avec order_items')
   }
 
   async deleteOrder(orderId) {
-    const collection = db.getCollection('orders')
-    const result = await collection.deleteOne({ order_id: parseInt(orderId) })
-    return result.deletedCount > 0
+    // Supprimer tous les items liés à la commande
+    const items = db.getCollection('order_items')
+    const res = await items.deleteMany({ order_id: parseInt(orderId) })
+    return res.deletedCount > 0
   }
 
   async getOrdersStats() {
-    const collection = db.getCollection('orders')
-    const stats = await collection.aggregate([
+    // Statistiques basées sur order_items.status
+    const items = db.getCollection('order_items')
+    const stats = await items.aggregate([
       {
         $group: {
           _id: '$status',
@@ -89,7 +119,7 @@ class OrdersService {
     ]).toArray()
 
     return stats.reduce((acc, stat) => {
-      acc[stat._id] = stat.count
+      acc[stat._id || 'unknown'] = stat.count
       return acc
     }, {})
   }

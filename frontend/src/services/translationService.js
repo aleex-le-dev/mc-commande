@@ -326,7 +326,9 @@ class TranslationService {
         for (const { key, value } of data.items) obj[key] = value
         localStorage.setItem(this.customKey, JSON.stringify(obj))
       }
-    } catch (_) {}
+    } catch (error) {
+      console.warn('Erreur chargement traductions personnalisées:', error)
+    }
   }
 
   // Fonction principale de traduction
@@ -451,7 +453,9 @@ class TranslationService {
         const regex = new RegExp(`\\b${escaped}\\b`, 'gi')
         translatedText = translatedText.replace(regex, v)
       })
-    } catch (_) {}
+    } catch (error) {
+      console.warn('Erreur remplacement termes techniques:', error)
+    }
     
     // Remplacer les termes techniques
     Object.entries(this.manualTranslations).forEach(([english, french]) => {
