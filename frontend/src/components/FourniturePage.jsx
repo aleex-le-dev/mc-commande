@@ -9,14 +9,18 @@ import React, { useMemo, useState } from 'react'
 const FourniturePage = () => {
   const storageKey = 'mc-fournitures-v1'
   const [input, setInput] = useState('')
-  const [qty, setQty] = useState('1')
+  const [qty, setQty] = useState('')
   const [items, setItems] = useState(() => {
     try {
       const raw = sessionStorage.getItem(storageKey)
       const parsed = raw ? JSON.parse(raw) : []
-      // Migration légère: injecter qty=1 si absent
+      // Migration légère: ne pas forcer qty par défaut (obligatoire à la saisie)
       if (Array.isArray(parsed)) {
-        return parsed.map((it) => (typeof it === 'string' ? { id: Date.now(), label: it, qty: 1 } : { ...it, qty: it.qty ? it.qty : 1 }))
+        return parsed.map((it, idx) => (
+          typeof it === 'string'
+            ? { id: Date.now() + idx, label: it, qty: null }
+            : { ...it, qty: (typeof it.qty === 'number' ? it.qty : null) }
+        ))
       }
       return []
     } catch {
@@ -29,15 +33,28 @@ const FourniturePage = () => {
     try { sessionStorage.setItem(storageKey, JSON.stringify(next)) } catch {}
   }
 
+  const updateItemLabel = (id, nextLabel) => {
+    const label = (nextLabel || '').trim()
+    const next = items.map((it) => it.id === id ? { ...it, label } : it)
+    save(next)
+  }
+
+  const updateItemQty = (id, nextQty) => {
+    const q = parseInt(nextQty, 10)
+    const qty = Number.isFinite(q) && q >= 1 ? q : ''
+    const next = items.map((it) => it.id === id ? { ...it, qty } : it)
+    save(next)
+  }
+
   const addItem = () => {
     const label = input.trim()
     const q = parseInt(qty, 10)
     if (!label) return
     if (!Number.isFinite(q) || q < 1) return
-    const next = [{ id: Date.now(), label, qty: q }, ...items]
+    const next = [...items, { id: Date.now(), label, qty: q }]
     save(next)
     setInput('')
-    setQty('1')
+    setQty('')
   }
 
   const removeItem = (id) => {
@@ -107,19 +124,33 @@ const FourniturePage = () => {
       ) : (
         <ul className="space-y-2">
           {items.map((it) => (
-            <li key={it.id} className="flex items-center justify-between px-3 py-2 rounded-md border"
+            <li key={it.id} className="flex items-center gap-2 px-3 py-2 rounded-md border"
               style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-primary)' }}
             >
-              <span style={{ color: 'var(--text-primary)' }}>
-                {it.label}
-                <span className="ml-2 px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                  × {it.qty ?? 1}
-                </span>
-              </span>
+              <input
+                type="text"
+                value={it.label}
+                onChange={(e) => updateItemLabel(it.id, e.target.value)}
+                placeholder="Nom de la fourniture"
+                className="flex-1 px-2 py-1 rounded border text-sm"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                aria-label="Nom"
+              />
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={it.qty === '' || typeof it.qty === 'undefined' || it.qty === null ? '' : it.qty}
+                onChange={(e) => updateItemQty(it.id, e.target.value)}
+                placeholder="Qté"
+                className="w-24 px-2 py-1 rounded border text-right text-sm"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                aria-label="Quantité"
+              />
               <button
                 type="button"
                 onClick={() => removeItem(it.id)}
-                className="ml-3 px-2 py-1 rounded-md text-sm transition-colors duration-200 hover:opacity-80"
+                className="px-2 py-1 rounded-md text-sm transition-colors duration-200 hover:opacity-80"
                 style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}
                 title="Supprimer"
                 aria-label="Supprimer"
