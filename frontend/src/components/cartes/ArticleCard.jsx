@@ -172,12 +172,25 @@ const ArticleCard = forwardRef(({
       if (targetId !== uniqueAssignmentId) return
       try {
         await ApiService.production.setArticleUrgent(article.orderId, article.line_item_id, urgent)
+        // Override local urgent and mirror on article.production_status for instant UI
         setLocalUrgent(Boolean(urgent))
+        try {
+          article.production_status = {
+            ...(article.production_status || {}),
+            urgent: Boolean(urgent)
+          }
+        } catch {}
         // notifier tri + mise à jour locale des données unifiées
         window.dispatchEvent(new Event('mc-mark-urgent'))
         window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
       } catch (e) {
         setLocalUrgent(Boolean(urgent))
+        try {
+          article.production_status = {
+            ...(article.production_status || {}),
+            urgent: Boolean(urgent)
+          }
+        } catch {}
         window.dispatchEvent(new Event('mc-mark-urgent'))
         window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
       }

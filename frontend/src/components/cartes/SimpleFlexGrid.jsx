@@ -28,6 +28,7 @@ const SimpleFlexGrid = ({
   const visibleCountRef = useRef(280)
   const lastNonEmptyArticlesRef = useRef([])
   const urgentTickRef = useRef(0)
+  const urgentOverridesRef = useRef(new Map()) // key: `${orderId}-${lineItemId}` -> boolean
   
   // États dérivés avec useMemo pour éviter les re-renders
   const visibleCount = useMemo(() => visibleCountRef.current, [])
@@ -87,14 +88,21 @@ const SimpleFlexGrid = ({
   useEffect(() => {
     const handleUrgent = () => {
       urgentTickRef.current += 1
-      // Forcer un re-render seulement si nécessaire
-      if (urgentTickRef.current % 5 === 0) {
-        // Re-render seulement tous les 5 urgents pour éviter les re-renders excessifs
-        setUrgentTick(urgentTickRef.current)
-      }
+      setUrgentTick(urgentTickRef.current)
+    }
+    const handleUrgentUpdated = (ev) => {
+      const { orderId, lineItemId, urgent } = ev.detail || {}
+      if (!orderId || !lineItemId) return
+      urgentOverridesRef.current.set(`${orderId}-${lineItemId}`, Boolean(urgent))
+      urgentTickRef.current += 1
+      setUrgentTick(urgentTickRef.current)
     }
     window.addEventListener('mc-mark-urgent', handleUrgent)
-    return () => window.removeEventListener('mc-mark-urgent', handleUrgent)
+    window.addEventListener('mc-article-urgent-updated', handleUrgentUpdated)
+    return () => {
+      window.removeEventListener('mc-mark-urgent', handleUrgent)
+      window.removeEventListener('mc-article-urgent-updated', handleUrgentUpdated)
+    }
   }, [])
 
   // Réinitialiser le nombre d'éléments visibles quand les filtres changent
@@ -129,8 +137,12 @@ const SimpleFlexGrid = ({
     // Prioriser les urgents en tête selon le flag
     const arranged = prioritizeUrgent
       ? [...source].sort((a, b) => {
-          const ua = (a.production_status?.urgent === true) ? 1 : 0
-          const ub = (b.production_status?.urgent === true) ? 1 : 0
+          const keyA = `${a.orderId}-${a.line_item_id}`
+          const keyB = `${b.orderId}-${b.line_item_id}`
+          const overrideA = urgentOverridesRef.current.get(keyA)
+          const overrideB = urgentOverridesRef.current.get(keyB)
+          const ua = (typeof overrideA === 'boolean') ? (overrideA ? 1 : 0) : ((a.production_status?.urgent === true) ? 1 : 0)
+          const ub = (typeof overrideB === 'boolean') ? (overrideB ? 1 : 0) : ((b.production_status?.urgent === true) ? 1 : 0)
           if (ua !== ub) return ub - ua
           return 0
         })

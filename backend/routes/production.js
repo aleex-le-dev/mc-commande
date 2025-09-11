@@ -42,6 +42,27 @@ router.put('/status/:orderId/:lineItemId', async (req, res) => {
   }
 })
 
+// PUT /api/production/urgent/:orderId/:lineItemId - Mettre à jour le flag urgent (UX-only badge)
+router.put('/urgent/:orderId/:lineItemId', async (req, res) => {
+  try {
+    const { urgent } = req.body
+    if (typeof urgent === 'undefined') {
+      return res.status(400).json({ error: 'Paramètre urgent requis' })
+    }
+
+    const ok = await productionService.updateUrgentFlag(
+      req.params.orderId,
+      req.params.lineItemId,
+      Boolean(urgent)
+    )
+
+    res.json({ success: ok, message: 'Urgence mise à jour', data: { urgent: Boolean(urgent) } })
+  } catch (error) {
+    console.error('Erreur mise à jour urgent:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // GET /api/production/stats - Statistiques de production
 router.get('/stats', async (req, res) => {
   try {

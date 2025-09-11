@@ -72,6 +72,27 @@ class ProductionService {
     const result = await collection.bulkWrite(bulkOps)
     return result
   }
+
+  async updateUrgentFlag(orderId, lineItemId, urgent) {
+    const collection = db.getCollection('production_status')
+    const parsedOrderId = parseInt(orderId)
+    const parsedLineItemId = parseInt(lineItemId)
+
+    const result = await collection.updateOne(
+      { order_id: parsedOrderId, line_item_id: parsedLineItemId },
+      {
+        $set: {
+          order_id: parsedOrderId,
+          line_item_id: parsedLineItemId,
+          urgent: Boolean(urgent),
+          updated_at: new Date()
+        }
+      },
+      { upsert: true }
+    )
+
+    return result.upsertedCount > 0 || result.modifiedCount > 0
+  }
 }
 
 module.exports = new ProductionService()

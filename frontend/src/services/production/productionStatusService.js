@@ -51,11 +51,7 @@ export const ProductionStatusService = {
    */
   async setArticleUrgent(orderId, lineItemId, urgent) {
     try {
-      const response = await HttpClientService.put('/production/urgent', {
-        order_id: orderId,
-        line_item_id: lineItemId,
-        urgent
-      })
+      const response = await HttpClientService.put(`/production/urgent/${orderId}/${lineItemId}`, { urgent })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
