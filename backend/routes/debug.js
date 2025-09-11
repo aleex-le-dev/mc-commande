@@ -56,15 +56,33 @@ router.get('/test-all', async (req, res) => {
     }
 
     // Statistiques spécifiques
+    console.log('🔍 [debug] Calcul des statistiques...')
     const orderItemsCollection = db.getCollection('order_items')
-    const ordersCollection = db.getCollection('orders_sync') // Utiliser orders_sync au lieu de orders
     const statusCollection = db.getCollection('production_status')
+    
+    console.log('🔍 [debug] Collections:', {
+      orderItems: orderItemsCollection ? 'OK' : 'ERREUR',
+      status: statusCollection ? 'OK' : 'ERREUR'
+    })
+
+    const commandes = await orderItemsCollection.distinct('order_id').then(ids => {
+      console.log('🔍 [debug] IDs commandes distincts:', ids.length, ids.slice(0, 3))
+      return ids.length
+    })
+    
+    const articles = await orderItemsCollection.countDocuments()
+    console.log('🔍 [debug] Total articles:', articles)
+    
+    const statuts = await statusCollection.countDocuments()
+    console.log('🔍 [debug] Total statuts:', statuts)
 
     results.stats = {
-      commandes: await ordersCollection.countDocuments(),
-      articles: await orderItemsCollection.countDocuments(),
-      statuts: await statusCollection.countDocuments()
+      commandes,
+      articles,
+      statuts
     }
+    
+    console.log('🔍 [debug] Résultat stats:', results.stats)
 
     // Formatage pour l'interface frontend
     const formattedResults = {

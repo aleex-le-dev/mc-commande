@@ -96,10 +96,20 @@ export const ProductionStatusService = {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await response.json()
+      const result = await response.json()
+      console.log('🔍 [ProductionStatusService] Réponse brute:', result)
+      
+      // Retourner directement les données si la réponse contient success: true
+      if (result.success && result.data) {
+        console.log('🔍 [ProductionStatusService] Données extraites:', result.data)
+        return result.data
+      }
+      
+      // Fallback si la structure est différente
+      return result
     } catch (error) {
       console.error('Erreur récupération stats production:', error)
-      return { total: 0, byStatus: {}, byType: {} }
+      return { totalOrders: 0, totalItems: 0, totalStatuses: 0, statusStats: {}, statusesByType: [] }
     }
   }
 }
