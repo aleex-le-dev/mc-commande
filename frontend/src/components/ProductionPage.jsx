@@ -31,7 +31,7 @@ const ProductionPage = ({ productionType, title }) => {
     status: selectedStatus,
     search: searchTerm,
     sortBy: 'order_date',
-    sortOrder: 'desc',
+    sortOrder: 'asc',
     productionType,
     showUrgentOnly
   })
