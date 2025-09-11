@@ -5,7 +5,9 @@ const router = express.Router()
 // GET /api/orders - Récupérer toutes les commandes avec pagination et filtres
 router.get('/', async (req, res) => {
   try {
+    console.log('📊 [API] Récupération commandes avec filtres:', req.query)
     const result = await ordersService.getOrders(req.query)
+    console.log(`📊 [API] ${result.orders.length} commandes retournées, total: ${result.pagination?.total || 'N/A'}`)
     res.json({ success: true, orders: result.orders, pagination: result.pagination, stats: result.stats })
   } catch (error) {
     console.error('Erreur récupération commandes:', error)

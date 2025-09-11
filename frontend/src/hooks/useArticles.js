@@ -69,12 +69,20 @@ export const useArticles = (options = {}) => {
   // Écouter l'événement de synchronisation terminée
   useEffect(() => {
     const handleSyncCompleted = () => {
-      console.log('🔄 Re-calcul des articles après synchronisation')
-      setSyncTick(prev => prev + 1)
+      console.log('🔄 [useArticles] Événement mc-sync-completed reçu - Re-calcul des articles')
+      setSyncTick(prev => {
+        const newTick = prev + 1
+        console.log(`🔄 [useArticles] syncTick: ${prev} -> ${newTick}`)
+        return newTick
+      })
     }
     
+    console.log('🔄 [useArticles] Ajout du listener mc-sync-completed')
     window.addEventListener('mc-sync-completed', handleSyncCompleted)
-    return () => window.removeEventListener('mc-sync-completed', handleSyncCompleted)
+    return () => {
+      console.log('🔄 [useArticles] Suppression du listener mc-sync-completed')
+      window.removeEventListener('mc-sync-completed', handleSyncCompleted)
+    }
   }, [])
 
   // Transformation des commandes en articles (responsabilité unique)
@@ -83,7 +91,10 @@ export const useArticles = (options = {}) => {
     const tick = syncTick
     const ordersArray = orders?.orders || orders
     
+    console.log(`🔄 [useArticles] Re-calcul articles - syncTick: ${tick}, orders: ${ordersArray?.length || 0}`)
+    
     if (!ordersArray || !Array.isArray(ordersArray)) {
+      console.log('🔄 [useArticles] Aucune commande disponible')
       return []
     }
     

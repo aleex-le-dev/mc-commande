@@ -76,58 +76,64 @@ router.post('/orders', async (req, res) => {
       })
     }
     
-    // Insérer les commandes en BDD
-    const insertedOrders = []
-    for (const order of newOrders) {
-      try {
-        // Vérifier si la commande existe déjà
-        const existingOrder = await orderItemsCollection.findOne({ order_id: order.id })
-        if (existingOrder) {
-          console.log(`⚠️ Commande ${order.id} déjà existante, ignorée`)
-          continue
-        }
-        
-        // Transformer et insérer la commande
-        const transformedOrder = await ordersService.transformWooCommerceOrder(order)
-        
-        // Insérer chaque item de la commande
-        for (const item of transformedOrder.items) {
-          const orderItem = {
-            order_id: transformedOrder.order_id,
-            order_number: transformedOrder.order_number,
-            order_date: transformedOrder.order_date,
-            status: transformedOrder.status,
-            customer: transformedOrder.customer,
-            customer_email: transformedOrder.customer_email,
-            customer_phone: transformedOrder.customer_phone,
-            customer_address: transformedOrder.customer_address,
-            customer_note: transformedOrder.customer_note,
-            shipping_method: transformedOrder.shipping_method,
-            shipping_carrier: transformedOrder.shipping_carrier,
-            total: transformedOrder.total,
-            created_at: transformedOrder.created_at,
-            updated_at: transformedOrder.updated_at,
-            line_item_id: item.line_item_id,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            price: item.price,
-            meta_data: item.meta_data,
-            image_url: item.image_url,
-            permalink: item.permalink,
-            variation_id: item.variation_id,
-            production_status: item.production_status
-          }
-          
-          await orderItemsCollection.insertOne(orderItem)
-        }
-        
-        insertedOrders.push(transformedOrder)
-        console.log(`✅ Commande ${order.id} synchronisée avec ${transformedOrder.items.length} articles`)
-      } catch (error) {
-        console.error(`❌ Erreur synchronisation commande ${order.id}:`, error)
-      }
-    }
+             // Insérer les commandes en BDD
+             const insertedOrders = []
+             for (const order of newOrders) {
+               try {
+                 // Vérifier si la commande existe déjà
+                 const existingOrder = await orderItemsCollection.findOne({ order_id: order.id })
+                 if (existingOrder) {
+                   console.log(`⚠️ Commande ${order.id} déjà existante, ignorée`)
+                   continue
+                 }
+                 
+                 // Transformer et insérer la commande
+                 const transformedOrder = await ordersService.transformWooCommerceOrder(order)
+                 console.log(`🔄 Transformation commande ${order.id}:`, {
+                   order_id: transformedOrder.order_id,
+                   items_count: transformedOrder.items.length,
+                   first_item: transformedOrder.items[0]?.product_name
+                 })
+                 
+                 // Insérer chaque item de la commande
+                 for (const item of transformedOrder.items) {
+                   const orderItem = {
+                     order_id: transformedOrder.order_id,
+                     order_number: transformedOrder.order_number,
+                     order_date: transformedOrder.order_date,
+                     status: transformedOrder.status,
+                     customer: transformedOrder.customer,
+                     customer_email: transformedOrder.customer_email,
+                     customer_phone: transformedOrder.customer_phone,
+                     customer_address: transformedOrder.customer_address,
+                     customer_note: transformedOrder.customer_note,
+                     shipping_method: transformedOrder.shipping_method,
+                     shipping_carrier: transformedOrder.shipping_carrier,
+                     total: transformedOrder.total,
+                     created_at: transformedOrder.created_at,
+                     updated_at: transformedOrder.updated_at,
+                     line_item_id: item.line_item_id,
+                     product_id: item.product_id,
+                     product_name: item.product_name,
+                     quantity: item.quantity,
+                     price: item.price,
+                     meta_data: item.meta_data,
+                     image_url: item.image_url,
+                     permalink: item.permalink,
+                     variation_id: item.variation_id,
+                     production_status: item.production_status
+                   }
+                   
+                   const insertResult = await orderItemsCollection.insertOne(orderItem)
+                   console.log(`📝 Item inséré: ${item.product_name} (ID: ${insertResult.insertedId})`)
+                 }
+                 
+                 insertedOrders.push(transformedOrder)
+                 console.log(`✅ Commande ${order.id} synchronisée avec ${transformedOrder.items.length} articles`)
+               } catch (error) {
+                 console.error(`❌ Erreur synchronisation commande ${order.id}:`, error)
+               }
+             }
     
     const result = {
       success: true,

@@ -30,23 +30,36 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       const result = await Promise.race([syncPromise, timeoutPromise])
       console.log('✅ Synchronisation terminée:', result)
       
-      // Invalidation ciblée pour recharger depuis la BDD
-      queryClient.invalidateQueries(['db-orders'])
-      queryClient.invalidateQueries(['production-statuses'])
-      queryClient.invalidateQueries(['unified-orders'])
-      queryClient.invalidateQueries(['assignments'])
-      queryClient.invalidateQueries(['tricoteuses'])
+      // Invalidation complète de tous les caches
+      console.log('🔄 [SyncButton] Invalidation complète des caches...')
+      queryClient.invalidateQueries()
+      queryClient.removeQueries()
       try { if (typeof window !== 'undefined' && window) window.mcBypassOrdersCache = true } catch {}
       
-      // Attendre le refetch pour avoir les nouvelles données
+      // Attendre un peu pour que l'invalidation soit effective
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Forcer un nouveau fetch de toutes les données
+      console.log('🔄 [SyncButton] Nouveau fetch des données...')
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['db-orders'], type: 'active' }),
-        queryClient.refetchQueries({ queryKey: ['assignments'], type: 'active' })
+        queryClient.refetchQueries({ type: 'active' })
       ])
+      console.log('🔄 [SyncButton] Nouveau fetch terminé')
+      
+      // Attendre un peu plus pour que les données soient vraiment disponibles
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Déclencher un événement global pour forcer le re-render des composants
+      console.log('🔄 [SyncButton] Émission de l\'événement mc-sync-completed')
       window.dispatchEvent(new Event('mc-sync-completed'))
+      console.log('🔄 [SyncButton] Événement mc-sync-completed émis')
+      
+      // Forcer un rechargement complet de la page après un délai
+      console.log('🔄 [SyncButton] Rechargement de la page dans 2 secondes...')
+      setTimeout(() => {
+        console.log('🔄 [SyncButton] Rechargement de la page')
+        window.location.reload()
+      }, 2000)
       
       // Précharger les images des nouvelles commandes
       try {
