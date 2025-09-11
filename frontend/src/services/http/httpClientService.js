@@ -59,10 +59,25 @@ export const HttpClientService = {
   async testConnection() {
     try {
       const response = await this.get('/health')
-      return response.ok
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          success: true,
+          message: 'Connexion WordPress API réussie',
+          data: data
+        }
+      } else {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`
+        }
+      }
     } catch (error) {
       console.error('Test de connexion échoué:', error)
-      return false
+      return {
+        success: false,
+        error: error.message
+      }
     }
   }
 }
