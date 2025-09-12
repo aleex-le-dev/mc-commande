@@ -188,24 +188,44 @@ const ArticleCard = forwardRef(({
         // Override local urgent and mirror on article.production_status for instant UI
         setLocalUrgent(Boolean(urgent))
         try {
-          article.production_status = {
-            ...(article.production_status || {}),
-            urgent: Boolean(urgent)
+          // Mettre à jour l'objet article directement
+          article.urgent = Boolean(urgent)
+          if (!article.production_status) {
+            article.production_status = {}
           }
+          article.production_status.urgent = Boolean(urgent)
+          console.log('🔄 Article urgent mis à jour:', { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) })
         } catch {}
         // notifier tri + mise à jour locale des données unifiées
         window.dispatchEvent(new Event('mc-mark-urgent'))
         window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
+        // Forcer le re-render et le re-tri après changement urgent
+        setTimeout(() => {
+          window.dispatchEvent(new Event('mc-refresh-data'))
+          window.dispatchEvent(new Event('mc-data-updated'))
+          // Forcer un re-calcul complet des articles
+          window.dispatchEvent(new Event('mc-sync-completed'))
+        }, 100)
       } catch (e) {
         setLocalUrgent(Boolean(urgent))
         try {
-          article.production_status = {
-            ...(article.production_status || {}),
-            urgent: Boolean(urgent)
+          // Mettre à jour l'objet article directement
+          article.urgent = Boolean(urgent)
+          if (!article.production_status) {
+            article.production_status = {}
           }
+          article.production_status.urgent = Boolean(urgent)
+          console.log('🔄 Article urgent mis à jour (fallback):', { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) })
         } catch {}
         window.dispatchEvent(new Event('mc-mark-urgent'))
         window.dispatchEvent(new CustomEvent('mc-article-urgent-updated', { detail: { orderId: article.orderId, lineItemId: article.line_item_id, urgent: Boolean(urgent) } }))
+        // Forcer le re-render et le re-tri après changement urgent
+        setTimeout(() => {
+          window.dispatchEvent(new Event('mc-refresh-data'))
+          window.dispatchEvent(new Event('mc-data-updated'))
+          // Forcer un re-calcul complet des articles
+          window.dispatchEvent(new Event('mc-sync-completed'))
+        }, 100)
       }
     }
     window.addEventListener('mc-mark-urgent', handleMarkUrgent, true)

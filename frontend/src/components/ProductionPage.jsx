@@ -177,7 +177,7 @@ const ProductionPage = ({ productionType, title }) => {
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
         productionType={productionType}
-        prioritizeUrgent={true}
+        prioritizeUrgent={false}
       />
       
       {/* Pagination avancée */}

@@ -145,12 +145,40 @@ export const useArticles = (options = {}) => {
 
   // Filtrage des articles (responsabilité unique)
   const filteredArticles = useMemo(() => {
-    const filtered = applyFilters(articles, {
+    let filtered = applyFilters(articles, {
       productionType,
       status,
       searchTerm: search,
       showUrgentOnly
     })
+    
+    // Tri global: urgents en premier, puis par date
+    filtered = [...filtered].sort((a, b) => {
+      const aUrgent = a.urgent === true || a.production_status?.urgent === true
+      const bUrgent = b.urgent === true || b.production_status?.urgent === true
+      
+      // Debug pour les articles du 12
+      if (a.orderDate && a.orderDate.includes('12/09')) {
+        console.log('🔍 Tri article 12:', { 
+          orderId: a.orderId, 
+          lineItemId: a.line_item_id, 
+          urgent: aUrgent, 
+          orderDate: a.orderDate,
+          production_status_urgent: a.production_status?.urgent,
+          article_urgent: a.urgent
+        })
+      }
+      
+      // Si l'un est urgent et pas l'autre, l'urgent passe en premier
+      if (aUrgent && !bUrgent) return -1
+      if (!aUrgent && bUrgent) return 1
+      
+      // Sinon, trier par date (plus ancien en premier)
+      const dateA = new Date(a.orderDate || a.order_date || 0)
+      const dateB = new Date(b.orderDate || b.order_date || 0)
+      return dateA - dateB
+    })
+    
     return filtered
   }, [articles, productionType, status, search, showUrgentOnly])
 

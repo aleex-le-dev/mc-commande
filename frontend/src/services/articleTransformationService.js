@@ -58,7 +58,7 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     assignedTo: tricoteuse?.firstName || assignment?.tricoteuse_name || null,
     tricoteuse_photo: tricoteuse?.photoUrl || assignment?.tricoteuse_photo || null,
     tricoteuse_color: tricoteuse?.color || assignment?.tricoteuse_color || null,
-    urgent: assignment?.urgent || false,
+    urgent: assignment?.urgent || item.production_status?.urgent || false,
     assignmentId: assignment?._id || null,
     tricoteuseId: assignment?.tricoteuse_id || null,
     // placeholders; computed using _all_order_line_item_ids if provided

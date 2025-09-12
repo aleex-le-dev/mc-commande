@@ -103,7 +103,13 @@ function App() {
               const qty = Math.max(1, parseInt(qtyStr))
               const priceStr = prompt('Prix unitaire ?', '0') || '0'
               const price = Math.max(0, parseFloat(priceStr))
-              const productionType = (prompt('Type production (couture/maille) ?', 'couture') || 'couture').toLowerCase() === 'maille' ? 'maille' : 'couture'
+              let productionType = ''
+              while (productionType !== 'maille' && productionType !== 'couture') {
+                productionType = prompt('Type production (maille/couture) ?', 'Entrez "couture" ou "maille"')?.toLowerCase().trim() || ''
+                if (productionType !== 'maille' && productionType !== 'couture') {
+                  alert('Veuillez choisir exactement "maille" ou "couture"')
+                }
+              }
 
               const payload = {
                 customer,
