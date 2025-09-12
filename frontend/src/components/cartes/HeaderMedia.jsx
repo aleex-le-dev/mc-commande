@@ -32,14 +32,14 @@ const HeaderMedia = ({
             alt={article.product_name}
             className="w-full h-full object-cover"
             onLoad={() => {
-              if (article?.orderId === 389860) {
-                console.log('🖼️ [IMAGE] HeaderMedia - Image chargée pour article', article?.lineItemId)
+              if (article?.productId === 389525 || article?.productId === 389503) {
+                console.log('🖼️ [IMAGE] HeaderMedia - Image chargée pour productId', article?.productId)
               }
               setIsImageLoading(false)
             }}
             onError={() => {
-              if (article?.orderId === 389860) {
-                console.log('🖼️ [IMAGE] HeaderMedia - Erreur chargement image pour article', article?.lineItemId)
+              if (article?.productId === 389525 || article?.productId === 389503) {
+                console.log('🖼️ [IMAGE] HeaderMedia - Erreur chargement image pour productId', article?.productId)
               }
               // Fallback simple en cas d'erreur
               setImageUrl('')
