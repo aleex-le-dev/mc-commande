@@ -115,17 +115,11 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
   useEffect(() => {
     // Ne charger l'image que si le chargement d'images est activé
     if (!isImageLoadingEnabled || !productId || !backendUrl) {
-      if (productId === 389525 || productId === 389503) {
-        console.log('🖼️ [IMAGE] ProductImage - Chargement désactivé pour productId', productId, 'isImageLoadingEnabled:', isImageLoadingEnabled)
-      }
       return
     }
 
     // Vérifier d'abord le cache global
     if (imageCache.has(backendUrl)) {
-      if (productId === 389525 || productId === 389503) {
-        console.log('🖼️ [IMAGE] ProductImage - Image trouvée en cache pour productId', productId)
-      }
       setImageUrl(imageCache.get(backendUrl))
       setHasError(false)
       setErrorDetails('')
@@ -192,9 +186,6 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
       return
     }
 
-    if (productId === 389525 || productId === 389503) {
-      console.log('🖼️ [IMAGE] ProductImage - Début chargement image pour productId', productId, 'URL:', backendUrl)
-    }
     console.log(`🖼️ Chargement prioritaire image ${id}: ${backendUrl}`)
     setIsLoading(true)
     setHasError(false)

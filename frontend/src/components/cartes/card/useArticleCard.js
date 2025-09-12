@@ -59,37 +59,24 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
   // Calcul de l'URL d'affichage de l'image
   const displayImageUrl = useMemo(() => {
     if (!isImageLoadingEnabled) {
-      if (article?.productId === 389525 || article?.productId === 389503) {
-        console.log('🖼️ [IMAGE] useArticleCard - Chargement désactivé pour productId', article?.productId)
-      }
       return null
     }
 
     if (imageUrl) {
-      if (article?.productId === 389525 || article?.productId === 389503) {
-        console.log('🖼️ [IMAGE] useArticleCard - Image disponible pour productId', article?.productId, 'URL:', imageUrl)
-      }
       return imageUrl
     }
 
     // Si pas d'image chargée mais chargement activé, utiliser l'URL directe
     if (article?.image_url) {
-      if (article?.productId === 389525 || article?.productId === 389503) {
-        console.log('🖼️ [IMAGE] useArticleCard - Utilisation image_url directe pour productId', article?.productId, 'URL:', article.image_url)
-      }
       return article.image_url
     }
 
     return null
-  }, [isImageLoadingEnabled, imageUrl, article?.productId, article?.image_url])
+  }, [isImageLoadingEnabled, imageUrl, article?.image_url])
 
   // Charger l'image via l'API
   const loadImage = useCallback(async () => {
     if (!isImageLoadingEnabled || !article?.productId || imageUrl) return
-
-    if (article?.productId === 389525 || article?.productId === 389503) {
-      console.log('🖼️ [IMAGE] useArticleCard - Début chargement image pour productId', article?.productId)
-    }
 
     setIsImageLoading(true)
     try {
@@ -99,18 +86,9 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
         const imageObjectUrl = URL.createObjectURL(imageBlob)
         setImageUrl(imageObjectUrl)
         setIsFromCache(false)
-        if (article?.productId === 389525 || article?.productId === 389503) {
-          console.log('🖼️ [IMAGE] useArticleCard - Image chargée avec succès pour productId', article?.productId)
-        }
-      } else {
-        if (article?.productId === 389525 || article?.productId === 389503) {
-          console.log('🖼️ [IMAGE] useArticleCard - Erreur chargement image pour productId', article?.productId, 'Status:', response.status)
-        }
       }
     } catch (error) {
-      if (article?.productId === 389525 || article?.productId === 389503) {
-        console.log('🖼️ [IMAGE] useArticleCard - Erreur chargement image pour productId', article?.productId, 'Error:', error.message)
-      }
+      // Erreur silencieuse
     } finally {
       setIsImageLoading(false)
     }
