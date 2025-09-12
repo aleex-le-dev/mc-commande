@@ -37,10 +37,10 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     orderNumber: order.order_number,
     orderId: order.order_id,
     orderDate: order.order_date,
-    customer: order.customer_name,
-    customerEmail: order.customer_email,
-    customerPhone: order.customer_phone,
-    customerAddress: order.customer_address,
+    customer: order.customer_name || order.customer || null,
+    customerEmail: order.customer_email || null,
+    customerPhone: order.customer_phone || null,
+    customerAddress: order.customer_address || null,
     // Note client: récupérer depuis plusieurs sources potentielles
     customerNote: (
       (typeof order?.customer_note === 'string' && order.customer_note.trim().length > 0 ? order.customer_note : null) ||

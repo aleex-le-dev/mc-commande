@@ -11,7 +11,14 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
   const [customer, setCustomer] = useState('')
   const [dateStr, setDateStr] = useState(() => new Date().toISOString().slice(0, 10))
   const [customerAddress, setCustomerAddress] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerCountry, setCustomerCountry] = useState('FR')
+  const [shippingMethod, setShippingMethod] = useState('Livraison gratuite')
+  const [shippingCarrier, setShippingCarrier] = useState('UPS')
+  const [showClientDetails, setShowClientDetails] = useState(false)
   const [productName, setProductName] = useState('')
+  const [productSize, setProductSize] = useState('')
   const [qty, setQty] = useState(1)
   const [price, setPrice] = useState(0)
   const [orderIdentifier, setOrderIdentifier] = useState('')
@@ -25,7 +32,14 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
       setCustomer('')
       setDateStr(new Date().toISOString().slice(0, 10))
       setCustomerAddress('')
+      setCustomerEmail('')
+      setCustomerPhone('')
+      setCustomerCountry('FR')
+      setShippingMethod('Livraison gratuite')
+      setShippingCarrier('UPS')
+      setShowClientDetails(false)
       setProductName('')
+      setProductSize('')
       setQty(1)
       setPrice(0)
       setOrderIdentifier('')
@@ -43,8 +57,11 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
     if (!['maille', 'couture'].includes(String(productionType))) e.productionType = 'Choisir maille ou couture'
     if (isNaN(Number(qty)) || Number(qty) < 1) e.qty = 'Quantité invalide'
     if (isNaN(Number(price)) || Number(price) < 0) e.price = 'Prix invalide'
+    if (customerEmail && !/^\S+@\S+\.\S+$/.test(customerEmail)) e.customerEmail = 'Email invalide'
+    if (customerPhone && customerPhone.replace(/\D/g, '').length < 6) e.customerPhone = 'Téléphone invalide'
+    if (!customerCountry || customerCountry.trim().length < 2) e.customerCountry = 'Pays invalide'
     return e
-  }, [customer, productName, orderIdentifier, productionType, qty, price])
+  }, [customer, productName, orderIdentifier, productionType, qty, price, customerEmail, customerPhone, customerCountry])
 
   const isValid = Object.keys(validation).length === 0
 
@@ -59,8 +76,20 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
         order_date: `${dateStr}T00:00:00`,
         order_number: orderIdentifier.trim(),
         customer_address: customerAddress?.trim() || null,
+        customer_email: customerEmail?.trim() || null,
+        customer_phone: customerPhone?.trim() || null,
+        customer_country: customerCountry?.trim() || 'FR',
+        shipping_method: shippingMethod?.trim() || 'Livraison gratuite',
+        shipping_carrier: shippingCarrier?.trim() || (customerCountry?.toUpperCase() === 'FR' ? 'UPS' : 'DHL'),
         items: [
-          { product_id: 0, product_name: productName.trim(), quantity: Number(qty), price: Number(price), production_type: productionType }
+          { 
+            product_id: 0, 
+            product_name: productName.trim(), 
+            quantity: Number(qty), 
+            price: Number(price), 
+            production_type: productionType,
+            meta_data: productSize && productSize.trim().length > 0 ? [ { key: 'taille', value: productSize.trim() } ] : []
+          }
         ],
         status: 'a_faire'
       }
@@ -122,7 +151,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1">Identifiant commande *</label>
+                <label className="block text-sm mb-1">Numéro de commande (alphanumérique) *</label>
                 <input
                   type="text"
                   inputMode="text"
@@ -131,22 +160,109 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                   style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.orderIdentifier ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
                   value={orderIdentifier}
                   onChange={(e) => setOrderIdentifier(e.target.value)}
-                  placeholder="Ex: MC123A"
+                  placeholder="Ex: MC123A ou 22605443"
                 />
                 {validation.orderIdentifier && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.orderIdentifier}</p>}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm mb-1">Adresse client (optionnel)</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 rounded border"
-                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                placeholder="Adresse complète"
-              />
+            {/* Infos client optionnelles (dropdown) */}
+            <div className="mt-1 border rounded" style={{ borderColor: 'var(--border-primary)' }}>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between px-3 py-2"
+                onClick={() => setShowClientDetails(v => !v)}
+                style={{ color: 'var(--text-primary)' }}
+                aria-expanded={showClientDetails}
+              >
+                <span className="text-sm font-medium">Infos client (optionnel)</span>
+                <span className="text-xl leading-none" aria-hidden>{showClientDetails ? '▾' : '▸'}</span>
+              </button>
+              {showClientDetails && (
+                <div className="p-3 space-y-3 border-t" style={{ borderColor: 'var(--border-primary)' }}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm mb-1">Email</label>
+                      <input
+                        type="email"
+                        className="w-full px-3 py-2 rounded border"
+                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.customerEmail ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="exemple@mail.com"
+                      />
+                      {validation.customerEmail && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.customerEmail}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Téléphone</label>
+                      <input
+                        type="tel"
+                        className="w-full px-3 py-2 rounded border"
+                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.customerPhone ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="+33 6 12 34 56 78"
+                      />
+                      {validation.customerPhone && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.customerPhone}</p>}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Adresse</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 rounded border"
+                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      placeholder="Adresse complète"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Pays</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 rounded border"
+                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.customerCountry ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
+                      value={customerCountry}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase()
+                        setCustomerCountry(v)
+                        setShippingCarrier(v === 'FR' ? 'UPS' : 'DHL')
+                      }}
+                      placeholder="FR"
+                    />
+                    {validation.customerCountry && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.customerCountry}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm mb-1">Méthode d'expédition</label>
+                      <select
+                        className="w-full px-3 py-2 rounded border"
+                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                        value={shippingMethod}
+                        onChange={(e) => setShippingMethod(e.target.value)}
+                      >
+                        <option value="Livraison gratuite">Livraison gratuite</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Express">Express</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Transporteur</label>
+                      <select
+                        className="w-full px-3 py-2 rounded border"
+                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                        value={shippingCarrier}
+                        onChange={(e) => setShippingCarrier(e.target.value)}
+                      >
+                        <option value="UPS">UPS</option>
+                        <option value="DHL">DHL</option>
+                        <option value="LaPoste">La Poste</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -160,6 +276,18 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                 placeholder='Ex: "Chemise Cléo"'
               />
               {validation.productName && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.productName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1">Taille (optionnel)</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 rounded border"
+                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                value={productSize}
+                onChange={(e) => setProductSize(e.target.value)}
+                placeholder="Ex: S, M, L, 36, 38…"
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -203,6 +331,8 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                 {validation.productionType && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.productionType}</p>}
               </div>
             </div>
+
+            
           </div>
 
           <div className="mt-5 flex justify-end gap-2">

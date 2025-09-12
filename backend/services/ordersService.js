@@ -125,6 +125,14 @@ class OrdersService {
                 order_id: { $first: '$order_id' },
                 order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
                 status: { $first: '$status' },
+                // Remonter les infos client depuis les items (utile pour commandes manuelles)
+                customer: { $first: '$customer' },
+                customer_name: { $first: '$customer_name' },
+                customer_email: { $first: '$customer_email' },
+                customer_phone: { $first: '$customer_phone' },
+                customer_address: { $first: '$customer_address' },
+                shipping_method: { $first: '$shipping_method' },
+                shipping_carrier: { $first: '$shipping_carrier' },
                 customer_note: { $first: '$order_customer_note' },
                 items_count: { $sum: 1 },
                 items: { $push: '$$ROOT' }
@@ -156,11 +164,11 @@ class OrdersService {
             { $addFields: { 
               customer_name: { $ifNull: ['$order_data.customer_name', '$customer_name', '$customer'] },
               customer_email: { $ifNull: ['$order_data.customer_email', '$customer_email', null] },
-              customer_phone: { $ifNull: ['$order_data.customer_phone', null] },
-              customer_address: { $ifNull: ['$order_data.customer_address', null] },
+              customer_phone: { $ifNull: ['$order_data.customer_phone', '$customer_phone', null] },
+              customer_address: { $ifNull: ['$order_data.customer_address', '$customer_address', null] },
               customer_note: { $ifNull: ['$order_data.customer_note', '$customer_note', null] },
-              shipping_method: { $ifNull: ['$order_data.shipping_method_title', '$order_data.shipping_method', null] },
-              shipping_carrier: { $ifNull: ['$order_data.shipping_carrier', null] }
+              shipping_method: { $ifNull: ['$order_data.shipping_method_title', '$order_data.shipping_method', '$shipping_method', null] },
+              shipping_carrier: { $ifNull: ['$order_data.shipping_carrier', '$shipping_carrier', null] }
             } },
             { $addFields: { all_line_item_ids: { $sortArray: { input: '$all_line_item_ids', sortBy: 1 } } } },
             { $project: { all_items: 0 } },
@@ -295,6 +303,11 @@ class OrdersService {
     const customer = payload?.customer || 'Client inconnu'
     const customer_note = payload?.note || ''
     const customer_address_input = typeof payload?.customer_address === 'string' && payload.customer_address.trim().length > 0 ? payload.customer_address.trim() : null
+    const customer_email_input = typeof payload?.customer_email === 'string' && payload.customer_email.trim().length > 0 ? payload.customer_email.trim() : null
+    const customer_phone_input = typeof payload?.customer_phone === 'string' && payload.customer_phone.trim().length > 0 ? payload.customer_phone.trim() : null
+    const customer_country_input = typeof payload?.customer_country === 'string' && payload.customer_country.trim().length > 0 ? payload.customer_country.trim().toUpperCase() : null
+    const shipping_method_input = typeof payload?.shipping_method === 'string' && payload.shipping_method.trim().length > 0 ? payload.shipping_method.trim() : 'Livraison gratuite'
+    const shipping_carrier_input = typeof payload?.shipping_carrier === 'string' && payload.shipping_carrier.trim().length > 0 ? payload.shipping_carrier.trim() : (customer_country_input === 'FR' ? 'UPS' : 'DHL')
     const itemsInput = Array.isArray(payload?.items) && payload.items.length > 0 ? payload.items : [
       { product_id: 0, product_name: 'Article', quantity: 1, price: 0, production_type: 'couture' }
     ]
@@ -306,12 +319,13 @@ class OrdersService {
       order_date: orderDate,
       status,
       customer,
-      customer_email: null,
-      customer_phone: null,
+      customer_email: customer_email_input,
+      customer_phone: customer_phone_input,
       customer_address: customer_address_input,
+      customer_country: customer_country_input,
       customer_note,
-      shipping_method: 'Local',
-      shipping_carrier: 'local',
+      shipping_method: shipping_method_input,
+      shipping_carrier: shipping_carrier_input,
       total: totalAmount,
       created_at: now,
       updated_at: now,
@@ -320,7 +334,7 @@ class OrdersService {
       product_name: String(it.product_name || 'Article'),
       quantity: Number(it.quantity) || 1,
       price: Number(it.price) || 0,
-      meta_data: [],
+      meta_data: Array.isArray(it.meta_data) ? it.meta_data : [],
       image_url: null,
       permalink: null,
       variation_id: null,
