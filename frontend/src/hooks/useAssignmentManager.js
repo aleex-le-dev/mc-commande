@@ -152,33 +152,50 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
     
     setIsAssigning(true)
     const currentUrgent = localAssignment ? localAssignment.urgent : false
+    const currentStatus = localAssignment ? localAssignment.status : 'en_cours'
     
     const assignmentData = { 
       article_id: uniqueAssignmentId, 
       tricoteuse_id: tricoteuse._id, 
       tricoteuse_name: tricoteuse.firstName, 
-      status: 'en_cours',
+      status: currentStatus,
       urgent: currentUrgent
     }
     
     try {
-      const created = await ApiService.assignments.createAssignment(assignmentData)
+      let result
       
-      // Synchroniser le statut initial avec production_status en BDD
-      try { 
-        await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, 'en_cours') 
-      } catch (error) {
-        console.error('Erreur synchronisation statut initial:', error)
+      if (localAssignment) {
+        // Mise à jour d'assignation existante (changement de tricoteuse)
+        const assignmentId = localAssignment._id || localAssignment.id
+        result = await ApiService.assignments.updateAssignment(assignmentId, {
+          tricoteuse_id: tricoteuse._id,
+          tricoteuse_name: tricoteuse.firstName,
+          tricoteuse_photo: tricoteuse.photoUrl,
+          tricoteuse_color: tricoteuse.color,
+          updated_at: new Date()
+        })
+      } else {
+        // Nouvelle assignation
+        result = await ApiService.assignments.createAssignment(assignmentData)
+        
+        // Synchroniser le statut avec production_status en BDD seulement si c'est une nouvelle assignation
+        try { 
+          await ApiService.production.updateArticleStatus(article.orderId, article.line_item_id, currentStatus) 
+        } catch (error) {
+          console.error('Erreur synchronisation statut initial:', error)
+        }
       }
       
       const enrichedAssignment = { 
         ...assignmentData, 
         tricoteuse_photo: tricoteuse.photoUrl, 
         tricoteuse_color: tricoteuse.color, 
-        tricoteuse_name: tricoteuse.firstName 
+        tricoteuse_name: tricoteuse.firstName,
+        _id: localAssignment?._id || result?.data?._id || result?._id
       }
       
-      setLocalAssignment({ ...enrichedAssignment, _id: created?.data?._id || created?._id || localAssignment?._id })
+      setLocalAssignment(enrichedAssignment)
       if (onAssignmentUpdate) { 
         onAssignmentUpdate(uniqueAssignmentId, enrichedAssignment) 
       }
