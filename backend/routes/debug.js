@@ -517,7 +517,7 @@ router.get('/storage', async (req, res) => {
     // Calculer le pourcentage d'utilisation (512 MB = 512 * 1024 * 1024 bytes)
     const maxStorageBytes = 512 * 1024 * 1024 // 512 MB
     const usedBytes = stats.dataSize
-    const usagePercentage = Math.round((usedBytes / maxStorageBytes) * 100)
+    const usagePercentage = Math.max(0.1, Math.round((usedBytes / maxStorageBytes) * 100))
 
     // Calculer les jours depuis la création (approximation basée sur les données)
     const now = new Date()
