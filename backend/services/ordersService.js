@@ -546,7 +546,7 @@ class OrdersService {
         customer_address: `${wooOrder.billing.address_1}, ${wooOrder.billing.address_2}, ${wooOrder.billing.city}, ${wooOrder.billing.postcode}, ${wooOrder.billing.country}`,
         customer_note: wooOrder.customer_note || '',
         shipping_method: wooOrder.shipping_lines?.[0]?.method_title || 'Standard',
-        shipping_carrier: wooOrder.shipping_lines?.[0]?.method_id || 'standard',
+        shipping_carrier: this.extractShippingCarrier(wooOrder.shipping_lines?.[0]),
         total: parseFloat(wooOrder.total),
         created_at: new Date(wooOrder.date_created),
         updated_at: new Date(wooOrder.date_modified),
@@ -593,6 +593,52 @@ class OrdersService {
       console.error('Erreur transformation commande WooCommerce:', error)
       throw error
     }
+  }
+
+  // Extraire le transporteur depuis les données de livraison WooCommerce
+  extractShippingCarrier(shippingLine) {
+    if (!shippingLine) return 'Standard'
+    
+    const methodTitle = shippingLine.method_title || ''
+    const methodId = shippingLine.method_id || ''
+    
+    // Rechercher DHL dans le titre ou l'ID
+    if (methodTitle.toLowerCase().includes('dhl') || methodId.toLowerCase().includes('dhl')) {
+      return 'DHL'
+    }
+    
+    // Rechercher UPS dans le titre ou l'ID
+    if (methodTitle.toLowerCase().includes('ups') || methodId.toLowerCase().includes('ups')) {
+      return 'UPS'
+    }
+    
+    // Rechercher FedEx dans le titre ou l'ID
+    if (methodTitle.toLowerCase().includes('fedex') || methodId.toLowerCase().includes('fedex')) {
+      return 'FedEx'
+    }
+    
+    // Rechercher Chronopost dans le titre ou l'ID
+    if (methodTitle.toLowerCase().includes('chronopost') || methodId.toLowerCase().includes('chronopost')) {
+      return 'Chronopost'
+    }
+    
+    // Rechercher Colissimo dans le titre ou l'ID
+    if (methodTitle.toLowerCase().includes('colissimo') || methodId.toLowerCase().includes('colissimo')) {
+      return 'Colissimo'
+    }
+    
+    // Si c'est flat_rate, essayer d'extraire le transporteur du titre
+    if (methodId === 'flat_rate' && methodTitle) {
+      // Chercher des mots-clés de transporteur dans le titre
+      if (methodTitle.toLowerCase().includes('dhl')) return 'DHL'
+      if (methodTitle.toLowerCase().includes('ups')) return 'UPS'
+      if (methodTitle.toLowerCase().includes('fedex')) return 'FedEx'
+      if (methodTitle.toLowerCase().includes('chronopost')) return 'Chronopost'
+      if (methodTitle.toLowerCase().includes('colissimo')) return 'Colissimo'
+    }
+    
+    // Par défaut, utiliser le titre de la méthode ou "Standard"
+    return methodTitle || 'Standard'
   }
 }
 
