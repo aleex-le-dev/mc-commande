@@ -10,6 +10,46 @@ const apiRoutes = require('./routes')
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// Planification (sans dépendance externe): exécuter la sync à 10:00 Europe/Paris
+const { synchronizeOrdersOnce } = require('./services/syncService')
+const tz = 'Europe/Paris'
+
+function getMsUntilNextEightAM(timezone) {
+  const now = new Date()
+  // Calcul de 08:00 locale Europe/Paris
+  const formatter = new Intl.DateTimeFormat('fr-FR', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const [day, month, year] = formatter.format(now).split('/')
+  const base = new Date(`${year}-${month}-${day}T10:00:00`)
+  // Ajuste l'heure affichée Europe/Paris vers l'heure système via offset réel
+  const target = new Date(base.toLocaleString('en-US', { timeZone: timezone }))
+  let ms = target.getTime() - now.getTime()
+  if (ms <= 0) {
+    // Demain 10:00
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const [d2, m2, y2] = formatter.format(tomorrow).split('/')
+    const base2 = new Date(`${y2}-${m2}-${d2}T10:00:00`)
+    const target2 = new Date(base2.toLocaleString('en-US', { timeZone: timezone }))
+    ms = target2.getTime() - now.getTime()
+  }
+  return ms
+}
+
+async function scheduleDailySync() {
+  const delay = getMsUntilNextEightAM(tz)
+  setTimeout(async function run() {
+    try {
+      console.log('⏰ Lancement automatique synchronisation (10:00 Europe/Paris)')
+      const result = await synchronizeOrdersOnce()
+      console.log('✅ Sync auto terminée:', result)
+    } catch (e) {
+      console.error('❌ Erreur sync auto:', e)
+    } finally {
+      // Replanifie pour le prochain 08:00
+      scheduleDailySync()
+    }
+  }, delay)
+}
+
 // Middleware
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
@@ -76,6 +116,9 @@ async function startServer() {
         process.exit(1)
       }
     })
+    
+    // Planifier la synchronisation quotidienne
+    scheduleDailySync()
   } catch (error) {
     console.error('❌ Erreur démarrage serveur:', error)
     process.exit(1)
