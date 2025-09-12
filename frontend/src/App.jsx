@@ -249,9 +249,15 @@ function App() {
         } catch (error) {
           console.warn('Erreur mise à jour cache:', error)
         }
-        // Notifier l'UI
-        console.log('[DELETE-ARTICLE] Dispatch mc-data-updated')
+        // Notifier l'UI et forcer re-render
+        console.log('[DELETE-ARTICLE] Dispatch mc-data-updated + mc-refresh-data + mc-sync-completed')
         window.dispatchEvent(new Event('mc-data-updated'))
+        window.dispatchEvent(new Event('mc-refresh-data'))
+        window.dispatchEvent(new Event('mc-sync-completed'))
+        try {
+          queryClient.invalidateQueries(['unified-orders'])
+          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
+        } catch {}
       } else {
         console.error('Erreur lors de la suppression de l\'article:', response.statusText)
         alert('Erreur lors de la suppression de l\'article')
@@ -291,8 +297,14 @@ function App() {
         } catch (error) {
           console.warn('Erreur mise à jour cache:', error)
         }
-        console.log('[DELETE-ORDER] Dispatch mc-data-updated')
+        console.log('[DELETE-ORDER] Dispatch mc-data-updated + mc-refresh-data + mc-sync-completed')
         window.dispatchEvent(new Event('mc-data-updated'))
+        window.dispatchEvent(new Event('mc-refresh-data'))
+        window.dispatchEvent(new Event('mc-sync-completed'))
+        try {
+          queryClient.invalidateQueries(['unified-orders'])
+          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
+        } catch {}
       } else {
         console.error('Erreur lors de la suppression:', response.statusText)
         alert('Erreur lors de la suppression de la commande')
