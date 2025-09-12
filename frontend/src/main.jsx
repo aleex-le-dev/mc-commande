@@ -21,6 +21,7 @@ const queryClient = new QueryClient({
 const Root = () => {
   // Démarrer le préchargement (sans synchronisation) en arrière-plan, avant l'authentification
   useEffect(() => {
+    if (import.meta.env.PROD) return
     let isInitialized = false
     
     const initializeServices = async () => {
@@ -48,11 +49,10 @@ const Root = () => {
     } catch {}
   }, [])
 
-  // Diagnostic production: healthcheck backend et timings (désactivé temporairement)
+  // Diagnostic production: healthcheck backend et timings (désactivé)
   useEffect(() => {
     if (!import.meta.env.PROD) return
-    // Désactivé temporairement car le backend est trop lent en production
-    console.log('[BOOT] Healthcheck désactivé (backend lent)')
+    // Désactivé car le backend est trop lent en production
   }, [])
   return (
     <QueryClientProvider client={queryClient}>

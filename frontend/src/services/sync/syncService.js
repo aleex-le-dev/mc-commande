@@ -111,8 +111,6 @@ export const SyncService = {
         return false
       }
       
-      console.log('🔄 Préchargement des données de l\'application...')
-      
       // Précharger les données en parallèle
       const [tricoteuses, assignments, fullOrders] = await Promise.allSettled([
         HttpClientService.get('/tricoteuses'),
@@ -136,7 +134,6 @@ export const SyncService = {
         HttpCacheService.set('orders', fullOrdersData.orders || [])
       }
       
-      console.log('✅ Préchargement terminé')
       return true
     } catch (error) {
       console.error('Erreur préchargement données:', error)

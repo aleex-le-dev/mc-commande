@@ -137,6 +137,11 @@ export const ApiService = {
   
   async prefetchAppData() {
     return SyncService.prefetchAppData()
+  },
+  
+  // Méthode getOrders pour compatibilité
+  async getOrders(options = {}) {
+    return OrdersService.getOrders(options)
   }
 }
 

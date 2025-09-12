@@ -38,13 +38,13 @@ const AuthGate = ({ children, onAuthenticated }) => {
     }
   }, [onAuthenticated])
 
-  // Démarrer le préchargement si pas fait (aucune requête protégée)
+  // Préchargement désactivé en production
   useEffect(() => {
+    if (import.meta.env.PROD) return
     const prefetchDone = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
     if (!prefetchDone) {
       try { ApiService.prefetchAppData() } catch {}
     }
-    // Ne plus pinger les logs côté non-authentifié pour éviter 401
   }, [])
 
   const handleSubmit = async (e) => {

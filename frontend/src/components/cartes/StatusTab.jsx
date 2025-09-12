@@ -28,18 +28,13 @@ const StatusTab = () => {
   const testWordPressProducts = async () => {
     setLoadingStates(prev => ({ ...prev, wordpressProducts: true }))
     try {
-      // Test de récupération des produits via une route qui retourne du JSON
-      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const response = await fetch(`${base}/api/orders?limit=1`)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const data = await response.json()
-      setTestResults(prev => ({ ...prev, wordpressProducts: { success: true, data } }))
-      setStatus('Test des produits WordPress réussi')
+      // Test de récupération des commandes via l'API unifiée
+      const result = await ApiService.getOrders({ limit: 1 })
+      setTestResults(prev => ({ ...prev, wordpressProducts: { success: true, data: result } }))
+      setStatus('Test des commandes base de données réussi')
     } catch (error) {
       setTestResults(prev => ({ ...prev, wordpressProducts: { success: false, error: error.message } }))
-      setStatus('Erreur lors du test des produits WordPress')
+      setStatus('Erreur lors du test des commandes base de données')
     }
     setLoadingStates(prev => ({ ...prev, wordpressProducts: false }))
   }

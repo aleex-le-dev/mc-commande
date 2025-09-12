@@ -10,6 +10,14 @@ import { HttpCacheService } from '../cache/httpCacheService.js'
  */
 export const OrdersService = {
   /**
+   * Récupérer les commandes avec options (méthode principale)
+   */
+  async getOrders(options = {}) {
+    const { page = 1, limit = 50, status = 'all', search = '', sortBy = 'order_date', sortOrder = 'desc', productionType = 'all' } = options
+    return this.getOrdersPaginated(page, limit, status, search, sortBy, sortOrder, productionType)
+  },
+
+  /**
    * Récupérer les commandes depuis la base de données avec pagination
    * Évite de charger toutes les commandes d'un coup
    */
