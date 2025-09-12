@@ -220,36 +220,7 @@ const SimpleFlexGrid = ({
         </div>
       )
       
-      // Vérifier si c'est le dernier article de la date limite
-      const isLastArticleOfDateLimite = index === subset.length - 1 || 
-        (subset[index + 1] && subset[index + 1].orderDate !== article.orderDate)
       
-      // Si c'est le dernier article de la date limite, ajouter un trait de séparation
-      if (isLastArticleOfDateLimite && article.orderDate && gridState.dateLimite) {
-        const dateCommande = new Date(article.orderDate)
-        const dateLimiteObj = new Date(gridState.dateLimite)
-        
-        // Vérifier si la commande est de la date limite calculée
-        if (dateCommande.toDateString() === dateLimiteObj.toDateString()) {
-          
-          // Ajouter le trait de séparation qui traverse toute la largeur
-          cards.push(
-            <div 
-              key={`separator-${article.orderNumber}`}
-              className="col-span-full w-full h-2 bg-red-500 my-4 rounded-lg shadow-lg"
-              style={{ 
-                gridColumn: '1 / -1',
-                width: '100%',
-                margin: '16px 0'
-              }}
-            >
-              <div className="flex items-center justify-center h-full">
-                <span className="text-white text-sm font-bold">📅 Date limite - {dateLimiteObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-              </div>
-            </div>
-          )
-        }
-      }
     })
     
     return cards
