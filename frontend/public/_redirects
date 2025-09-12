@@ -1,0 +1,7 @@
+# Force refresh for all assets
+/assets/* /assets/:splat 200
+/*.js /:splat 200
+/*.css /:splat 200
+
+# SPA fallback
+/* /index.html 200

@@ -39,6 +39,10 @@ const corsMiddleware = (req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Cache-Control, Connection')
   // Désactiver l'indexation par les moteurs de recherche
   res.header('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet')
+  // Forcer le rechargement des assets en production
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.header('Pragma', 'no-cache')
+  res.header('Expires', '0')
   
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204)

@@ -33,7 +33,11 @@ export default defineConfig({
         chunkFileNames: `assets/[name]-[hash].js`,
         assetFileNames: `assets/[name]-[hash].[ext]`
       }
-    }
+    },
+    // Forcer la reconstruction complète
+    emptyOutDir: true,
+    // Désactiver le cache de build
+    cache: false
   },
   // Configuration pour les assets
   assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.webp']
