@@ -6,8 +6,84 @@ const ordersService = require('./ordersService')
  * - Lit la dernière commande en BDD
  * - Récupère les commandes récentes depuis WooCommerce
  * - Transforme et insère les items manquants
+ * - Supprime les commandes terminées/remboursées/annulées
  * Retourne un résumé d'exécution.
  */
+
+/**
+ * Supprime les commandes avec des statuts finaux (terminé, remboursé, annulé)
+ * @returns {Object} Résumé de la suppression
+ */
+async function cleanupFinishedOrders() {
+  if (!database.isConnected) {
+    throw new Error('Base de données non connectée')
+  }
+
+  const orderItemsCollection = database.getCollection('order_items')
+  
+  // Statuts finaux à supprimer
+  const finalStatuses = ['completed', 'refunded', 'cancelled', 'terminé', 'remboursé', 'annulé']
+  
+  try {
+    // Compter les commandes à supprimer
+    const countToDelete = await orderItemsCollection.countDocuments({
+      status: { $in: finalStatuses }
+    })
+    
+    console.log(`🔍 Recherche commandes finales: ${countToDelete} commandes trouvées avec statuts: ${finalStatuses.join(', ')}`)
+    
+    if (countToDelete === 0) {
+      console.log('✅ Aucune commande finale à supprimer')
+      return {
+        success: true,
+        message: 'Aucune commande finale à supprimer',
+        deleted: 0
+      }
+    }
+    
+    // Récupérer les détails des commandes à supprimer pour les logs
+    const ordersToDelete = await orderItemsCollection.find({
+      status: { $in: finalStatuses }
+    }).toArray()
+    
+    // Grouper par order_id pour afficher les commandes
+    const ordersByStatus = {}
+    ordersToDelete.forEach(order => {
+      if (!ordersByStatus[order.status]) {
+        ordersByStatus[order.status] = new Set()
+      }
+      ordersByStatus[order.status].add(order.order_id)
+    })
+    
+    // Afficher les détails des commandes à supprimer
+    Object.keys(ordersByStatus).forEach(status => {
+      const orderIds = Array.from(ordersByStatus[status])
+      console.log(`🗑️  Suppression ${orderIds.length} commandes avec statut "${status}": ${orderIds.slice(0, 10).join(', ')}${orderIds.length > 10 ? '...' : ''}`)
+    })
+    
+    // Supprimer les commandes avec statuts finaux
+    const deleteResult = await orderItemsCollection.deleteMany({
+      status: { $in: finalStatuses }
+    })
+    
+    console.log(`🧹 Nettoyage terminé: ${deleteResult.deletedCount} commandes supprimées (statuts finaux)`)
+    
+    return {
+      success: true,
+      message: `${deleteResult.deletedCount} commandes finales supprimées`,
+      deleted: deleteResult.deletedCount
+    }
+  } catch (error) {
+    console.error('Erreur nettoyage commandes finales:', error)
+    return {
+      success: false,
+      message: 'Erreur lors du nettoyage des commandes finales',
+      deleted: 0,
+      error: error.message
+    }
+  }
+}
+
 async function synchronizeOrdersOnce() {
   if (!database.isConnected) {
     throw new Error('Base de données non connectée')
@@ -86,18 +162,25 @@ async function synchronizeOrdersOnce() {
     }
   }
 
+  // Nettoyage des commandes finales
+  console.log('🧹 Nettoyage des commandes finales...')
+  const cleanupResult = await cleanupFinishedOrders()
+  
   return {
     success: true,
-    message: `Synchronisation réussie: ${insertedOrders.length} nouvelles commandes`,
+    message: `Synchronisation réussie: ${insertedOrders.length} nouvelles commandes, ${cleanupResult.deleted} commandes finales supprimées`,
     synchronized: insertedOrders.length,
+    deleted: cleanupResult.deleted,
     lastOrderId,
     newOrders: insertedOrders.map(o => o.order_id),
+    cleanup: cleanupResult,
     timestamp: new Date().toISOString()
   }
 }
 
 module.exports = {
-  synchronizeOrdersOnce
+  synchronizeOrdersOnce,
+  cleanupFinishedOrders
 }
 
 
