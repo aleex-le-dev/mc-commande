@@ -6,6 +6,7 @@ import { useMemo, useEffect, useState } from 'react'
 import { useOrders } from './useOrders'
 import { useAssignments } from './useAssignments'
 import { useTricoteuses } from './useTricoteuses'
+import { useProductionStatus } from './useProductionStatus'
 import {
   transformItemToArticle,
   applyFilters,
@@ -60,6 +61,12 @@ export const useArticles = (options = {}) => {
     getTricoteuseById 
   } = useTricoteuses()
 
+  const { 
+    productionStatuses,
+    loading: productionStatusLoading,
+    getProductionStatusByArticle
+  } = useProductionStatus()
+
   // Tick local pour re-calculer les articles quand on récupère des notes externes
   const [externalNotesTick, setExternalNotesTick] = useState(0)
   
@@ -107,9 +114,16 @@ export const useArticles = (options = {}) => {
           const assignment = getAssignmentByArticleId(articleId)
           const tricoteuse = assignment ? getTricoteuseById(assignment.tricoteuse_id) : null
           
+          // Récupérer le statut de production avec les notes d'article
+          const productionStatus = getProductionStatusByArticle(order.order_id, articleId)
+          
           // Transformer l'item en article enrichi
           // Inject per-order ids to compute x/y in transform
-          const itemWithMeta = { ...item, _all_order_line_item_ids: allIds }
+          const itemWithMeta = { 
+            ...item, 
+            _all_order_line_item_ids: allIds,
+            production_status: productionStatus // Injecter le statut de production avec les notes
+          }
           // Injecter note depuis cache externe si disponible
           let injectedOrder = order
           try {
@@ -131,7 +145,7 @@ export const useArticles = (options = {}) => {
     }
     
     return allArticles
-  }, [orders, assignments, tricoteuses, getAssignmentByArticleId, getTricoteuseById, externalNotesTick, syncTick])
+  }, [orders, assignments, tricoteuses, productionStatuses, getAssignmentByArticleId, getTricoteuseById, getProductionStatusByArticle, externalNotesTick, syncTick])
 
   // Récupérer les notes manquantes directement depuis WooCommerce si possible
   useEffect(() => {

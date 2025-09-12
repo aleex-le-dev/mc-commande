@@ -41,12 +41,12 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     customerEmail: order.customer_email || null,
     customerPhone: order.customer_phone || null,
     customerAddress: order.customer_address || null,
-    // Note client: récupérer depuis plusieurs sources potentielles
+    // Note client: prioriser les notes d'articles depuis production_status
     customerNote: (
+      (typeof item?.production_status?.notes === 'string' && item.production_status.notes.trim().length > 0 ? item.production_status.notes : null) ||
       (typeof order?.customer_note === 'string' && order.customer_note.trim().length > 0 ? order.customer_note : null) ||
       (typeof order?.order_customer_note === 'string' && order.order_customer_note.trim().length > 0 ? order.order_customer_note : null) ||
       (typeof item?.order_customer_note === 'string' && item.order_customer_note.trim().length > 0 ? item.order_customer_note : null) ||
-      (typeof item?.production_status?.notes === 'string' && item.production_status.notes.trim().length > 0 ? item.production_status.notes : null) ||
       orderLevelMetaNote ||
       itemLevelMetaNote
     ),

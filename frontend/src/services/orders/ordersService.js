@@ -178,6 +178,22 @@ export const OrdersService = {
   },
 
   /**
+   * Mettre à jour une note d'article spécifique
+   */
+  async updateArticleNote(orderId, lineItemId, note) {
+    try {
+      const response = await HttpClientService.put(`/orders/${orderId}/articles/${lineItemId}/note`, { note })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Erreur mise à jour note article:', error)
+      throw error
+    }
+  },
+
+  /**
    * Mettre à jour le statut d'une commande
    */
   async updateOrderStatus(orderId, newStatus) {

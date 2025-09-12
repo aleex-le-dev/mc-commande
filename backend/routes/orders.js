@@ -172,6 +172,34 @@ router.put('/:id/note', async (req, res) => {
   }
 })
 
+// PUT /api/orders/:orderId/articles/:lineItemId/note - Mettre à jour la note d'un article spécifique
+router.put('/:orderId/articles/:lineItemId/note', async (req, res) => {
+  try {
+    const { note } = req.body
+    const orderId = parseInt(req.params.orderId)
+    const lineItemId = parseInt(req.params.lineItemId)
+    
+    // Accepter les notes vides (pour supprimer une note)
+    if (note === undefined || note === null) {
+      return res.status(400).json({ error: 'Note manquante' })
+    }
+    
+    if (typeof note !== 'string') {
+      return res.status(400).json({ error: 'Note doit être une chaîne de caractères' })
+    }
+    
+    const success = await ordersService.updateArticleNote(orderId, lineItemId, note.trim())
+    if (!success) {
+      return res.status(404).json({ error: 'Article non trouvé' })
+    }
+    
+    res.json({ success: true, message: 'Note article mise à jour avec succès' })
+  } catch (error) {
+    console.error('Erreur mise à jour note article:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // POST /api/orders/:id/archive - Archiver une commande
 router.post('/:id/archive', async (req, res) => {
   try {

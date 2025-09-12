@@ -73,7 +73,28 @@ class CustomerNotesImporter {
         this.notesFound++
         console.log(`   📝 Commande ${orderId}: "${customerNote.substring(0, 50)}${customerNote.length > 50 ? '...' : ''}"`)
         
-        // Mettre à jour tous les order_items de cette commande
+        // Récupérer tous les articles de cette commande
+        const orderItems = await orderItemsCollection.find({ order_id: orderId }).toArray()
+        
+        // Appliquer la note à chaque article individuellement dans production_status
+        const productionCollection = db.getCollection('production_status')
+        let articlesUpdated = 0
+        
+        for (const item of orderItems) {
+          await productionCollection.updateOne(
+            { order_id: orderId, line_item_id: item.line_item_id },
+            { 
+              $set: { 
+                notes: customerNote.trim(),
+                updated_at: new Date()
+              }
+            },
+            { upsert: true }
+          )
+          articlesUpdated++
+        }
+        
+        // Garder aussi la note au niveau de la commande pour compatibilité
         const result = await orderItemsCollection.updateMany(
           { order_id: orderId },
           { 
@@ -84,8 +105,8 @@ class CustomerNotesImporter {
           }
         )
         
-        this.updatedCount += result.modifiedCount
-        console.log(`   ✅ ${result.modifiedCount} items mis à jour`)
+        this.updatedCount += articlesUpdated
+        console.log(`   ✅ ${articlesUpdated} articles mis à jour avec notes individuelles`)
       } else {
         console.log(`   ℹ️  Commande ${orderId}: pas de note client`)
       }

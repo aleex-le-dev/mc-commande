@@ -422,6 +422,29 @@ class OrdersService {
     }
   }
 
+  async updateArticleNote(orderId, lineItemId, note) {
+    try {
+      const production = db.getCollection('production_status')
+      
+      // Mettre à jour la note pour cet article spécifique
+      const result = await production.updateOne(
+        { order_id: orderId, line_item_id: lineItemId },
+        { 
+          $set: { 
+            notes: note,
+            updated_at: new Date()
+          }
+        },
+        { upsert: true }
+      )
+      
+      return result.modifiedCount > 0 || result.upsertedCount > 0
+    } catch (error) {
+      console.error('Erreur mise à jour note article:', error)
+      throw error
+    }
+  }
+
   async getArchivedOrders(filters = {}) {
     try {
       const archivedOrders = db.getCollection('archived_orders')
@@ -588,7 +611,7 @@ class OrdersService {
               status: 'a_faire',
               production_type: productionType,
               urgent: false,
-              notes: null,
+              notes: wooOrder.customer_note || null, // Appliquer la note WordPress à chaque article
               updated_at: new Date()
             }
           }

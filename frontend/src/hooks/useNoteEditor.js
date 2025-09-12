@@ -60,10 +60,15 @@ export const useNoteEditor = (article) => {
     try {
       setIsSavingNote(true)
       
-      // Sauvegarder au niveau de la commande (les notes restent liées à l'article, pas à la couturière)
-      const success = await ApiService.orders.updateOrderNote(article.orderId, content)
+      // Sauvegarder au niveau de l'article spécifique (chaque article a sa propre note)
+      const success = await ApiService.orders.updateArticleNote(article.orderId, article.lineItemId, content)
       if (success) {
-        article.customerNote = content
+        // Mettre à jour la note dans l'objet article
+        if (article.production_status) {
+          article.production_status.notes = content
+        } else {
+          article.production_status = { notes: content }
+        }
         setIsNoteOpen(false)
         return true
       }
@@ -74,7 +79,7 @@ export const useNoteEditor = (article) => {
     } finally {
       setIsSavingNote(false)
     }
-  }, [article?.orderId])
+  }, [article?.orderId, article?.lineItemId])
 
   // Toggle de l'éditeur
   const toggleNoteEditor = useCallback(() => {
