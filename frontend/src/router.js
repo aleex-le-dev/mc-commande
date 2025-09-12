@@ -25,6 +25,7 @@ export const getParametresSubTabFromLocation = () => {
     if (path.includes('/parametres/date-limite') || path.includes('/paramètres/date-limite')) return 'dateLimite'
     if (path.includes('/parametres/stats') || path.includes('/paramètres/stats')) return 'stats'
     if (path.includes('/parametres/status') || path.includes('/paramètres/status')) return 'status'
+    if (path.includes('/parametres/import') || path.includes('/paramètres/import')) return 'import'
   } catch {}
   return 'tricoteuses' // Par défaut
 }

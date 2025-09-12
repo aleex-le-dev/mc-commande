@@ -9,6 +9,7 @@ const productionRoutes = require('./production')
 const delaisRoutes = require('./delais')
 const fournituresRoutes = require('./fournitures')
 const syncRoutes = require('./sync')
+const importRoutes = require('./import')
 
 // Configuration des routes
 router.use('/orders', ordersRoutes)
@@ -18,6 +19,7 @@ router.use('/production', productionRoutes)
 router.use('/delais', delaisRoutes)
 router.use('/fournitures', fournituresRoutes)
 router.use('/sync', syncRoutes)
+router.use('/import', importRoutes)
 
 // Route de santé
 router.get('/health', (req, res) => {
