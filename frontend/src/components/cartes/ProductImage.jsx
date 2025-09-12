@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { getBackendUrl } from '../../config/api.js'
 import LazyImage from '../LazyImage.jsx'
+import { useImageLoadingControl } from '../../hooks/useImageLoadingControl.js'
 
 // Cache global ultra-optimisé pour les images
 const imageCache = new Map()
@@ -99,6 +100,9 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
   const [errorDetails, setErrorDetails] = useState('')
   const abortControllerRef = useRef(null)
   
+  // Contrôle du chargement des images
+  const { isImageLoadingEnabled } = useImageLoadingControl()
+  
   // URL optimisée avec cache intelligent et persistance
   const backendUrl = useMemo(() => {
     if (!productId) return null
@@ -109,59 +113,68 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
   }, [productId])
 
   useEffect(() => {
-    if (productId && backendUrl) {
-      // Vérifier d'abord le cache global
-      if (imageCache.has(backendUrl)) {
-        setImageUrl(imageCache.get(backendUrl))
-        setHasError(false)
-        setErrorDetails('')
-        return
+    // Ne charger l'image que si le chargement d'images est activé
+    if (!isImageLoadingEnabled || !productId || !backendUrl) {
+      if (article?.orderId === 389860) {
+        console.log('🖼️ [IMAGE] ProductImage - Chargement désactivé pour article', article?.lineItemId, 'isImageLoadingEnabled:', isImageLoadingEnabled)
       }
+      return
+    }
 
-      // Si l'image est en cours de chargement, attendre
-      if (loadingPromises.has(backendUrl)) {
-        loadingPromises.get(backendUrl).then(() => {
-          if (imageCache.has(backendUrl)) {
-            setImageUrl(imageCache.get(backendUrl))
-            setHasError(false)
-            setErrorDetails('')
-          }
-        }).catch(() => {
-          setHasError(true)
-          setErrorDetails('Erreur de chargement')
-        })
-        return
+    // Vérifier d'abord le cache global
+    if (imageCache.has(backendUrl)) {
+      if (article?.orderId === 389860) {
+        console.log('🖼️ [IMAGE] ProductImage - Image trouvée en cache pour article', article?.lineItemId)
       }
-
-      // Reset l'état
-      setImageUrl(null)
+      setImageUrl(imageCache.get(backendUrl))
       setHasError(false)
       setErrorDetails('')
-      
-      // Annuler la requête précédente si elle existe
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-      
-      // Créer un nouveau contrôleur d'annulation
-      abortControllerRef.current = new AbortController()
-      
-      // Chargement immédiat pour les images prioritaires
-      if (priority) {
-        fetchProductImage(productId, abortControllerRef.current.signal)
-      } else {
-        // Préchargement en arrière-plan pour les autres
-        ImagePreloader.preload(backendUrl).then(() => {
-          if (imageCache.has(backendUrl)) {
-            setImageUrl(imageCache.get(backendUrl))
-            setHasError(false)
-            setErrorDetails('')
-          }
-        }).catch(() => {
-          setHasError(true)
-          setErrorDetails('Erreur de préchargement')
-        })
-      }
+      return
+    }
+
+    // Si l'image est en cours de chargement, attendre
+    if (loadingPromises.has(backendUrl)) {
+      loadingPromises.get(backendUrl).then(() => {
+        if (imageCache.has(backendUrl)) {
+          setImageUrl(imageCache.get(backendUrl))
+          setHasError(false)
+          setErrorDetails('')
+        }
+      }).catch(() => {
+        setHasError(true)
+        setErrorDetails('Erreur de chargement')
+      })
+      return
+    }
+
+    // Reset l'état
+    setImageUrl(null)
+    setHasError(false)
+    setErrorDetails('')
+    
+    // Annuler la requête précédente si elle existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // Créer un nouveau contrôleur d'annulation
+    abortControllerRef.current = new AbortController()
+    
+    // Chargement immédiat pour les images prioritaires
+    if (priority) {
+      fetchProductImage(productId, abortControllerRef.current.signal)
+    } else {
+      // Préchargement en arrière-plan pour les autres
+      ImagePreloader.preload(backendUrl).then(() => {
+        if (imageCache.has(backendUrl)) {
+          setImageUrl(imageCache.get(backendUrl))
+          setHasError(false)
+          setErrorDetails('')
+        }
+      }).catch(() => {
+        setHasError(true)
+        setErrorDetails('Erreur de préchargement')
+      })
     }
 
     // Cleanup function
@@ -170,7 +183,7 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
         abortControllerRef.current.abort()
       }
     }
-  }, [productId, backendUrl, priority])
+  }, [productId, backendUrl, priority, isImageLoadingEnabled])
 
   const fetchProductImage = useCallback(async (id, signal) => {
     if (!id || !backendUrl) {
@@ -179,6 +192,9 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
       return
     }
 
+    if (article?.orderId === 389860) {
+      console.log('🖼️ [IMAGE] ProductImage - Début chargement image pour article', article?.lineItemId, 'URL:', backendUrl)
+    }
     console.log(`🖼️ Chargement prioritaire image ${id}: ${backendUrl}`)
     setIsLoading(true)
     setHasError(false)

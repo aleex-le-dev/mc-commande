@@ -486,15 +486,7 @@ const ArticleCard = forwardRef(({
         onToggleNote={toggleNoteEditor}
         noteBtnRef={noteBtnRef}
         hasNote={Boolean(article.production_status?.notes || article.customerNote)}
-        displayNote={(() => {
-          const note = article.production_status?.notes || article.customerNote || ''
-          if (article?.orderId === 389860) {
-            console.log('🔍 [NOTE] ArticleCard - Affichage note pour article', article?.lineItemId, ':', note)
-            console.log('🔍 [NOTE] ArticleCard - production_status.notes:', article.production_status?.notes)
-            console.log('🔍 [NOTE] ArticleCard - customerNote:', article.customerNote)
-          }
-          return note
-        })()}
+        displayNote={article.production_status?.notes || article.customerNote || ''}
         localAssignment={localAssignment}
         isLoadingAssignment={isLoadingAssignment}
         onOpenAssignModal={disableAssignmentModal ? () => {} : () => openTricoteuseModal()}

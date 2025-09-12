@@ -39,17 +39,8 @@ export const useNoteEditor = (article) => {
   // Ouvrir l'éditeur de note
   const openNoteEditor = useCallback(() => {
     try {
-      if (article?.orderId === 389860) {
-        console.log('🔍 [NOTE] openNoteEditor - Article:', article?.orderId, article?.lineItemId)
-        console.log('🔍 [NOTE] openNoteEditor - production_status.notes:', article?.production_status?.notes)
-        console.log('🔍 [NOTE] openNoteEditor - customerNote:', article?.customerNote)
-      }
-      
       window.dispatchEvent(new Event('mc-close-notes'))
       const noteToEdit = article?.production_status?.notes || article?.customerNote || ''
-      if (article?.orderId === 389860) {
-        console.log('🔍 [NOTE] openNoteEditor - Note à éditer:', noteToEdit)
-      }
       setEditingNote(noteToEdit)
       setIsNoteOpen(true)
     } catch (error) {
@@ -66,47 +57,24 @@ export const useNoteEditor = (article) => {
   // Sauvegarder la note
   const saveNote = useCallback(async (content) => {
     try {
-      if (article?.orderId === 389860) {
-        console.log('🔍 [NOTE] saveNote - Début sauvegarde')
-        console.log('🔍 [NOTE] saveNote - Article:', article?.orderId, article?.lineItemId)
-        console.log('🔍 [NOTE] saveNote - Contenu à sauvegarder:', content)
-        console.log('🔍 [NOTE] saveNote - Longueur contenu:', content?.length)
-      }
-      
       setIsSavingNote(true)
       
       // Sauvegarder au niveau de l'article spécifique (chaque article a sa propre note)
-      if (article?.orderId === 389860) {
-        console.log('🔍 [NOTE] saveNote - Appel API updateArticleNote...')
-      }
       const success = await ApiService.orders.updateArticleNote(article.orderId, article.lineItemId, content)
       
-      if (article?.orderId === 389860) {
-        console.log('🔍 [NOTE] saveNote - Résultat API:', success)
-      }
-      
       if (success) {
-        if (article?.orderId === 389860) {
-          console.log('🔍 [NOTE] saveNote - Sauvegarde réussie, fermeture éditeur')
-        }
         setIsNoteOpen(false)
         
         // Déclencher le rechargement des données pour que les notes persistent après actualisation
         // Ne pas modifier l'objet local, laisser le rechargement depuis le serveur
-        if (article?.orderId === 389860) {
-          console.log('🔍 [NOTE] saveNote - Déclenchement rechargement données')
-        }
         window.dispatchEvent(new Event('mc-refresh-data'))
         
         return true
       } else {
-        if (article?.orderId === 389860) {
-          console.log('🔍 [NOTE] saveNote - Échec sauvegarde (success = false)')
-        }
         return false
       }
     } catch (error) {
-      console.error('🔍 [NOTE] saveNote - Erreur sauvegarde note:', error)
+      console.error('Erreur sauvegarde note:', error)
       return false
     } finally {
       setIsSavingNote(false)

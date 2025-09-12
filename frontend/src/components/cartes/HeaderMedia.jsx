@@ -1,5 +1,6 @@
 import React from 'react'
 import TopBadges from './TopBadges'
+import { useImageLoadingControl } from '../../hooks/useImageLoadingControl.js'
  
 
 // En-tête média: image, badges, liens, overlay et actions latérales
@@ -20,6 +21,8 @@ const HeaderMedia = ({
   compact = false,
   
 }) => {
+  // Contrôle du chargement des images
+  const { isImageLoadingEnabled } = useImageLoadingControl()
   return (
     <div className={`relative ${compact ? 'h-36 sm:h-40' : 'h-44 sm:h-60'} overflow-hidden rounded-t-3xl`}>
       {displayImageUrl ? (
@@ -28,8 +31,16 @@ const HeaderMedia = ({
             src={displayImageUrl}
             alt={article.product_name}
             className="w-full h-full object-cover"
-            onLoad={() => setIsImageLoading(false)}
+            onLoad={() => {
+              if (article?.orderId === 389860) {
+                console.log('🖼️ [IMAGE] HeaderMedia - Image chargée pour article', article?.lineItemId)
+              }
+              setIsImageLoading(false)
+            }}
             onError={() => {
+              if (article?.orderId === 389860) {
+                console.log('🖼️ [IMAGE] HeaderMedia - Erreur chargement image pour article', article?.lineItemId)
+              }
               // Fallback simple en cas d'erreur
               setImageUrl('')
             }}
@@ -46,7 +57,9 @@ const HeaderMedia = ({
           ) : (
             <div className="text-center">
               <div className="text-4xl text-slate-500 mb-2">📦</div>
-              <div className="text-sm text-slate-600">Aucune image</div>
+              <div className="text-sm text-slate-600">
+                {isImageLoadingEnabled ? 'Chargement des images...' : 'Aucune image'}
+              </div>
             </div>
           )}
         </div>

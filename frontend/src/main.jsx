@@ -6,6 +6,7 @@ import { ApiService } from './services/apiService.js'
 import AuthGate from './components/AuthGate.jsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './utils/circuitBreakerReset.js'
+import { enableImageLoadingAfterPageLoad } from './hooks/useImageLoadingControl.js'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,11 @@ const Root = () => {
     }
     
     initializeServices()
+  }, [])
+
+  // Activer le chargement des images après le chargement de la page
+  useEffect(() => {
+    enableImageLoadingAfterPageLoad()
   }, [])
 
   // Empreinte console: une seule ligne cliquable
