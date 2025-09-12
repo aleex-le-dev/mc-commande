@@ -85,6 +85,9 @@ const HeaderMedia = ({
 
       <div className="absolute top-4 left-4 px-2 py-1 rounded-lg bg-black/25 backdrop-blur-sm text-white text-lg font-bold z-5">
         {article.orderNumber}
+        <span className="ml-2 text-sm font-normal opacity-90">
+          {article.orderItemPosition}/{article.orderItemsTotal}
+        </span>
       </div>
 
       <div className="absolute left-4 top-20 z-5 pointer-events-auto">
