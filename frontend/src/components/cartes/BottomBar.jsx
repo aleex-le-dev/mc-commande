@@ -46,7 +46,7 @@ const BottomBar = ({
             type="button"
             onClick={onToggleNote}
             ref={noteBtnRef}
-            className={`inline-flex items-center justify-center align-middle ${ hasNote ? (compact ? 'px-1.5 py-0.5' : 'px-2 py-1') + ' rounded-md border note-btn' : '' }`}
+            className={`inline-flex items-center justify-center align-middle ${ hasNote ? (compact ? 'px-1.5 py-0.5' : 'px-2 py-1') + ' rounded-md border note-btn clignoter' : '' }`}
             style={{
               backgroundColor: hasNote ? '#fbbf24' : 'transparent',
               color: hasNote ? '#78350f' : '#374151',

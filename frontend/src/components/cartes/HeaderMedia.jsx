@@ -32,40 +32,31 @@ const HeaderMedia = ({
             alt={article.product_name}
             className="w-full h-full object-cover"
             onLoad={() => {
-              setIsImageLoading(false)
+              // Image chargée avec succès
             }}
             onError={() => {
               // Fallback simple en cas d'erreur
-              setImageUrl('')
             }}
           />
 
-          {imageUrl && imageUrl.startsWith('data:image/') && (
-            <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded-full shadow-lg z-10">🎨 Par défaut</div>
-          )}
         </div>
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center">
-          {isImageLoading ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-600 border-t-transparent"></div>
-          ) : (
-            <div className="text-center">
-              <div className="text-4xl text-slate-500 mb-2">📦</div>
-              <div className="text-sm text-slate-600">
-                {isImageLoadingEnabled ? 'Chargement des images...' : 'Aucune image'}
-              </div>
+          <div className="text-center">
+            <div className="text-4xl text-slate-500 mb-2">📦</div>
+            <div className="text-sm text-slate-600">
+              {isImageLoadingEnabled ? 'Chargement des images...' : 'Aucune image'}
             </div>
-          )}
+          </div>
         </div>
       )}
 
       <TopBadges showRetard={doitAvoirTraitRouge} showUrgent={Boolean(isUrgent)} />
 
       <a
-        href={article.permalink || '#'}
+        href={article.permalink || `https://maisoncleo.com/produit/?p=${article.productId}`}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => { if (!article.permalink) e.preventDefault() }}
         className="absolute inset-0 z-5 cursor-pointer"
         title="Voir la fiche produit"
         aria-label="Voir la fiche produit"

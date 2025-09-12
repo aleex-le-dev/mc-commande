@@ -258,7 +258,7 @@ const ProductImage = ({ productId, productName, permalink, priority = false }) =
 
   return (
     <a
-      href={permalink || '#'}
+      href={permalink || `https://maisoncleo.com/produit/?p=${productId}`}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-block group"

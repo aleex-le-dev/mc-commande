@@ -35,6 +35,7 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     ...item,
     article_id: articleId,
     lineItemId: articleId, // Ajouter lineItemId pour la compatibilité
+    productId: item.product_id, // Ajouter productId pour les liens
     orderNumber: order.order_number || order.order_id,
     orderId: order.order_id,
     orderDate: order.order_date,

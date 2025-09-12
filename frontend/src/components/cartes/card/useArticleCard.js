@@ -51,55 +51,19 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')
   }, [])
 
-  // Gestion des images
-  const [imageUrl, setImageUrl] = useState(null)
-  const [isImageLoading, setIsImageLoading] = useState(false)
-  const [isFromCache, setIsFromCache] = useState(false)
-
-  // Calcul de l'URL d'affichage de l'image
+  // Calcul de l'URL d'affichage de l'image (simplifié)
   const displayImageUrl = useMemo(() => {
     if (!isImageLoadingEnabled) {
       return null
     }
 
-    if (imageUrl) {
-      return imageUrl
-    }
-
-    // Si pas d'image chargée mais chargement activé, utiliser l'URL directe
+    // Utiliser directement l'image_url de l'article (plus stable)
     if (article?.image_url) {
       return article.image_url
     }
 
     return null
-  }, [isImageLoadingEnabled, imageUrl, article?.image_url])
-
-  // Charger l'image via l'API
-  const loadImage = useCallback(async () => {
-    if (!isImageLoadingEnabled || !article?.productId || imageUrl) return
-
-    setIsImageLoading(true)
-    try {
-      const response = await fetch(`/api/images/${article.productId}?w=256&q=75&f=webp`)
-      if (response.ok) {
-        const imageBlob = await response.blob()
-        const imageObjectUrl = URL.createObjectURL(imageBlob)
-        setImageUrl(imageObjectUrl)
-        setIsFromCache(false)
-      }
-    } catch (error) {
-      // Erreur silencieuse
-    } finally {
-      setIsImageLoading(false)
-    }
-  }, [isImageLoadingEnabled, article?.productId, imageUrl])
-
-  // Charger l'image quand le chargement est activé
-  React.useEffect(() => {
-    if (isImageLoadingEnabled && article?.productId && !imageUrl) {
-      loadImage()
-    }
-  }, [isImageLoadingEnabled, article?.productId, imageUrl, loadImage])
+  }, [isImageLoadingEnabled, article?.image_url])
 
   return {
     // État local
@@ -115,9 +79,6 @@ const useArticleCard = ({ article, assignment, onAssignmentUpdate, tricoteusesPr
     ...delaiData,
     
     // Gestion des images
-    imageUrl, setImageUrl,
-    isImageLoading, setIsImageLoading,
-    isFromCache, setIsFromCache,
     displayImageUrl,
     
     // Fonctions utilitaires

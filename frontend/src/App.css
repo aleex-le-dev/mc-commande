@@ -519,3 +519,18 @@ body {
 .dark #mc-note-panel .note-text {
   color: #92400e !important; /* amber-800 */
 }
+
+/* Animation de clignotement pour les notes */
+.clignoter svg,
+.clignoter span {
+  animation: clignoter 1.5s ease-in-out infinite;
+}
+
+@keyframes clignoter {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
