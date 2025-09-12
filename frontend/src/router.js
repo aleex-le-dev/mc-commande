@@ -33,12 +33,8 @@ export const getParametresSubTabFromLocation = () => {
 export const navigateToTab = (tabId) => {
   try {
     const path = `/${tabId}`
-    const isHashMode = window.location.hash && window.location.hash.startsWith('#/')
-    if (isHashMode) {
-      if (window.location.hash !== `#${path}`) window.location.hash = `#${path}`
-    } else {
-      if (window.location.pathname !== path) window.history.pushState({ tab: tabId }, '', path)
-    }
+    // Forcer le mode hash en production pour éviter les 404 côté serveur
+    if (window.location.hash !== `#${path}`) window.location.hash = `#${path}`
     // Notifier le routeur interne pour mettre à jour l'état immédiatement
     window.dispatchEvent(new Event('mc-route-update'))
   } catch {}
@@ -78,12 +74,18 @@ export const useRouteSync = () => {
   // Rediriger la racine vers /couture
   useEffect(() => {
     try {
-      const isHashMode = window.location.hash && window.location.hash.startsWith('#/')
-      const hasRoute = (isHashMode && window.location.hash.length > 2) || (!isHashMode && window.location.pathname && window.location.pathname !== '/')
-      if (!hasRoute) {
-        navigateToTab('couture')
-        setActiveTab('couture')
+      const path = (window.location.pathname || '').toLowerCase()
+      const hash = window.location.hash || ''
+      // Si on est arrivé via /couture (sans hash), convertir en hash pour éviter 404 en prod
+      if (!hash.startsWith('#/')) {
+        if (path && path !== '/' && path !== '/index.html') {
+          const newHash = `#${path}`
+          window.location.replace(newHash)
+          return
+        }
       }
+      const hasRoute = (hash && hash.length > 2)
+      if (!hasRoute) navigateToTab('couture')
     } catch {}
   }, [])
 
