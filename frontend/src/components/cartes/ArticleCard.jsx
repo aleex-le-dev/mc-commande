@@ -417,10 +417,16 @@ const ArticleCard = forwardRef(({
           ? ''
           : (
             localAssignment ? 
-              (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
-               localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
-               localAssignment.status === 'termine' ? 'border-status-termine' :
-               'border-status-retard') :
+              (() => {
+                console.log('🔍 [DEBUG] ArticleCard - localAssignment:', localAssignment)
+                console.log('🔍 [DEBUG] ArticleCard - localAssignment.status:', localAssignment.status)
+                const statusClass = localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
+                                   localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
+                                   localAssignment.status === 'termine' ? 'border-status-termine' :
+                                   'border-status-retard'
+                console.log('🔍 [DEBUG] ArticleCard - Status class:', statusClass)
+                return statusClass
+              })() :
             // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
             (article.globalStatus === 'en_cours' ? 'border-status-en-cours' :
              article.globalStatus === 'en_pause' ? 'border-status-en-pause' :

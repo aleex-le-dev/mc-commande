@@ -21,7 +21,17 @@ export const useGridState = () => {
       const data = await ApiService.assignments.getAssignments()
       const assignmentsMap = {}
       data.forEach(assignment => {
-        assignmentsMap[assignment.article_id] = assignment
+        // Gérer les deux formats d'ID : "order_id_line_item_id" et "line_item_id"
+        const articleId = assignment.article_id
+        if (articleId.includes('_')) {
+          // Format "order_id_line_item_id" - extraire line_item_id
+          const lineItemId = articleId.split('_')[1]
+          assignmentsMap[lineItemId] = assignment
+          assignmentsMap[articleId] = assignment // Garder aussi l'ID complet
+        } else {
+          // Format "line_item_id" simple
+          assignmentsMap[articleId] = assignment
+        }
       })
       // Fusionner avec les assignations existantes pour préserver les modifications locales
       setAssignments(prevAssignments => {

@@ -28,13 +28,17 @@ export const useAssignments = () => {
     setError(null)
 
     try {
+      console.log('🔍 [DEBUG] Hook useAssignments - Appel API...')
       const data = await ApiService.assignments.getAssignments()
+      console.log('🔍 [DEBUG] Hook useAssignments - Données reçues:', data)
+      
       // Normaliser: s'assurer que tricoteuse_name est présent
       const normalized = data.map(a => ({
         ...a,
         article_id: String(a.article_id),
         tricoteuse_name: a.tricoteuse_name || a.tricoteuse?.firstName || a.tricoteuse_id || a.tricoteuse
       }))
+      console.log('🔍 [DEBUG] Hook useAssignments - Données normalisées:', normalized)
       setAssignments(normalized)
       logger.service.success('Chargement assignations')
     } catch (err) {

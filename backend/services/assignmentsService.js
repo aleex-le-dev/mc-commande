@@ -94,7 +94,7 @@ class AssignmentsService {
       line_item_id: lineItemId,
       tricoteuse_id: String(tricoteuse_id),
       tricoteuse_name: finalTricoteuseName,
-      status: status || 'a_faire',
+      status: status || 'en_cours', // Assigné = automatiquement en cours
       assigned_at: new Date(),
       updated_at: new Date()
     }
@@ -106,13 +106,13 @@ class AssignmentsService {
     if (existing) {
       await collection.updateOne(
         { _id: existing._id },
-        { $set: { 
-          tricoteuse_id: assignment.tricoteuse_id, 
+        { $set: {
+          tricoteuse_id: assignment.tricoteuse_id,
           tricoteuse_name: finalTricoteuseName,
-          status: assignment.status, 
-          order_id: assignment.order_id, 
-          line_item_id: assignment.line_item_id, 
-          updated_at: new Date() 
+          status: 'en_cours', // Toujours en cours quand assigné
+          order_id: assignment.order_id,
+          line_item_id: assignment.line_item_id,
+          updated_at: new Date()
         } }
       )
       
@@ -128,7 +128,7 @@ class AssignmentsService {
           { order_id: orderId, line_item_id: lineItemId },
           { 
             $set: { 
-              status: assignment.status,
+              status: 'en_cours', // Assigné = automatiquement en cours
               assigned_to: finalTricoteuseName,
               tricoteuse: finalTricoteuseName,
               // NE JAMAIS TOUCHER AUX NOTES - elles restent intactes
@@ -156,7 +156,7 @@ class AssignmentsService {
         { order_id: orderId, line_item_id: lineItemId },
         { 
           $set: { 
-            status: assignment.status,
+            status: 'en_cours', // Assigné = automatiquement en cours
             assigned_to: finalTricoteuseName,
             tricoteuse: finalTricoteuseName,
             // NE JAMAIS TOUCHER AUX NOTES - elles restent intactes
@@ -232,7 +232,7 @@ class AssignmentsService {
           { order_id: existingAssignment.order_id, line_item_id: existingAssignment.line_item_id },
           { 
             $set: { 
-              status: updateData.status || existingAssignment.status,
+              status: updateData.status || 'en_cours', // Assigné = automatiquement en cours
               assigned_to: finalTricoteuseName,
               tricoteuse: finalTricoteuseName,
               // NE JAMAIS TOUCHER AUX NOTES - elles restent intactes
@@ -339,7 +339,7 @@ class AssignmentsService {
         { order_id: parseInt(orderId), line_item_id: parseInt(lineItemId) },
         { 
           $set: { 
-            status: assignment.status,
+            status: 'en_cours', // Assigné = automatiquement en cours
             assigned_to: tricoteuseName || null,
             tricoteuse: tricoteuseName || null,
             // NE JAMAIS TOUCHER AUX NOTES - elles restent intactes
