@@ -43,7 +43,25 @@ router.get('/:id', async (req, res) => {
 // POST /api/orders - Créer une nouvelle commande
 router.post('/', async (req, res) => {
   try {
-    const orderId = await ordersService.createOrder(req.body)
+    const body = req.body || {}
+    // Validation: nom client obligatoire (string non vide)
+    if (typeof body.customer !== 'string' || body.customer.trim().length === 0) {
+      return res.status(400).json({ error: 'Le nom du client est obligatoire' })
+    }
+    // Validation: nom produit obligatoire (au moins un item avec product_name non vide)
+    if (!Array.isArray(body.items) || body.items.length === 0 || typeof body.items[0]?.product_name !== 'string' || body.items[0].product_name.trim().length === 0) {
+      return res.status(400).json({ error: 'Le nom du produit est obligatoire' })
+    }
+    // Validation: identifiant de commande alphanumérique si fourni
+    if (body.order_number !== undefined && body.order_number !== null) {
+      const str = String(body.order_number).trim()
+      if (!/^[A-Za-z0-9]+$/.test(str)) {
+        return res.status(400).json({ error: "Identifiant de commande invalide: uniquement lettres et chiffres autorisés" })
+      }
+      body.order_number = str
+    }
+
+    const orderId = await ordersService.createOrder(body)
     res.status(201).json({ success: true, message: 'Commande créée avec succès', orderId })
   } catch (error) {
     console.error('Erreur création commande:', error)

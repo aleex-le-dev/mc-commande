@@ -294,6 +294,7 @@ class OrdersService {
     const status = payload?.status || 'a_faire'
     const customer = payload?.customer || 'Client inconnu'
     const customer_note = payload?.note || ''
+    const customer_address_input = typeof payload?.customer_address === 'string' && payload.customer_address.trim().length > 0 ? payload.customer_address.trim() : null
     const itemsInput = Array.isArray(payload?.items) && payload.items.length > 0 ? payload.items : [
       { product_id: 0, product_name: 'Article', quantity: 1, price: 0, production_type: 'couture' }
     ]
@@ -307,7 +308,7 @@ class OrdersService {
       customer,
       customer_email: null,
       customer_phone: null,
-      customer_address: null,
+      customer_address: customer_address_input,
       customer_note,
       shipping_method: 'Local',
       shipping_carrier: 'local',
