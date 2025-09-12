@@ -42,7 +42,18 @@ class OrdersService {
           as: 'ps'
         }
       },
-      { $addFields: { production_status: { $arrayElemAt: ['$ps', 0] } } },
+      // Conserver le production_type et autres champs présents dans order_items.production_status
+      // puis fusionner avec la doc production_status (si elle existe) pour ne PAS écraser les champs manquants
+      { 
+        $addFields: { 
+          production_status: { 
+            $mergeObjects: [
+              { $ifNull: ['$production_status', {}] },
+              { $ifNull: [ { $arrayElemAt: ['$ps', 0] }, {} ] }
+            ]
+          } 
+        } 
+      },
       // Extraire une note potentielle depuis les meta_data de l'item
       {
         $addFields: {
@@ -270,9 +281,60 @@ class OrdersService {
     return result[0] || null
   }
 
-  async createOrder() {
-    // Non supporté sur order_items (création multi-lignes requise)
-    throw new Error('createOrder non supporté avec order_items')
+  async createOrder(payload) {
+    // Création minimale d'une commande locale dans order_items
+    // payload: { order_id?, order_number?, customer, items: [{ product_id, product_name, quantity, price, production_type }], status?, note? }
+    const items = db.getCollection('order_items')
+    const now = new Date()
+    const providedDate = payload?.order_date ? new Date(payload.order_date) : null
+    const orderDate = providedDate && !isNaN(providedDate.getTime()) ? providedDate : now
+
+    const orderId = Number(payload?.order_id) || Math.floor(10_000_000 + Math.random() * 90_000_000)
+    const orderNumber = payload?.order_number || String(orderId)
+    const status = payload?.status || 'a_faire'
+    const customer = payload?.customer || 'Client inconnu'
+    const customer_note = payload?.note || ''
+    const itemsInput = Array.isArray(payload?.items) && payload.items.length > 0 ? payload.items : [
+      { product_id: 0, product_name: 'Article', quantity: 1, price: 0, production_type: 'couture' }
+    ]
+
+    const totalAmount = itemsInput.reduce((s, x) => s + Number(x.price || 0) * Number(x.quantity || 1), 0)
+    const toInsert = itemsInput.map((it, idx) => ({
+      order_id: orderId,
+      order_number: orderNumber,
+      order_date: orderDate,
+      status,
+      customer,
+      customer_email: null,
+      customer_phone: null,
+      customer_address: null,
+      customer_note,
+      shipping_method: 'Local',
+      shipping_carrier: 'local',
+      total: totalAmount,
+      created_at: now,
+      updated_at: now,
+      line_item_id: Number(it.line_item_id) || (orderId * 1000 + idx + 1),
+      product_id: Number(it.product_id) || 0,
+      product_name: String(it.product_name || 'Article'),
+      quantity: Number(it.quantity) || 1,
+      price: Number(it.price) || 0,
+      meta_data: [],
+      image_url: null,
+      permalink: null,
+      variation_id: null,
+      production_status: {
+        status: 'a_faire',
+        production_type: String(it.production_type || 'couture'),
+        urgent: false,
+        notes: null,
+        updated_at: now
+      }
+    }))
+
+    await items.insertMany(toInsert)
+
+    return orderId
   }
 
   async updateOrder() {
@@ -285,6 +347,12 @@ class OrdersService {
     const items = db.getCollection('order_items')
     const res = await items.deleteMany({ order_id: parseInt(orderId) })
     return res.deletedCount > 0
+  }
+
+  async deleteOrderItem(orderId, lineItemId) {
+    const items = db.getCollection('order_items')
+    const res = await items.deleteOne({ order_id: parseInt(orderId), line_item_id: parseInt(lineItemId) })
+    return res.deletedCount === 1
   }
 
   async getOrdersStats() {

@@ -94,6 +94,37 @@ function App() {
       const { x, y, uniqueAssignmentId, currentUrgent, hasNote, currentProductionType, orderNumber, orderId, articles, hasAssignment } = ev.detail || {}
       setCtxPosition({ x, y })
       const items = [
+        { id: 'add-order', label: '➕ Ajouter une commande', category: 'Admin', onClick: async () => {
+            try {
+              const customer = prompt('Nom client ?') || 'Client inconnu'
+              const dateStr = prompt('Date de commande (YYYY-MM-DD) ?', new Date().toISOString().slice(0,10)) || new Date().toISOString().slice(0,10)
+              const productName = prompt('Nom produit ?') || 'Article'
+              const qtyStr = prompt('Quantité ?', '1') || '1'
+              const qty = Math.max(1, parseInt(qtyStr))
+              const priceStr = prompt('Prix unitaire ?', '0') || '0'
+              const price = Math.max(0, parseFloat(priceStr))
+              const productionType = (prompt('Type production (couture/maille) ?', 'couture') || 'couture').toLowerCase() === 'maille' ? 'maille' : 'couture'
+
+              const payload = {
+                customer,
+                order_date: `${dateStr}T00:00:00`,
+                items: [{ product_id: 0, product_name: productName, quantity: qty, price, production_type: productionType }],
+                status: 'a_faire'
+              }
+
+              const OrdersService = (await import('./services/orders/ordersService.js')).default
+              const res = await OrdersService.createOrder(payload)
+              alert(`Commande créée (ID: ${res.orderId || 'N/A'})`)
+              // Rafraîchir l'affichage (événements déjà écoutés par useOrders)
+              window.dispatchEvent(new Event('mc-refresh-data'))
+              window.dispatchEvent(new Event('mc-data-updated'))
+            } catch (error) {
+              alert('Erreur création commande: ' + (error?.message || 'inconnue'))
+            } finally {
+              setCtxVisible(false)
+            }
+          }
+        },
         { id: 'note', label: hasNote ? 'Modifier la note' : 'Ajouter une note', category: 'Couturière', icon: hasNote ? <RiStickyNoteFill size={16} /> : <RiStickyNoteAddLine size={16} />, onClick: () => window.dispatchEvent(new CustomEvent('mc-edit-note', { detail: { uniqueAssignmentId } })) },
         { id: 'urgent', label: currentUrgent ? '🚨 Retirer URGENT' : '🚨 Mettre en URGENT', category: 'Admin', onClick: () => window.dispatchEvent(new CustomEvent('mc-mark-urgent', { detail: { uniqueAssignmentId, urgent: !currentUrgent } })) },
         { id: 'view-order', label: '📦 Voir la commande complète', category: 'Admin', onClick: () => {

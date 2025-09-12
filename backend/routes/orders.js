@@ -79,6 +79,21 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+// DELETE /api/orders/:id/items/:lineItemId - Supprimer un article spécifique d'une commande
+router.delete('/:id/items/:lineItemId', async (req, res) => {
+  try {
+    const { id, lineItemId } = req.params
+    const ok = await ordersService.deleteOrderItem(id, lineItemId)
+    if (!ok) {
+      return res.status(404).json({ error: 'Article non trouvé' })
+    }
+    res.json({ success: true, message: 'Article supprimé avec succès' })
+  } catch (error) {
+    console.error('Erreur suppression article:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // GET /api/orders/stats - Statistiques des commandes
 router.get('/stats', async (req, res) => {
   try {

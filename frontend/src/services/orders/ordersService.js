@@ -55,6 +55,22 @@ export const OrdersService = {
   },
 
   /**
+   * Créer une nouvelle commande locale via l'API backend
+   */
+  async createOrder(orderPayload) {
+    try {
+      const response = await HttpClientService.post('/orders', orderPayload)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Erreur création commande:', error)
+      throw error
+    }
+  },
+
+  /**
    * Récupérer les commandes avec pagination
    */
   async getOrdersPaginated(page = 1, limit = 50, status = 'all', search = '', sortBy = 'order_date', sortOrder = 'desc', productionType = 'all') {
