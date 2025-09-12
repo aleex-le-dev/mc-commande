@@ -34,7 +34,7 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
   return {
     ...item,
     article_id: articleId,
-    orderNumber: order.order_number,
+    orderNumber: order.order_number || order.order_id,
     orderId: order.order_id,
     orderDate: order.order_date,
     customer: order.customer_name || order.customer || null,

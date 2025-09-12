@@ -123,6 +123,7 @@ class OrdersService {
               $group: {
                 _id: '$order_id',
                 order_id: { $first: '$order_id' },
+                order_number: { $first: '$order_number' },
                 order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
                 status: { $first: '$status' },
                 // Remonter les infos client depuis les items (utile pour commandes manuelles)
@@ -254,6 +255,7 @@ class OrdersService {
         $group: {
           _id: '$order_id',
           order_id: { $first: '$order_id' },
+          order_number: { $first: '$order_number' },
           order_date: { $min: { $ifNull: ['$order_date', '$created_at'] } },
           status: { $first: '$status' },
           items_count: { $sum: 1 },
@@ -306,8 +308,9 @@ class OrdersService {
     const customer_email_input = typeof payload?.customer_email === 'string' && payload.customer_email.trim().length > 0 ? payload.customer_email.trim() : null
     const customer_phone_input = typeof payload?.customer_phone === 'string' && payload.customer_phone.trim().length > 0 ? payload.customer_phone.trim() : null
     const customer_country_input = typeof payload?.customer_country === 'string' && payload.customer_country.trim().length > 0 ? payload.customer_country.trim().toUpperCase() : null
-    const shipping_method_input = typeof payload?.shipping_method === 'string' && payload.shipping_method.trim().length > 0 ? payload.shipping_method.trim() : 'Livraison gratuite'
-    const shipping_carrier_input = typeof payload?.shipping_carrier === 'string' && payload.shipping_carrier.trim().length > 0 ? payload.shipping_carrier.trim() : (customer_country_input === 'FR' ? 'UPS' : 'DHL')
+    // Ne pas forcer shipping_method/carrier pour commandes manuelles; laisser null et se baser sur BDD/affichage
+    const shipping_method_input = null
+    const shipping_carrier_input = null
     const itemsInput = Array.isArray(payload?.items) && payload.items.length > 0 ? payload.items : [
       { product_id: 0, product_name: 'Article', quantity: 1, price: 0, production_type: 'couture' }
     ]

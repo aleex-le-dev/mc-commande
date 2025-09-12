@@ -14,8 +14,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerCountry, setCustomerCountry] = useState('FR')
-  const [shippingMethod, setShippingMethod] = useState('Livraison gratuite')
-  const [shippingCarrier, setShippingCarrier] = useState('UPS')
+  // Retiré: la méthode d'expédition est déterminée par la BDD côté affichage
   const [showClientDetails, setShowClientDetails] = useState(false)
   const [productName, setProductName] = useState('')
   const [productSize, setProductSize] = useState('')
@@ -35,8 +34,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
       setCustomerEmail('')
       setCustomerPhone('')
       setCustomerCountry('FR')
-      setShippingMethod('Livraison gratuite')
-      setShippingCarrier('UPS')
+      // Pas de sélection de méthode/transporteur dans la création manuelle
       setShowClientDetails(false)
       setProductName('')
       setProductSize('')
@@ -79,8 +77,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
         customer_email: customerEmail?.trim() || null,
         customer_phone: customerPhone?.trim() || null,
         customer_country: customerCountry?.trim() || 'FR',
-        shipping_method: shippingMethod?.trim() || 'Livraison gratuite',
-        shipping_carrier: shippingCarrier?.trim() || (customerCountry?.toUpperCase() === 'FR' ? 'UPS' : 'DHL'),
+        // Ne pas fixer la méthode ni le transporteur côté création manuelle
         items: [
           { 
             product_id: 0, 
@@ -233,34 +230,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                     />
                     {validation.customerCountry && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.customerCountry}</p>}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm mb-1">Méthode d'expédition</label>
-                      <select
-                        className="w-full px-3 py-2 rounded border"
-                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                        value={shippingMethod}
-                        onChange={(e) => setShippingMethod(e.target.value)}
-                      >
-                        <option value="Livraison gratuite">Livraison gratuite</option>
-                        <option value="Standard">Standard</option>
-                        <option value="Express">Express</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Transporteur</label>
-                      <select
-                        className="w-full px-3 py-2 rounded border"
-                        style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
-                        value={shippingCarrier}
-                        onChange={(e) => setShippingCarrier(e.target.value)}
-                      >
-                        <option value="UPS">UPS</option>
-                        <option value="DHL">DHL</option>
-                        <option value="LaPoste">La Poste</option>
-                      </select>
-                    </div>
-                  </div>
+                  {/* Méthode d'expédition et transporteur: non saisis ici; affichés depuis la BDD si disponibles */}
                 </div>
               )}
             </div>
