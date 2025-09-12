@@ -48,7 +48,14 @@ class OrdersService {
         $addFields: { 
           production_status: { 
             $mergeObjects: [
-              { $ifNull: ['$production_status', {}] },
+              // Convertir production_status string en objet si nécessaire
+              {
+                $cond: {
+                  if: { $eq: [{ $type: '$production_status' }, 'string'] },
+                  then: { status: '$production_status' },
+                  else: { $ifNull: ['$production_status', {}] }
+                }
+              },
               { $ifNull: [ { $arrayElemAt: ['$ps', 0] }, {} ] }
             ]
           } 
