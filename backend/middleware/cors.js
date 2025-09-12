@@ -4,7 +4,7 @@ const cors = require('cors')
 const getCorsOptions = () => {
   // Liste d'origines autorisées (CSV) pour CORS. Toujours inclure localhost en dev.
   const ENV_ALLOWED_ORIGINS = (process.env.VITE_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
-  const DEFAULT_ALLOWED = ['http://localhost:5173']
+  const DEFAULT_ALLOWED = ['http://localhost:5173', 'http://localhost:8080']
   const FRONTEND_ORIGIN = process.env.VITE_FRONTEND_ORIGIN || null
   const ALLOWED_ORIGINS = Array.from(new Set([
     ...DEFAULT_ALLOWED,

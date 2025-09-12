@@ -179,23 +179,50 @@ router.put('/:orderId/articles/:lineItemId/note', async (req, res) => {
     const orderId = parseInt(req.params.orderId)
     const lineItemId = parseInt(req.params.lineItemId)
     
+    if (orderId === 389860) {
+      console.log('🔍 [NOTE] Backend - Mise à jour note article')
+      console.log('🔍 [NOTE] Backend - orderId:', orderId, 'lineItemId:', lineItemId)
+      console.log('🔍 [NOTE] Backend - note reçue:', note)
+      console.log('🔍 [NOTE] Backend - type note:', typeof note)
+    }
+    
     // Accepter les notes vides (pour supprimer une note)
     if (note === undefined || note === null) {
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] Backend - Erreur: note manquante')
+      }
       return res.status(400).json({ error: 'Note manquante' })
     }
     
     if (typeof note !== 'string') {
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] Backend - Erreur: note pas une string')
+      }
       return res.status(400).json({ error: 'Note doit être une chaîne de caractères' })
     }
     
+    if (orderId === 389860) {
+      console.log('🔍 [NOTE] Backend - Appel ordersService.updateArticleNote...')
+    }
     const success = await ordersService.updateArticleNote(orderId, lineItemId, note.trim())
+    
+    if (orderId === 389860) {
+      console.log('🔍 [NOTE] Backend - Résultat updateArticleNote:', success)
+    }
+    
     if (!success) {
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] Backend - Article non trouvé')
+      }
       return res.status(404).json({ error: 'Article non trouvé' })
     }
     
+    if (orderId === 389860) {
+      console.log('🔍 [NOTE] Backend - Note mise à jour avec succès')
+    }
     res.json({ success: true, message: 'Note article mise à jour avec succès' })
   } catch (error) {
-    console.error('Erreur mise à jour note article:', error)
+    console.error('🔍 [NOTE] Backend - Erreur mise à jour note article:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
   }
 })

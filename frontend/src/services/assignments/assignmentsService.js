@@ -14,22 +14,18 @@ export const AssignmentsService = {
    */
   async getAssignments() {
     try {
-      console.log('🔍 [DEBUG] Récupération des assignations...')
       
       // Forcer le rechargement à chaque appel après une mutation via invalidation explicite
       const response = await HttpClientService.get('/assignments')
       
-      console.log('🔍 [DEBUG] Réponse API:', response.status, response.ok)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
       const data = await response.json()
-      console.log('🔍 [DEBUG] Données reçues:', data)
       
       const assignments = data.assignments || data.data || []
-      console.log('🔍 [DEBUG] Assignations extraites:', assignments.length, assignments)
       
       return assignments
     } catch (error) {

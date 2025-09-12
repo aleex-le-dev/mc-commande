@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Notes API</title>
+</head>
+<body>
+    <h1>Test Notes API</h1>
+    <button onclick="testNoteAPI()">Tester l'API Notes</button>
+    <div id="result"></div>
+
+    <script>
+        async function testNoteAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Test en cours...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/orders/389860/articles/188494/note', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ note: 'Test depuis frontend' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ Succès: ${JSON.stringify(data)}`;
+                } else {
+                    resultDiv.innerHTML = `❌ Erreur HTTP: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Erreur: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

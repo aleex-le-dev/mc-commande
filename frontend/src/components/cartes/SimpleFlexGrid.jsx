@@ -191,8 +191,6 @@ const SimpleFlexGrid = ({
       )
       
       // Debug: vérifier les IDs
-      console.log('🔍 [DEBUG] SimpleFlexGrid - Article:', article.line_item_id, 'Assignations disponibles:', Object.keys(gridState.assignments))
-      console.log('🔍 [DEBUG] SimpleFlexGrid - Assignation pour cet article:', gridState.assignments[article.line_item_id])
       
       // Ajouter la carte
       cards.push(

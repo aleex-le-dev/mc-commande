@@ -417,16 +417,10 @@ const ArticleCard = forwardRef(({
           ? ''
           : (
             localAssignment ? 
-              (() => {
-                console.log('🔍 [DEBUG] ArticleCard - localAssignment:', localAssignment)
-                console.log('🔍 [DEBUG] ArticleCard - localAssignment.status:', localAssignment.status)
-                const statusClass = localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
-                                   localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
-                                   localAssignment.status === 'termine' ? 'border-status-termine' :
-                                   'border-status-retard'
-                console.log('🔍 [DEBUG] ArticleCard - Status class:', statusClass)
-                return statusClass
-              })() :
+              (localAssignment.status === 'en_cours' ? 'border-status-en-cours' :
+               localAssignment.status === 'en_pause' ? 'border-status-en-pause' :
+               localAssignment.status === 'termine' ? 'border-status-termine' :
+               'border-status-retard') :
             // Fallback: utiliser le statut depuis l'article si pas d'assignation locale
             (article.globalStatus === 'en_cours' ? 'border-status-en-cours' :
              article.globalStatus === 'en_pause' ? 'border-status-en-pause' :
@@ -491,8 +485,16 @@ const ArticleCard = forwardRef(({
         isNoteOpen={Boolean(isNoteOpen)}
         onToggleNote={toggleNoteEditor}
         noteBtnRef={noteBtnRef}
-        hasNote={Boolean(article.customerNote || article.production_status?.notes)}
-        displayNote={article.customerNote || article.production_status?.notes || ''}
+        hasNote={Boolean(article.production_status?.notes || article.customerNote)}
+        displayNote={(() => {
+          const note = article.production_status?.notes || article.customerNote || ''
+          if (article?.orderId === 389860) {
+            console.log('🔍 [NOTE] ArticleCard - Affichage note pour article', article?.lineItemId, ':', note)
+            console.log('🔍 [NOTE] ArticleCard - production_status.notes:', article.production_status?.notes)
+            console.log('🔍 [NOTE] ArticleCard - customerNote:', article.customerNote)
+          }
+          return note
+        })()}
         localAssignment={localAssignment}
         isLoadingAssignment={isLoadingAssignment}
         onOpenAssignModal={disableAssignmentModal ? () => {} : () => openTricoteuseModal()}

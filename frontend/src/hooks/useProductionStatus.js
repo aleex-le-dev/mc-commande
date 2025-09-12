@@ -2,7 +2,7 @@
  * Hook pour récupérer les statuts de production et leurs notes
  */
 import { useState, useEffect, useCallback } from 'react'
-import { ApiService } from '../services/apiService'
+import { getApiUrl } from '../config/api'
 
 export const useProductionStatus = () => {
   const [productionStatuses, setProductionStatuses] = useState([])
@@ -14,7 +14,7 @@ export const useProductionStatus = () => {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/production-status')
+      const response = await fetch(getApiUrl('production/status'))
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
@@ -31,6 +31,19 @@ export const useProductionStatus = () => {
 
   useEffect(() => {
     fetchProductionStatuses()
+  }, [fetchProductionStatuses])
+
+  // Écouter les événements de rechargement des données
+  useEffect(() => {
+    const handleRefreshData = () => {
+      console.log('🔄 useProductionStatus - Rechargement des statuts de production...')
+      fetchProductionStatuses()
+    }
+    
+    window.addEventListener('mc-refresh-data', handleRefreshData)
+    return () => {
+      window.removeEventListener('mc-refresh-data', handleRefreshData)
+    }
   }, [fetchProductionStatuses])
 
   const getProductionStatusByArticle = useCallback((orderId, lineItemId) => {

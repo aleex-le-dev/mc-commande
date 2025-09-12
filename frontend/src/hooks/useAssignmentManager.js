@@ -22,12 +22,9 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
 
   // Synchroniser localAssignment avec assignment
   useEffect(() => {
-    console.log('🔍 [DEBUG] useAssignmentManager - Assignment reçue:', assignment)
     if (assignment != null) {
       // Enrichir l'assignation avec les données de la tricoteuse
       if (tricoteuses && assignment.tricoteuse_id) {
-        console.log('🔍 [DEBUG] useAssignmentManager - Recherche tricoteuse avec ID:', assignment.tricoteuse_id)
-        console.log('🔍 [DEBUG] useAssignmentManager - Tricoteuses disponibles:', tricoteuses.map(t => ({ id: t._id, name: t.firstName })))
         
         // Essayer d'abord avec l'ID exact, puis avec la conversion en string
         let tricoteuse = tricoteuses.find(t => t._id === assignment.tricoteuse_id)
@@ -42,15 +39,11 @@ export const useAssignmentManager = ({ article, assignment, onAssignmentUpdate, 
             tricoteuse_color: tricoteuse.color,
             tricoteuse_name: tricoteuse.firstName
           }
-          console.log('🔍 [DEBUG] useAssignmentManager - Assignation enrichie:', enrichedAssignment)
-          console.log('🔍 [DEBUG] useAssignmentManager - Tricoteuse trouvée:', tricoteuse)
           setLocalAssignment(enrichedAssignment)
         } else {
-          console.log('🔍 [DEBUG] useAssignmentManager - Tricoteuse non trouvée, assignation simple:', assignment)
           setLocalAssignment(assignment)
         }
       } else {
-        console.log('🔍 [DEBUG] useAssignmentManager - Pas de tricoteuses disponibles, assignation simple:', assignment)
         setLocalAssignment(assignment)
       }
     } else {

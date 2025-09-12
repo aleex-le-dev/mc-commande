@@ -103,11 +103,14 @@ class OrdersService {
         $addFields: {
           order_customer_note: {
             $let: {
-              vars: { ocn: { $arrayElemAt: ['$ord.customer_note', 0] } },
+              vars: { 
+                ocn: { $arrayElemAt: ['$ord.customer_note', 0] },
+                psNotes: '$production_status.notes'
+              },
               in: {
                 $ifNull: [
                   '$$ocn',
-                  { $ifNull: ['$item_meta_note', { $ifNull: ['$production_status.notes', null] }] }
+                  { $ifNull: ['$item_meta_note', '$$psNotes'] }
                 ]
               }
             }
@@ -424,23 +427,47 @@ class OrdersService {
 
   async updateArticleNote(orderId, lineItemId, note) {
     try {
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Début')
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - orderId:', orderId, 'lineItemId:', lineItemId)
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - note:', note)
+      }
+      
       const production = db.getCollection('production_status')
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Collection production_status obtenue')
+      }
       
       // Mettre à jour la note pour cet article spécifique
-      const result = await production.updateOne(
-        { order_id: orderId, line_item_id: lineItemId },
-        { 
-          $set: { 
-            notes: note,
-            updated_at: new Date()
-          }
-        },
-        { upsert: true }
-      )
+      const query = { order_id: orderId, line_item_id: lineItemId }
+      const update = { 
+        $set: { 
+          notes: note,
+          updated_at: new Date()
+        }
+      }
       
-      return result.modifiedCount > 0 || result.upsertedCount > 0
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Query:', query)
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Update:', update)
+      }
+      
+      const result = await production.updateOne(query, update, { upsert: true })
+      
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Résultat MongoDB:', result)
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - modifiedCount:', result.modifiedCount)
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - upsertedCount:', result.upsertedCount)
+      }
+      
+      const success = result.modifiedCount > 0 || result.upsertedCount > 0
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Success:', success)
+      }
+      
+      return success
     } catch (error) {
-      console.error('Erreur mise à jour note article:', error)
+      console.error('🔍 [NOTE] ordersService.updateArticleNote - Erreur:', error)
       throw error
     }
   }

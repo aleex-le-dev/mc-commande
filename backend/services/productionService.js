@@ -1,6 +1,11 @@
 const db = require('./database')
 
 class ProductionService {
+  async getAllProductionStatuses() {
+    const collection = db.getCollection('production_status')
+    return await collection.find({}).sort({ updated_at: -1 }).toArray()
+  }
+
   async getProductionStatus(orderId, lineItemId) {
     const collection = db.getCollection('production_status')
     return await collection.findOne({ 

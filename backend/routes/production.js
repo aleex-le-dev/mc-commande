@@ -2,6 +2,17 @@ const express = require('express')
 const productionService = require('../services/productionService')
 const router = express.Router()
 
+// GET /api/production-status - Récupérer tous les statuts de production
+router.get('/status', async (req, res) => {
+  try {
+    const statuses = await productionService.getAllProductionStatuses()
+    res.json({ success: true, statuses })
+  } catch (error) {
+    console.error('Erreur récupération statuts production:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
 // GET /api/production/status/:orderId/:lineItemId - Récupérer le statut de production
 router.get('/status/:orderId/:lineItemId', async (req, res) => {
   try {

@@ -182,13 +182,29 @@ export const OrdersService = {
    */
   async updateArticleNote(orderId, lineItemId, note) {
     try {
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Début')
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - orderId:', orderId, 'lineItemId:', lineItemId)
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - note:', note)
+      }
+      
       const response = await HttpClientService.put(`/orders/${orderId}/articles/${lineItemId}/note`, { note })
+      
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Réponse HTTP:', response.status, response.ok)
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await response.json()
+      
+      const result = await response.json()
+      if (orderId === 389860) {
+        console.log('🔍 [NOTE] ordersService.updateArticleNote - Résultat:', result)
+      }
+      return result
     } catch (error) {
-      console.error('Erreur mise à jour note article:', error)
+      console.error('🔍 [NOTE] ordersService.updateArticleNote - Erreur:', error)
       throw error
     }
   },
