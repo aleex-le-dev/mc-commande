@@ -64,7 +64,7 @@ app.use('/api', apiRoutes)
 
 // Routes de debug (temporaires)
 const debugRoutes = require('./routes/debug')
-app.use('/debug', debugRoutes)
+app.use('/api/debug', debugRoutes)
 
 // Gestion des erreurs 404
 app.use('*', (req, res) => {

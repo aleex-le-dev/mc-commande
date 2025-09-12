@@ -111,6 +111,12 @@ export const ApiService = {
     return SyncService.testSync()
   },
   
+  async getStorageInfo() {
+    const res = await HttpClientService.get('/debug/storage')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  },
+  
   async getOrderByNumber(orderNumber) {
     return OrdersService.getOrderByNumber(orderNumber)
   },

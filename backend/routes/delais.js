@@ -1,36 +1,23 @@
 const express = require('express')
+const DelaisService = require('../services/delaisService')
 const router = express.Router()
 
 // GET /api/delais/configuration - Récupérer la configuration des délais
 router.get('/configuration', async (req, res) => {
   try {
-    // Configuration par défaut des délais
-    const defaultConfig = {
-      joursDelai: 21,
-      joursOuvrables: {
-        lundi: true,
-        mardi: true,
-        mercredi: true,
-        jeudi: true,
-        vendredi: true,
-        samedi: false,
-        dimanche: false
-      }
-    }
-
-    // Calculer la date limite actuelle
-    const aujourdhui = new Date()
-    const dateLimite = calculerDateLimite(aujourdhui, defaultConfig.joursOuvrables, defaultConfig.joursDelai)
+    const result = await DelaisService.getDefaultConfiguration()
     
-    const configAvecDateLimite = {
-      ...defaultConfig,
-      dateLimite: dateLimite
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data
+      })
+    } else {
+      res.status(500).json({ 
+        success: false,
+        error: result.error 
+      })
     }
-
-    res.json({
-      success: true,
-      data: configAvecDateLimite
-    })
   } catch (error) {
     console.error('Erreur récupération configuration délais:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
@@ -62,13 +49,56 @@ function calculerDateLimite(dateCommande, joursOuvrables, joursDelai) {
 // PUT /api/delais/configuration - Mettre à jour la configuration des délais
 router.put('/configuration', async (req, res) => {
   try {
-    // TODO: Implémenter la sauvegarde en base de données
-    res.json({
-      success: true,
-      message: 'Configuration des délais mise à jour'
+    const { joursDelai, joursOuvrables } = req.body
+    
+    if (!joursDelai || !joursOuvrables) {
+      return res.status(400).json({
+        success: false,
+        error: 'joursDelai et joursOuvrables sont requis'
+      })
+    }
+    
+    const result = await DelaisService.createOrUpdateConfiguration({
+      joursDelai,
+      joursOuvrables
     })
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: `Configuration ${result.operation} avec succès`,
+        data: result.data
+      })
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error
+      })
+    }
   } catch (error) {
     console.error('Erreur mise à jour configuration délais:', error)
+    res.status(500).json({ error: 'Erreur serveur interne' })
+  }
+})
+
+// GET /api/delais/configurations - Récupérer toutes les configurations
+router.get('/configurations', async (req, res) => {
+  try {
+    const result = await DelaisService.getAllConfigurations()
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data
+      })
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error
+      })
+    }
+  } catch (error) {
+    console.error('Erreur récupération configurations délais:', error)
     res.status(500).json({ error: 'Erreur serveur interne' })
   }
 })

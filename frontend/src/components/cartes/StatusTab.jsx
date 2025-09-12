@@ -9,6 +9,7 @@ const StatusTab = () => {
     wordpressProducts: false,
     database: false,
     stats: false,
+    storage: false,
     joursFeries: false
   })
 
@@ -67,6 +68,19 @@ const StatusTab = () => {
     setLoadingStates(prev => ({ ...prev, stats: false }))
   }
 
+  const testStorageInfo = async () => {
+    setLoadingStates(prev => ({ ...prev, storage: true }))
+    try {
+      const result = await ApiService.getStorageInfo()
+      setTestResults(prev => ({ ...prev, storage: { success: true, data: result } }))
+      setStatus('Informations de stockage récupérées avec succès')
+    } catch (error) {
+      setTestResults(prev => ({ ...prev, storage: { success: false, error: error.message } }))
+      setStatus('Erreur lors de la récupération des informations de stockage')
+    }
+    setLoadingStates(prev => ({ ...prev, storage: false }))
+  }
+
 
   const testJoursFeriesAPI = async () => {
     setLoadingStates(prev => ({ ...prev, joursFeries: true }))
@@ -112,6 +126,7 @@ const StatusTab = () => {
     }
     setLoadingStates(prev => ({ ...prev, joursFeries: false }))
   }
+
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -166,8 +181,16 @@ const StatusTab = () => {
                 >
                   {loadingStates.stats ? 'Test en cours...' : 'Contenu de la base'}
                 </button>
+                <button
+                  onClick={testStorageInfo}
+                  disabled={loadingStates.storage}
+                  className="w-full px-4 py-2 bg-green-400 text-white rounded-md hover:bg-green-500 disabled:opacity-50"
+                >
+                  {loadingStates.storage ? 'Test en cours...' : '💾 Espace de stockage'}
+                </button>
               </div>
             </div>
+
 
 
             {/* Tests APIs Externes */}
@@ -301,7 +324,149 @@ const StatusTab = () => {
                         )}
                       </div>
                     )}
-                        {testResults.joursFeries && (
+                    
+                    {testResults.storage && (
+                      <div className={`p-3 rounded-md ${testResults.storage.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                            <span className="font-medium">💾 Espace de stockage MongoDB</span>
+                          </div>
+                          <span className={`text-sm ${testResults.storage.success ? 'text-green-800' : 'text-red-800'}`}>
+                            {testResults.storage.success ? '✅ Succès' : '❌ Échec'}
+                          </span>
+                        </div>
+                        {testResults.storage.success && testResults.storage.data && (
+                          <div className="mt-2 text-sm text-green-700">
+                            {/* Informations du cluster MongoDB */}
+                            {testResults.storage.data.cluster && (
+                              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+                                <h4 className="font-bold text-blue-900 mb-3">📊 Cluster MongoDB</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold">💾 Data Size:</span>
+                                    <span className="text-lg font-bold text-blue-600">
+                                      {testResults.storage.data.cluster.usageText}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                                      style={{ width: `${testResults.storage.data.cluster.usagePercentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="flex justify-between text-xs text-gray-600">
+                                    <span>0 MB</span>
+                                    <span className="font-semibold">{testResults.storage.data.cluster.maxSize}</span>
+                                  </div>
+                                  <div className="text-center">
+                                    <span className="text-sm font-semibold text-blue-700">
+                                      {testResults.storage.data.cluster.daysText}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Composition par collection */}
+                            {testResults.storage.data.collections && testResults.storage.data.collections.length > 0 && (
+                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                                <h4 className="font-bold text-gray-900 mb-3">📊 Composition par collection</h4>
+                                <p className="text-xs text-gray-500 mb-3">* Tailles estimées basées sur le nombre de documents</p>
+                                <div className="space-y-3">
+                                  {testResults.storage.data.collections.map((collection, index) => (
+                                    <div key={index} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-3 h-3 rounded-full ${
+                                            index < 3 ? 'bg-red-500' : 
+                                            index < 6 ? 'bg-yellow-500' : 
+                                            'bg-green-500'
+                                          }`}></div>
+                                          <span className="font-semibold text-gray-800">
+                                            {collection.name}
+                                          </span>
+                                        </div>
+                                        <div className="text-right">
+                                          <span className="text-lg font-bold text-blue-600">
+                                            {collection.totalSize}
+                                          </span>
+                                          <div className="text-xs text-gray-500">
+                                            {collection.count.toLocaleString()} objets
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Barre de progression pour la taille */}
+                                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                        <div 
+                                          className={`h-2 rounded-full transition-all duration-300 ${
+                                            index < 3 ? 'bg-red-500' : 
+                                            index < 6 ? 'bg-yellow-500' : 
+                                            'bg-green-500'
+                                          }`}
+                                          style={{ 
+                                            width: `${Math.min(100, (parseFloat(collection.size) / parseFloat(testResults.storage.data.collections[0].size)) * 100)}%` 
+                                          }}
+                                        ></div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                        <div>
+                                          <span className="font-medium">Données:</span> {collection.size}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">Index:</span> {collection.indexSize}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">Moyenne:</span> {collection.avgObjSize}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">Indexes:</span> {collection.indexes}
+                                        </div>
+                                      </div>
+                                      
+                                      {collection.error && (
+                                        <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                                          ⚠️ {collection.error}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Détails de la base de données */}
+                            <div className="grid grid-cols-1 gap-2">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="font-semibold">🗄️ Base: {testResults.storage.data.database.name}</p>
+                                  <p className="font-semibold">📁 Collections: {testResults.storage.data.database.collections}</p>
+                                  <p className="font-semibold">📄 Objets: {testResults.storage.data.database.objects.toLocaleString()}</p>
+                                  <p className="font-semibold">🔍 Index: {testResults.storage.data.database.indexes}</p>
+                                </div>
+                                <div>
+                                  <p className="font-semibold">💾 Taille totale: {testResults.storage.data.database.totalSize}</p>
+                                  <p className="font-semibold">📊 Données: {testResults.storage.data.database.dataSize}</p>
+                                  <p className="font-semibold">🗂️ Stockage: {testResults.storage.data.database.storageSize}</p>
+                                  <p className="font-semibold">🔗 Index: {testResults.storage.data.database.indexSize}</p>
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-2 border-t border-green-200">
+                                <p className="font-semibold">📏 Taille moyenne objet: {testResults.storage.data.database.avgObjSize}</p>
+                                <p className="text-xs text-gray-500">🕒 {new Date(testResults.storage.data.timestamp).toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {!testResults.storage.success && (
+                          <p className="text-sm text-red-700 mt-1">{testResults.storage.error}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {testResults.joursFeries && (
                           <div className={`p-3 rounded-md ${testResults.joursFeries.success ? 'bg-green-50' : 'bg-red-50'}`}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
@@ -327,6 +492,56 @@ const StatusTab = () => {
                                   <p className="font-semibold">🌐 Source: {testResults.joursFeries.api}</p>
                                   <p className="font-semibold">🔗 URL: data.gouv.fr</p>
                                 </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        
+                        {testResults.cleanupSingleDelais && (
+                          <div className={`p-3 rounded-md ${testResults.cleanupSingleDelais.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                <span className="font-medium">🎯 Configuration unique</span>
+                              </div>
+                              <span className={`text-sm ${testResults.cleanupSingleDelais.success ? 'text-green-800' : 'text-red-800'}`}>
+                                {testResults.cleanupSingleDelais.success ? '✅ Succès' : '❌ Échec'}
+                              </span>
+                            </div>
+                            {!testResults.cleanupSingleDelais.success && (
+                              <p className="text-sm text-red-700 mt-1">{testResults.cleanupSingleDelais.error}</p>
+                            )}
+                            {testResults.cleanupSingleDelais.success && testResults.cleanupSingleDelais.data && (
+                              <div className="mt-2 text-sm text-green-700">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="font-semibold">📊 Avant: {testResults.cleanupSingleDelais.data.stats.documentsBefore} documents</p>
+                                    <p className="font-semibold">📊 Après: {testResults.cleanupSingleDelais.data.stats.documentsAfter} document</p>
+                                    <p className="font-semibold">🗑️ Supprimés: {testResults.cleanupSingleDelais.data.stats.documentsDeleted}</p>
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold">🎯 Configuration unique: ✅</p>
+                                    <p className="font-semibold">🔄 Remplacement automatique: ✅</p>
+                                    <p className="font-semibold">📅 Dernière modif: {new Date(testResults.cleanupSingleDelais.data.finalConfig.derniereModification).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                
+                                {testResults.cleanupSingleDelais.data.finalConfig && (
+                                  <div className="mt-3 pt-2 border-t border-green-200">
+                                    <h4 className="font-semibold text-sm text-green-700 mb-2">📋 Configuration unique:</h4>
+                                    <div className="text-xs bg-white p-2 rounded border">
+                                      <span className="font-medium">{testResults.cleanupSingleDelais.data.finalConfig.joursDelai} jours:</span> 
+                                      <span className="ml-2">
+                                        {Object.entries(testResults.cleanupSingleDelais.data.finalConfig.joursOuvrables)
+                                          .filter(([_, value]) => value)
+                                          .map(([day, _]) => day)
+                                          .join(', ')
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
