@@ -3,6 +3,7 @@ const database = require('../services/database');
 
 async function testOrdersQuery() {
   try {
+    process.env.MONGO_URI = "mongodb+srv://alexandrejanacek:fq29afdkYYXxEOjo@maisoncleo.ts2zl9t.mongodb.net/";
     await database.connect();
     console.log('✅ Connexion à la base de données');
     
