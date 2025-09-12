@@ -77,7 +77,14 @@ class AssignmentsService {
     // Récupérer le nom de la tricoteuse
     let finalTricoteuseName = tricoteuse_name
     if (!finalTricoteuseName) {
-      const tricoteuse = await tricoteuses.findOne({ _id: tricoteuse_id })
+      // Essayer d'abord avec ObjectId, puis avec string
+      let tricoteuse = null
+      try {
+        tricoteuse = await tricoteuses.findOne({ _id: db.createObjectId(tricoteuse_id) })
+      } catch (error) {
+        // Si ObjectId échoue, essayer avec string
+        tricoteuse = await tricoteuses.findOne({ _id: tricoteuse_id })
+      }
       finalTricoteuseName = tricoteuse?.firstName || 'Tricoteuse inconnue'
     }
 
@@ -185,7 +192,14 @@ class AssignmentsService {
     // Déterminer le nom de la tricoteuse
     let tricoteuseName = updateData.tricoteuse_name
     if (!tricoteuseName && updateData.tricoteuse_id) {
-      const tricoteuse = await tricoteuses.findOne({ _id: updateData.tricoteuse_id })
+      // Essayer d'abord avec ObjectId, puis avec string
+      let tricoteuse = null
+      try {
+        tricoteuse = await tricoteuses.findOne({ _id: db.createObjectId(updateData.tricoteuse_id) })
+      } catch (error) {
+        // Si ObjectId échoue, essayer avec string
+        tricoteuse = await tricoteuses.findOne({ _id: updateData.tricoteuse_id })
+      }
       tricoteuseName = tricoteuse?.firstName || 'Tricoteuse inconnue'
     }
 
