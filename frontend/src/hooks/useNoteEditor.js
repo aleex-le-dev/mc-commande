@@ -59,6 +59,8 @@ export const useNoteEditor = (article) => {
   const saveNote = useCallback(async (content) => {
     try {
       setIsSavingNote(true)
+      
+      // Sauvegarder au niveau de la commande (les notes restent liées à l'article, pas à la couturière)
       const success = await ApiService.orders.updateOrderNote(article.orderId, content)
       if (success) {
         article.customerNote = content

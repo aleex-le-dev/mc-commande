@@ -205,7 +205,7 @@ const TerminePage = () => {
                           tricoteusesProp={tricoteuses}
                           size="small"
                           color={`border-${a.status === 'termine' ? 'green' : a.status === 'en_cours' ? 'yellow' : a.status === 'en_pause' ? 'orange' : 'gray'}-500 ${getBgColor(a.status)}`}
-                          options={{ showAssignButton: true, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                          options={{ showAssignButton: true, showStatusButton: false, showNoteButton: true, showClientButton: true }}
                           productionType="all"
                           prioritizeUrgent={false}
                           disableStatusBorder={true}
@@ -308,7 +308,7 @@ const TerminePage = () => {
                           tricoteusesProp={tricoteuses}
                           size="small"
                           color={`border-${a.status === 'termine' ? 'green' : a.status === 'en_cours' ? 'yellow' : a.status === 'en_pause' ? 'orange' : 'gray'}-500 ${getBgColor(a.status)}`}
-                          options={{ showAssignButton: true, showStatusButton: false, showNoteButton: false, showClientButton: true }}
+                          options={{ showAssignButton: true, showStatusButton: false, showNoteButton: true, showClientButton: true }}
                           productionType="all"
                           prioritizeUrgent={false}
                           disableStatusBorder={true}

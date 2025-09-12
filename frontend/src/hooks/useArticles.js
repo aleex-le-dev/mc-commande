@@ -125,6 +125,11 @@ export const useArticles = (options = {}) => {
       }
     })
     
+    // Mettre à jour la variable globale pour le menu contextuel
+    if (typeof window !== 'undefined') {
+      window.mcAllArticles = allArticles
+    }
+    
     return allArticles
   }, [orders, assignments, tricoteuses, getAssignmentByArticleId, getTricoteuseById, externalNotesTick, syncTick])
 

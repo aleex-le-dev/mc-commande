@@ -106,7 +106,20 @@ const ArticleCard = forwardRef(({
   // Fonction utilitaire: dispatcher l'événement de menu contextuel
   const dispatchContextMenu = useCallback((clientX, clientY) => {
     try {
-      const allArticlesOfOrder = window.mcAllArticles?.filter(a => a.orderNumber === article.orderNumber) || [article]
+      // Essayer de récupérer tous les articles de la commande
+      let allArticlesOfOrder = [article]
+      
+      if (window.mcAllArticles && Array.isArray(window.mcAllArticles)) {
+        allArticlesOfOrder = window.mcAllArticles.filter(a => 
+          a.orderNumber === article.orderNumber || a.orderId === article.orderId
+        )
+      }
+      
+      // Si pas d'articles trouvés, utiliser l'article actuel
+      if (allArticlesOfOrder.length === 0) {
+        allArticlesOfOrder = [article]
+      }
+      
       const isOrderUrgent = Array.isArray(allArticlesOfOrder) && allArticlesOfOrder.some(a => a?.production_status?.urgent === true)
       const detail = {
         x: clientX,
@@ -121,7 +134,9 @@ const ArticleCard = forwardRef(({
         articles: allArticlesOfOrder,
       }
       window.dispatchEvent(new CustomEvent('mc-context', { detail }))
-    } catch {}
+    } catch (error) {
+      console.error('Erreur dispatchContextMenu:', error)
+    }
   }, [article, localAssignment, uniqueAssignmentId])
 
   // Handlers long-press mobile → clic droit simulé
@@ -421,23 +436,7 @@ const ArticleCard = forwardRef(({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        // Récupérer tous les articles de la même commande
-        const allArticlesOfOrder = window.mcAllArticles?.filter(a => a.orderNumber === article.orderNumber) || [article]
-        const isOrderUrgent = Array.isArray(allArticlesOfOrder) && allArticlesOfOrder.some(a => a?.production_status?.urgent === true)
-        
-        const detail = {
-          x: e.clientX,
-          y: e.clientY,
-          uniqueAssignmentId,
-          hasAssignment: Boolean(localAssignment),
-          currentUrgent: Boolean(isOrderUrgent || article?.production_status?.urgent === true),
-          hasNote: Boolean(article.customerNote),
-          currentProductionType: article.productionType,
-          orderNumber: article.orderNumber,
-          orderId: article.orderId,
-          articles: allArticlesOfOrder, // Tous les articles de la commande
-        };
-        window.dispatchEvent(new CustomEvent('mc-context', { detail }));
+        dispatchContextMenu(e.clientX, e.clientY);
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
