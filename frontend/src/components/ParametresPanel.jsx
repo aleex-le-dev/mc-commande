@@ -6,7 +6,6 @@ import StatusTab from './cartes/StatusTab'
 import StatsTab from './cartes/StatsTab'
 import ArchivedTab from './cartes/ArchivedTab'
 import DateLimiteTab from './cartes/DateLimiteTab'
-import ImportTab from './cartes/ImportTab'
 
 const ParametresPanel = () => {
   const [activeTab, setActiveTab] = useState(getParametresSubTabFromLocation())
@@ -15,8 +14,7 @@ const ParametresPanel = () => {
     { id: 'tricoteuses', label: 'Couturières', icon: '🧶', url: 'couturiere' },
     { id: 'dateLimite', label: 'Date limite', icon: '⏰', url: 'date-limite' },
     { id: 'stats', label: 'Stats & archives', icon: '📈', url: 'stats' },
-    { id: 'status', label: 'Statut et tests', icon: '📊', url: 'status' },
-    { id: 'import', label: 'Import', icon: '📥', url: 'import' }
+    { id: 'status', label: 'Statut et tests', icon: '📊', url: 'status' }
   ]
 
   const activeTabMeta = tabs.find(t => t.id === activeTab) || tabs[0]
@@ -57,8 +55,6 @@ const ParametresPanel = () => {
             <ArchivedTab />
           </div>
         )
-      case 'import':
-        return <ImportTab />
       default:
         return <TricoteusesTab />
     }
