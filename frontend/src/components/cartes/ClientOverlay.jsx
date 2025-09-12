@@ -119,17 +119,27 @@ const ClientOverlay = ({
             </svg>
             <div 
               className={`flex-1 min-w-0 ${compact ? 'text-sm' : 'text-base'} font-medium text-gray-900 cursor-pointer hover:bg-gray-100 px-1.5 py-1 rounded transition-colors`}
-              onClick={() => onCopy(article.shippingMethod || 'Non renseigné', 'Transporteur copié !')}
+              onClick={() => onCopy(article.shippingCarrier || article.shippingMethod || 'Non renseigné', 'Transport copié !')}
               title="Cliquer pour copier"
             >
               {(() => {
-                const title = (article.shippingMethod || '').toLowerCase()
-                const isFree = title.includes('gratuit') || title.includes('free')
-                if (isFree) {
-                  const carrier = article.shippingCarrier || ((article.customerCountry || '').toUpperCase() === 'FR' ? 'UPS' : 'DHL')
-                  return highlightText(`Livraison gratuite (${carrier})`, searchTerm)
+                const method = article.shippingMethod
+                const carrier = article.shippingCarrier
+                // Priorité: si un transporteur est défini, l'afficher tel quel
+                if (carrier && String(carrier).trim().length > 0) {
+                  return highlightText(carrier, searchTerm)
                 }
-                return highlightText(article.shippingMethod || 'Non renseigné', searchTerm)
+                // Sinon, afficher la méthode avec traitement du cas "gratuit"
+                if (method && String(method).trim().length > 0) {
+                  const title = String(method).toLowerCase()
+                  const isFree = title.includes('gratuit') || title.includes('free')
+                  if (isFree) {
+                    const fallbackCarrier = ((article.customerCountry || '').toUpperCase() === 'FR' ? 'UPS' : 'DHL')
+                    return highlightText(`Livraison gratuite (${fallbackCarrier})`, searchTerm)
+                  }
+                  return highlightText(method, searchTerm)
+                }
+                return highlightText('Non renseigné', searchTerm)
               })()}
             </div>
           </div>

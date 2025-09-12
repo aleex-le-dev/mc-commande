@@ -308,9 +308,11 @@ class OrdersService {
     const customer_email_input = typeof payload?.customer_email === 'string' && payload.customer_email.trim().length > 0 ? payload.customer_email.trim() : null
     const customer_phone_input = typeof payload?.customer_phone === 'string' && payload.customer_phone.trim().length > 0 ? payload.customer_phone.trim() : null
     const customer_country_input = typeof payload?.customer_country === 'string' && payload.customer_country.trim().length > 0 ? payload.customer_country.trim().toUpperCase() : null
-    // Ne pas forcer shipping_method/carrier pour commandes manuelles; laisser null et se baser sur BDD/affichage
+    // Méthode non forcée; accepter le transporteur fourni
     const shipping_method_input = null
-    const shipping_carrier_input = null
+    const shipping_carrier_input = typeof payload?.shipping_carrier === 'string' && payload.shipping_carrier.trim().length > 0
+      ? payload.shipping_carrier.trim()
+      : null
     const itemsInput = Array.isArray(payload?.items) && payload.items.length > 0 ? payload.items : [
       { product_id: 0, product_name: 'Article', quantity: 1, price: 0, production_type: 'couture' }
     ]

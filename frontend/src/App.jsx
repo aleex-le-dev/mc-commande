@@ -25,6 +25,8 @@ import PerformanceOptimizer from './components/PerformanceOptimizer'
 import SlowDeviceOptimizer from './components/SlowDeviceOptimizer'
 import './App.css'
 import { useRouteSync, navigateToTab } from './router'
+import { useDailySync } from './hooks/useDailySync'
+import createDeleteHandlers from './utils/deleteHandlers'
 
 // Configuration du client React Query (supprimé car défini dans main.jsx)
 
@@ -46,45 +48,9 @@ function App() {
   const [createOrderVisible, setCreateOrderVisible] = useState(false)
 
 
-  // Planifier une synchro quotidienne à 12:00 locale (optimisée)
-  useEffect(() => {
-    let timeoutId
-    const scheduleNext = () => {
-      const now = new Date()
-      const next = new Date()
-      next.setHours(12, 0, 0, 0)
-      if (now >= next) {
-        next.setDate(next.getDate() + 1)
-      }
-      const delay = next.getTime() - now.getTime()
-      timeoutId = setTimeout(async () => {
-        try {
-          setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne…' })
-          await ApiService.sync.syncOrders({})
-          // Invalidate caches comme le bouton
-          queryClient.invalidateQueries(['db-orders'])
-          queryClient.invalidateQueries(['production-statuses'])
-          queryClient.invalidateQueries(['unified-orders'])
-          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
-          setDailySyncToast({ visible: true, message: 'Synchronisation quotidienne terminée ✅' })
-        } catch (e) {
-          setDailySyncToast({ visible: true, message: "Erreur de synchronisation quotidienne" })
-        } finally {
-          // OPTIMISATION: Timeout avec cleanup
-          const hideTimeoutId = setTimeout(() => setDailySyncToast({ visible: false, message: '' }), 6000)
-          // replanifier pour le lendemain
-          scheduleNext()
-          
-          // Cleanup du timeout de masquage
-          return () => clearTimeout(hideTimeoutId)
-        }
-      }, delay)
-    }
-    scheduleNext()
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [queryClient])
+  // Synchro quotidienne via hook dédié
+  const syncToast = useDailySync(ApiService, queryClient, 12)
+  useEffect(() => { setDailySyncToast(syncToast) }, [syncToast])
 
   useEffect(() => {
     const handleContextMenu = (e) => {
@@ -216,56 +182,9 @@ function App() {
     }
   }, [])
 
-  // Fonction pour gérer la suppression d'un article spécifique
+  const { handleDeleteArticle: deleteArticle, handleDeleteOrder: deleteOrderApi } = createDeleteHandlers(queryClient)
   const handleDeleteArticle = async (orderId, lineItemId) => {
-    try {
-      console.log('[DELETE-ARTICLE] Demande de suppression', { orderId, lineItemId })
-      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const response = await fetch(`${base}/api/orders/${orderId}/items/${lineItemId}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.ok) {
-        console.log('[DELETE-ARTICLE] API OK')
-        // Mise à jour optimiste du cache
-        try {
-          const targetOrderId = String(orderId)
-          const targetLineId = String(lineItemId)
-          const before = queryClient.getQueryData(['unified-orders'])
-          console.log('[DELETE-ARTICLE] Cache avant', { orders: Array.isArray(before) ? before.length : 'NA' })
-          queryClient.setQueryData(['unified-orders'], (oldData) => {
-            if (!oldData) return oldData
-            const updated = oldData.map(order => {
-              if (String(order.order_id) === targetOrderId) {
-                const newItems = (order.items || []).filter(item => String(item.line_item_id) !== targetLineId)
-                return { ...order, items: newItems }
-              }
-              return order
-            }).filter(order => (order.items || []).length > 0)
-            return updated
-          })
-          const after = queryClient.getQueryData(['unified-orders'])
-          console.log('[DELETE-ARTICLE] Cache après', { orders: Array.isArray(after) ? after.length : 'NA' })
-        } catch (error) {
-          console.warn('Erreur mise à jour cache:', error)
-        }
-        // Notifier l'UI et forcer re-render
-        console.log('[DELETE-ARTICLE] Dispatch mc-data-updated + mc-refresh-data + mc-sync-completed')
-        window.dispatchEvent(new Event('mc-data-updated'))
-        window.dispatchEvent(new Event('mc-refresh-data'))
-        window.dispatchEvent(new Event('mc-sync-completed'))
-        try {
-          queryClient.invalidateQueries(['unified-orders'])
-          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
-        } catch {}
-      } else {
-        console.error('Erreur lors de la suppression de l\'article:', response.statusText)
-        alert('Erreur lors de la suppression de l\'article')
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'article:', error)
-      alert('Erreur lors de la suppression de l\'article')
-    }
+    try { await deleteArticle(orderId, lineItemId) } catch (e) { alert('Erreur lors de la suppression de l\'article') }
   }
 
   // Fonction pour gérer la suppression de commande
@@ -274,41 +193,9 @@ function App() {
     
     setIsDeleting(true)
     try {
-      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const response = await fetch(`${base}/api/orders/${deleteOrderInfo.orderId}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.ok) {
-        // Fermer le toast et rafraîchir les données
-        setShowDeleteToast(false)
-        setDeleteOrderInfo(null)
-        try {
-          console.log('[DELETE-ORDER] API OK', { orderId: deleteOrderInfo.orderId })
-          const before = queryClient.getQueryData(['unified-orders'])
-          console.log('[DELETE-ORDER] Cache avant', { orders: Array.isArray(before) ? before.length : 'NA' })
-          const targetOrderId = String(deleteOrderInfo.orderId)
-          queryClient.setQueryData(['unified-orders'], (oldData) => {
-            if (!oldData) return oldData
-            return oldData.filter(order => String(order.order_id) !== targetOrderId)
-          })
-          const after = queryClient.getQueryData(['unified-orders'])
-          console.log('[DELETE-ORDER] Cache après', { orders: Array.isArray(after) ? after.length : 'NA' })
-        } catch (error) {
-          console.warn('Erreur mise à jour cache:', error)
-        }
-        console.log('[DELETE-ORDER] Dispatch mc-data-updated + mc-refresh-data + mc-sync-completed')
-        window.dispatchEvent(new Event('mc-data-updated'))
-        window.dispatchEvent(new Event('mc-refresh-data'))
-        window.dispatchEvent(new Event('mc-sync-completed'))
-        try {
-          queryClient.invalidateQueries(['unified-orders'])
-          await queryClient.refetchQueries({ queryKey: ['unified-orders'], type: 'active' })
-        } catch {}
-      } else {
-        console.error('Erreur lors de la suppression:', response.statusText)
-        alert('Erreur lors de la suppression de la commande')
-      }
+      await deleteOrderApi(deleteOrderInfo.orderId)
+      setShowDeleteToast(false)
+      setDeleteOrderInfo(null)
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
       alert('Erreur lors de la suppression de la commande')

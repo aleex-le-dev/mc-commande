@@ -14,7 +14,8 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerCountry, setCustomerCountry] = useState('FR')
-  // Retiré: la méthode d'expédition est déterminée par la BDD côté affichage
+  // Transporteur pour commandes manuelles
+  const [shippingCarrier, setShippingCarrier] = useState('DHL Standard (1-3days)')
   const [showClientDetails, setShowClientDetails] = useState(false)
   const [productName, setProductName] = useState('')
   const [productSize, setProductSize] = useState('')
@@ -34,7 +35,8 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
       setCustomerEmail('')
       setCustomerPhone('')
       setCustomerCountry('FR')
-      // Pas de sélection de méthode/transporteur dans la création manuelle
+      // Réinitialiser transporteur
+      setShippingCarrier('DHL Standard (1-3days)')
       setShowClientDetails(false)
       setProductName('')
       setProductSize('')
@@ -77,7 +79,8 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
         customer_email: customerEmail?.trim() || null,
         customer_phone: customerPhone?.trim() || null,
         customer_country: customerCountry?.trim() || 'FR',
-        // Ne pas fixer la méthode ni le transporteur côté création manuelle
+        // Méthode non fixée côté création manuelle
+        shipping_carrier: shippingCarrier || null,
         items: [
           { 
             product_id: 0, 
@@ -230,7 +233,20 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
                     />
                     {validation.customerCountry && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.customerCountry}</p>}
                   </div>
-                  {/* Méthode d'expédition et transporteur: non saisis ici; affichés depuis la BDD si disponibles */}
+                  {/* Transporteur (manuel) */}
+                  <div>
+                    <label className="block text-sm mb-1">Transporteur (manuel)</label>
+                    <select
+                      className="w-full px-3 py-2 rounded border"
+                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                      value={shippingCarrier}
+                      onChange={(e) => setShippingCarrier(e.target.value)}
+                    >
+                      <option value="DHL Standard (1-3days)">DHL Standard (1-3days)</option>
+                      <option value="EXPRESS 12:00">EXPRESS 12:00</option>
+                      <option value="UPS Point Relais">UPS Point Relais</option>
+                    </select>
+                  </div>
                 </div>
               )}
             </div>
