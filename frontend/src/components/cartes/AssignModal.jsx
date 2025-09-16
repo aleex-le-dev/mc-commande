@@ -43,12 +43,16 @@ const AssignModal = ({
 
         <div className="space-y-3">
           {localAssignment && (
-            <button onClick={onRemove} className="w-full group p-3 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-all duration-200">
-              <div className="flex items-center justify-center">
-                <span className="sm:hidden text-red-600 font-semibold text-sm">Retirer</span>
-                <div className="hidden sm:flex w-10 h-10 rounded-full bg-red-500 items-center justify-center text-white font-bold text-base shadow-md">✕</div>
-              </div>
-            </button>
+            <div className="w-full flex items-center justify-center">
+              <button
+                onClick={onRemove}
+                aria-label="Retirer l'assignation"
+                title="Retirer l'assignation"
+                className="w-10 h-10 rounded-full bg-red-500 text-white font-bold text-base shadow-md flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-200 cursor-pointer transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
+              >
+                ✕
+              </button>
+            </div>
           )}
 
           {isLoadingTricoteuses && (
@@ -66,7 +70,7 @@ const AssignModal = ({
                   <button
                     key={t._id}
                     onClick={() => onPick(t)}
-                    className={`px-1 w-1/2 md:w-1/3 mb-2`}
+                    className={`px-1 w-1/2 md:w-1/3 mb-2 cursor-pointer transition-transform duration-150 ease-out ${isAssigning ? '' : 'hover:scale-105 active:scale-95'}`}
                     disabled={isAssigning}
                   >
                     <div className={`w-full p-2 rounded-xl transition-all duration-200 ${isAssigning ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'hover:bg-rose-50'}`}>
@@ -97,15 +101,34 @@ const AssignModal = ({
           {localAssignment && !isLoadingTricoteuses && (
             <div className="w-full border-t border-gray-200 pt-3 mt-3">
               <h4 className="text-xs font-semibold text-gray-700 text-center mb-2">Changer le statut</h4>
-              <div className="grid grid-cols-1 gap-2">
-                <button onClick={() => onChangeStatus('en_cours')} className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-yellow-200 ${localAssignment.status === 'en_cours' ? 'text-black shadow-lg' : 'text-black hover:shadow-md'}`} style={{ backgroundColor: localAssignment.status === 'en_cours' ? 'var(--couture-en-cours)' : 'var(--couture-en-cours-hover)', borderColor: localAssignment.status === 'en_cours' ? 'var(--couture-en-cours-selected-border)' : 'var(--couture-en-cours-border)' }}>
-                  <div className="text-center"><p className="text-xs font-medium">En cours</p></div>
+              <div
+                className="flex items-center justify-center gap-3 mt-1"
+                role="group"
+                aria-label="Changer le statut"
+              >
+                <button
+                  onClick={() => onChangeStatus('en_cours')}
+                  className="h-10 w-10 rounded-full border-0 flex items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-200 bg-yellow-400 transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
+                  aria-label="En cours"
+                  title="En cours"
+                >
+                  <span className="sr-only">En cours</span>
                 </button>
-                <button onClick={() => onChangeStatus('en_pause')} className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-orange-200 ${localAssignment.status === 'en_pause' ? 'text-white shadow-lg' : 'text-white hover:shadow-md'}`} style={{ backgroundColor: localAssignment.status === 'en_pause' ? 'var(--couture-en-pause)' : 'var(--couture-en-pause-hover)', borderColor: localAssignment.status === 'en_pause' ? 'var(--couture-en-pause-selected-border)' : 'var(--couture-en-pause-border)' }}>
-                  <div className="text-center"><p className="text-xs font-medium">En pause</p></div>
+                <button
+                  onClick={() => onChangeStatus('en_pause')}
+                  className="h-10 w-10 rounded-full border-0 flex items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-200 bg-orange-500 transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
+                  aria-label="En pause"
+                  title="En pause"
+                >
+                  <span className="sr-only">En pause</span>
                 </button>
-                <button onClick={() => onChangeStatus('termine')} className={`p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:bg-green-200 ${localAssignment.status === 'termine' ? 'text-white shadow-lg' : 'text-white hover:shadow-md'}`} style={{ backgroundColor: localAssignment.status === 'termine' ? 'var(--couture-termine)' : 'var(--couture-termine-hover)', borderColor: localAssignment.status === 'termine' ? 'var(--couture-termine-selected-border)' : 'var(--couture-termine-border)' }}>
-                  <div className="text-center"><p className="text-xs font-medium">Terminé</p></div>
+                <button
+                  onClick={() => onChangeStatus('termine')}
+                  className="h-10 w-10 rounded-full border-0 flex items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-200 bg-green-600 transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
+                  aria-label="Terminé"
+                  title="Terminé"
+                >
+                  <span className="sr-only">Terminé</span>
                 </button>
               </div>
             </div>
