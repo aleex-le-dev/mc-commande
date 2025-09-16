@@ -210,11 +210,13 @@ export const groupArticlesByOrder = (articles) => {
   const grouped = {}
   
   articles.forEach(article => {
-    const orderNumber = article.orderNumber
-    if (!grouped[orderNumber]) {
-      grouped[orderNumber] = {
+    const originalOrderNumber = article.orderNumber
+    const key = String(originalOrderNumber || '').trim().toLowerCase()
+    if (!grouped[key]) {
+      grouped[key] = {
+        // Conserver l'affichage original du premier article rencontré
         order: {
-          order_number: orderNumber,
+          order_number: originalOrderNumber,
           order_id: article.orderId,
           order_date: article.orderDate,
           customer_name: article.customer,
@@ -229,19 +231,17 @@ export const groupArticlesByOrder = (articles) => {
         articles: []
       }
     }
-    grouped[orderNumber].articles.push(article)
+    grouped[key].articles.push(article)
   })
   
-  // After grouping, fallback: if not set yet, assign position across ALL types
+  // Recalculer TOUJOURS les positions par groupe (1/2, 2/2), indépendamment des valeurs préexistantes
   Object.values(grouped).forEach(group => {
     const uniqueIds = Array.from(new Set(group.articles.map(a => a.line_item_id))).sort((a, b) => (a || 0) - (b || 0))
     const total = uniqueIds.length
     group.articles.forEach(art => {
-      if (!art.orderItemPosition || !art.orderItemsTotal) {
-        const pos = uniqueIds.indexOf(art.line_item_id)
-        art.orderItemPosition = (pos >= 0 ? pos + 1 : 1)
-        art.orderItemsTotal = total
-      }
+      const pos = uniqueIds.indexOf(art.line_item_id)
+      art.orderItemPosition = (pos >= 0 ? pos + 1 : 1)
+      art.orderItemsTotal = total
     })
   })
   

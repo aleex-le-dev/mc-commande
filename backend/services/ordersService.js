@@ -309,8 +309,28 @@ class OrdersService {
     const providedDate = payload?.order_date ? new Date(payload.order_date) : null
     const orderDate = providedDate && !isNaN(providedDate.getTime()) ? providedDate : now
 
-    const orderId = Number(payload?.order_id) || Math.floor(10_000_000 + Math.random() * 90_000_000)
-    const orderNumber = payload?.order_number || String(orderId)
+    // Gestion du numéro et de l'ID de commande (insensible à la casse)
+    const providedOrderNumber = typeof payload?.order_number === 'string' && payload.order_number.trim().length > 0
+      ? payload.order_number.trim()
+      : null
+    let orderId
+    let orderNumber
+    if (providedOrderNumber) {
+      // Rechercher une commande existante avec ce numéro (case-insensitive)
+      const escaped = providedOrderNumber.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const existing = await items.findOne({ order_number: { $regex: `^${escaped}$`, $options: 'i' } })
+      if (existing) {
+        orderId = existing.order_id
+        // Préserver le format existant (majuscules/minuscules) déjà stocké
+        orderNumber = existing.order_number
+      } else {
+        orderId = Number(payload?.order_id) || Math.floor(10_000_000 + Math.random() * 90_000_000)
+        orderNumber = providedOrderNumber || String(orderId)
+      }
+    } else {
+      orderId = Number(payload?.order_id) || Math.floor(10_000_000 + Math.random() * 90_000_000)
+      orderNumber = String(orderId)
+    }
     const status = payload?.status || 'a_faire'
     const customer = payload?.customer || 'Client inconnu'
     const customer_note = payload?.note || ''
@@ -328,6 +348,12 @@ class OrdersService {
     ]
 
     const totalAmount = itemsInput.reduce((s, x) => s + Number(x.price || 0) * Number(x.quantity || 1), 0)
+    // Calculer le prochain line_item_id si la commande existe déjà
+    let nextLineItemBase = null
+    const lastItem = await items.find({ order_id: orderId }).sort({ line_item_id: -1 }).limit(1).toArray()
+    if (lastItem && lastItem.length > 0) {
+      nextLineItemBase = Number(lastItem[0].line_item_id) || (orderId * 1000)
+    }
     const toInsert = itemsInput.map((it, idx) => ({
       order_id: orderId,
       order_number: orderNumber,
@@ -344,7 +370,9 @@ class OrdersService {
       total: totalAmount,
       created_at: now,
       updated_at: now,
-      line_item_id: Number(it.line_item_id) || (orderId * 1000 + idx + 1),
+      line_item_id: Number(it.line_item_id) || (
+        nextLineItemBase != null ? (nextLineItemBase + idx + 1) : (orderId * 1000 + idx + 1)
+      ),
       product_id: Number(it.product_id) || 0,
       product_name: String(it.product_name || 'Article'),
       quantity: Number(it.quantity) || 1,
@@ -363,6 +391,28 @@ class OrdersService {
     }))
 
     await items.insertMany(toInsert)
+
+    // Upsert dans production_status pour assurer le filtrage maille/couture correct
+    try {
+      const production = db.getCollection('production_status')
+      for (const it of toInsert) {
+        await production.updateOne(
+          { order_id: it.order_id, line_item_id: it.line_item_id },
+          { $set: {
+              order_id: it.order_id,
+              line_item_id: it.line_item_id,
+              status: 'a_faire',
+              production_type: it.production_status?.production_type || 'couture',
+              urgent: false,
+              updated_at: now
+            }
+          },
+          { upsert: true }
+        )
+      }
+    } catch (e) {
+      console.warn('Avertissement: échec upsert production_status:', e?.message)
+    }
 
     return orderId
   }
