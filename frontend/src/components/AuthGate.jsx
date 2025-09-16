@@ -186,24 +186,24 @@ const AuthGate = ({ children, onAuthenticated }) => {
             </div>
           ) : (
             <>
-              <form onSubmit={handleSubmit} className="transition-transform" style={{ transformOrigin: 'center' }}>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mot de passe"
-                  className="w-full border rounded-lg px-3 py-2 mb-3"
-                  style={{ borderColor: '#d1d5db', color: '#111827' }}
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
-                  style={{ backgroundColor: '#111827', color: '#ffffff' }}
-                >
-                  Entrer
-                </button>
-              </form>
+          <form onSubmit={handleSubmit} className="transition-transform" style={{ transformOrigin: 'center' }}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mot de passe"
+              className="w-full border rounded-lg px-3 py-2 mb-3"
+              style={{ borderColor: '#d1d5db', color: '#111827' }}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
+              style={{ backgroundColor: '#111827', color: '#ffffff' }}
+            >
+              Entrer
+            </button>
+          </form>
               <button
                 type="button"
                 onClick={async () => {
