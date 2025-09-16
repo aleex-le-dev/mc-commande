@@ -663,9 +663,9 @@ class OrdersService {
           const productName = item.name.toLowerCase()
           let productionType = 'couture' // Par défaut
           
-          // Mots-clés spécifiques pour identifier la maille (tricoté/tricotée/knitted/wool)
+          // Mots-clés spécifiques pour identifier la maille (tricoté/tricotée/knitted)
           const mailleKeywords = [
-            'tricoté', 'tricotée', 'knitted', 'wool'
+            'tricoté', 'tricotée', 'knitted'
           ]
           
           // Vérifier si le produit contient des mots-clés de maille
