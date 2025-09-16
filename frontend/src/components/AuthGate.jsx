@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import authService from '../services/authService'
 import { ApiService } from '../services/apiService'
 
@@ -15,7 +15,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
   const [resetNewPwd, setResetNewPwd] = useState('')
   const [showResetPwd, setShowResetPwd] = useState(false)
   const [loginError, setLoginError] = useState('')
-  const requiredPassword = useMemo(() => (import.meta.env.VITE_APP_PASSWORD || '').toString(), [])
+  // Suppression du fallback VITE_APP_PASSWORD: seule la vérification backend est valide
   // plus d'affichage de logs, uniquement console
 
   // Restaurer la session pour les rafraîchissements d'onglet (sessionStorage)
@@ -87,19 +87,6 @@ const AuthGate = ({ children, onAuthenticated }) => {
       if (typeof onAuthenticated === 'function') onAuthenticated()
       return
     } catch (err) {
-      // 2) Fallback: si un mot de passe build-time est défini, l'accepter
-      try {
-        if (requiredPassword && password === requiredPassword) {
-          sessionStorage.setItem(STORAGE_KEY, '1')
-          setIsAuthenticated(true)
-          if (typeof onAuthenticated === 'function') onAuthenticated()
-          try {
-            const link = document.querySelector('link[rel="icon"]')
-            if (link) link.href = '/mclogosite.png'
-          } catch {}
-          return
-        }
-      } catch {}
       // Échec: animer le formulaire
       try {
         setLoginError('Mot de passe incorrect')

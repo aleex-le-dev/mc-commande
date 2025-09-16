@@ -63,6 +63,15 @@ class DatabaseService {
       await this.createIndexIfNotExists('fournitures', { created_at: -1 })
       await this.createIndexIfNotExists('fournitures', { label: 1 })
 
+      // Collection des jetons de réinitialisation mot de passe
+      // Index TTL pour expiration automatique et index unique sur le champ token
+      try {
+        await this.db.collection('password_reset_tokens').createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 })
+      } catch (e) {
+        if (e.code !== 86 && e.codeName !== 'IndexKeySpecsConflict') throw e
+      }
+      await this.createIndexIfNotExists('password_reset_tokens', { token: 1 }, { unique: true })
+
       console.log('✅ Collections et index créés')
     } catch (error) {
       console.error('❌ Erreur création collections/index:', error)

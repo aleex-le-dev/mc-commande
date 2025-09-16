@@ -11,6 +11,7 @@ class AuthService {
 
   async setPassword(newPassword) {
     const settings = db.getCollection('app_settings')
+    const tokens = db.getCollection('password_reset_tokens')
     const saltRounds = 10
     const hash = await bcrypt.hash(String(newPassword), saltRounds)
     await settings.updateOne(
@@ -18,17 +19,18 @@ class AuthService {
       { $set: { key: 'auth_password', value: hash, updated_at: new Date() } },
       { upsert: true }
     )
+    // Invalider tous les tokens existants après changement de mot de passe
+    await tokens.deleteMany({})
     return true
   }
 
   async verify(password) {
     const stored = await this.getPasswordHash()
-    if (stored) {
-      return bcrypt.compare(String(password), stored)
+    if (!stored) {
+      // Aucun mot de passe défini en base => refuser l'accès
+      return false
     }
-    // Fallback: utiliser la variable d'environnement initiale si pas encore stockée
-    const init = process.env.INIT_APP_PASSWORD || ''
-    return String(password) === String(init)
+    return bcrypt.compare(String(password), stored)
   }
 
   generatePassword(length = 12) {
@@ -42,6 +44,8 @@ class AuthService {
 
   async createResetToken(ttlMinutes = 30) {
     const tokens = db.getCollection('password_reset_tokens')
+    // Un seul jeton actif: supprimer les anciens avant d'en créer un nouveau
+    await tokens.deleteMany({})
     const token = this.generatePassword(24)
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000)
     await tokens.insertOne({ token, expires_at: expiresAt, created_at: new Date() })
