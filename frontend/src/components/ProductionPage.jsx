@@ -87,7 +87,7 @@ const ProductionPage = ({ productionType, title }) => {
           selectedType={productionType}
           filteredArticlesCount={stats.total}
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
+          onSearchChange={(val) => { setSearchTerm(val); setCurrentPage(1) }}
           onGoToEnd={() => {
             try {
               const container = document.scrollingElement || document.documentElement
