@@ -1,15 +1,13 @@
 // Service d'authentification simple contre l'API backend
-// En dev: utilise automatiquement le backend local. En prod: Render ou VITE_API_URL si fourni.
-const API_BASE = (import.meta.env.DEV
-  ? 'http://localhost:3001'
-  : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+import { getBackendUrl } from '../config/api.js'
+const API_BASE = getBackendUrl()
 
 const authService = {
-  async setPassword(password) {
+  async setPassword(current, password) {
     const res = await fetch(`${API_BASE}/api/auth/set-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ current, password }),
       credentials: 'include'
     })
     const data = await res.json()
@@ -35,6 +33,16 @@ const authService = {
       credentials: 'include'
     })
     return res.ok
+  },
+
+  async forgot() {
+    const res = await fetch(`${API_BASE}/api/auth/forgot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.success !== true) throw new Error(data.error || 'Erreur génération mot de passe')
+    return true
   }
 }
 

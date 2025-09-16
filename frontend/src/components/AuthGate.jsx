@@ -10,6 +10,10 @@ const AuthGate = ({ children, onAuthenticated }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const STORAGE_KEY = 'mc-auth-ok-v2'
   const [password, setPassword] = useState('')
+  const [resetMode, setResetMode] = useState(false)
+  const [resetToken, setResetToken] = useState('')
+  const [resetNewPwd, setResetNewPwd] = useState('')
+  const [showResetPwd, setShowResetPwd] = useState(false)
   const requiredPassword = useMemo(() => (import.meta.env.VITE_APP_PASSWORD || '').toString(), [])
   // plus d'affichage de logs, uniquement console
 
@@ -38,40 +42,52 @@ const AuthGate = ({ children, onAuthenticated }) => {
     }
   }, [onAuthenticated])
 
-  // Préchargement désactivé en production
+  // Préchargement uniquement après authentification pour éviter les erreurs réseau sur l'écran mot de passe
   useEffect(() => {
+    if (!isAuthenticated) return
     if (import.meta.env.PROD) return
     const prefetchDone = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
     if (!prefetchDone) {
-      try { ApiService.prefetchAppData() } catch {}
+      try { ApiService.prefetchAppData(); sessionStorage.setItem('mc-prefetch-ok-v1', '1') } catch {}
     }
+  }, [isAuthenticated])
+
+  // Activer le formulaire de réinitialisation si /password?token=...
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      const isPasswordRoute = url.pathname.toLowerCase().includes('/password')
+      const token = url.searchParams.get('token')
+      if (isPasswordRoute && token) {
+        setResetMode(true)
+        setResetToken(token)
+      }
+    } catch {}
   }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      if (requiredPassword) {
-        // Mode mot de passe build-time (fallback)
-        if (password === requiredPassword) {
-          sessionStorage.setItem(STORAGE_KEY, '1')
-          setIsAuthenticated(true)
-          if (typeof onAuthenticated === 'function') onAuthenticated()
-          try {
-            // Nettoyer favicon pour laisser l'app principale le gérer ensuite
-            const link = document.querySelector('link[rel="icon"]')
-            if (link) link.href = '/vite.svg'
-          } catch {}
-          return
-        }
-        throw new Error('Mot de passe incorrect')
-      }
-      // Sinon, vérifier auprès du backend (mode gestion serveur)
+      // 1) Tenter d'abord la vérification backend (mot de passe dynamique)
       await authService.verify(password)
       sessionStorage.setItem(STORAGE_KEY, '1')
       setIsAuthenticated(true)
       if (typeof onAuthenticated === 'function') onAuthenticated()
       return
     } catch (err) {
+      // 2) Fallback: si un mot de passe build-time est défini, l'accepter
+      try {
+        if (requiredPassword && password === requiredPassword) {
+          sessionStorage.setItem(STORAGE_KEY, '1')
+          setIsAuthenticated(true)
+          if (typeof onAuthenticated === 'function') onAuthenticated()
+          try {
+            const link = document.querySelector('link[rel="icon"]')
+            if (link) link.href = '/vite.svg'
+          } catch {}
+          return
+        }
+      } catch {}
       // Échec: animer le formulaire
     }
     // Échec: ne pas révéler d'information, secouer légèrement le formulaire
@@ -93,26 +109,95 @@ const AuthGate = ({ children, onAuthenticated }) => {
           <div className="text-center mb-4">
             <img src="/mclogosite.png" alt="Maisoncléo" className="mx-auto h-6" />
           </div>
-          <h1 className="text-lg font-semibold text-center mb-2" style={{ color: '#111827' }}>Accès protégé et sécurisé</h1>
-          {/* Message de préchargement retiré : on garde uniquement l'exécution en arrière-plan et le log console */}
-          <form onSubmit={handleSubmit} className="transition-transform" style={{ transformOrigin: 'center' }}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mot de passe"
-              className="w-full border rounded-lg px-3 py-2 mb-3"
-              style={{ borderColor: '#d1d5db', color: '#111827' }}
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
-              style={{ backgroundColor: '#111827', color: '#ffffff' }}
-            >
-              Entrer
-            </button>
-          </form>
+          <h1 className="text-lg font-semibold text-center mb-2" style={{ color: '#111827' }}>{resetMode ? 'Définir un nouveau mot de passe' : 'Accès protégé et sécurisé'}</h1>
+          {resetMode ? (
+            <div className="transition-transform" style={{ transformOrigin: 'center' }}>
+              <div className="relative mb-3">
+                <input
+                  type={showResetPwd ? 'text' : 'password'}
+                  value={resetNewPwd}
+                  onChange={(e) => setResetNewPwd(e.target.value)}
+                  placeholder="Nouveau mot de passe (≥ 6 caractères)"
+                  className="w-full border rounded-lg px-3 py-2 pr-10"
+                  style={{ borderColor: '#d1d5db', color: '#111827' }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPwd(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                  aria-label={showResetPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  title={showResetPwd ? 'Masquer' : 'Afficher'}
+                >
+                  {showResetPwd ? '🙈' : '👁️'}
+                </button>
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
+                style={{ backgroundColor: '#111827', color: '#ffffff' }}
+                onClick={async () => {
+                  try {
+                    if (!resetNewPwd || resetNewPwd.length < 1) { alert('Mot de passe requis'); return }
+                    const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+                    const res = await fetch(`${base}/api/auth/reset`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ token: resetToken, password: resetNewPwd })
+                    })
+                    const data = await res.json()
+                    if (!res.ok || data.success !== true) throw new Error(data.error || 'Erreur reset')
+                    alert('Mot de passe défini. Connecte-toi avec le nouveau mot de passe.')
+                    try { window.history.replaceState({}, '', '/') } catch {}
+                    setResetMode(false)
+                    setPassword('')
+                    setResetToken('')
+                    setResetNewPwd('')
+                  } catch (e) {
+                    alert('Échec de définition du mot de passe.')
+                  }
+                }}
+              >
+                Définir le mot de passe
+              </button>
+            </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="transition-transform" style={{ transformOrigin: 'center' }}>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mot de passe"
+                  className="w-full border rounded-lg px-3 py-2 mb-3"
+                  style={{ borderColor: '#d1d5db', color: '#111827' }}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
+                  style={{ backgroundColor: '#111827', color: '#ffffff' }}
+                >
+                  Entrer
+                </button>
+              </form>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await authService.forgot()
+                    alert('Un nouveau mot de passe a été envoyé sur le mail c********@maisoncleo.com')
+                  } catch (e) {
+                    alert('Erreur envoi du mot de passe. Contactez le support.')
+                  }
+                }}
+                className="w-full text-center mt-3 underline cursor-pointer"
+                style={{ color: '#6b7280' }}
+              >
+                Mot de passe oublié ?
+              </button>
+            </>
+          )}
           <style>{`
             .shake { animation: mc-shake 0.25s ease-in-out 2; }
             @keyframes mc-shake {

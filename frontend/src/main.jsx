@@ -20,24 +20,7 @@ const queryClient = new QueryClient({
 })
 
 const Root = () => {
-  // Démarrer le préchargement (sans synchronisation) en arrière-plan, avant l'authentification
-  useEffect(() => {
-    if (import.meta.env.PROD) return
-    let isInitialized = false
-    
-    const initializeServices = async () => {
-      if (isInitialized) return
-      isInitialized = true
-      
-      const already = sessionStorage.getItem('mc-prefetch-ok-v1') === '1'
-      if (!already) {
-        await ApiService.prefetchAppData()
-      }
-      
-    }
-    
-    initializeServices()
-  }, [])
+  // Préchargement déplacé après authentification (voir AuthGate)
 
   // Activer le chargement des images après le chargement de la page
   useEffect(() => {

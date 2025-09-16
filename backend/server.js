@@ -61,6 +61,9 @@ app.use(corsMiddleware)
 
 // Routes centralisées
 app.use('/api', apiRoutes)
+// Route d'auth
+const authRoutes = require('./routes/auth')
+app.use('/api/auth', authRoutes)
 
 // Routes de debug (temporaires)
 const debugRoutes = require('./routes/debug')
