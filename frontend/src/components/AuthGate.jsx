@@ -55,16 +55,23 @@ const AuthGate = ({ children, onAuthenticated }) => {
   // Activer le formulaire de réinitialisation si /password?token=... (support hash routing)
   useEffect(() => {
     try {
-      const url = new URL(window.location.href)
-      const pathname = (url.pathname || '').toLowerCase()
-      const hash = (window.location.hash || '').toLowerCase()
-      const isPasswordRoute = pathname.includes('/password') || hash.includes('/password')
-      const tokenFromSearch = url.searchParams.get('token')
-      const tokenFromHash = new URLSearchParams((window.location.hash.split('?')[1] || '')).get('token')
-      const token = tokenFromSearch || tokenFromHash
-      if (isPasswordRoute && token) {
+      const href = window.location.href
+      const lower = href.toLowerCase()
+      const isPasswordRoute = lower.includes('/password')
+      if (isPasswordRoute) {
         setResetMode(true)
-        setResetToken(token)
+        // Extraire le token depuis search OU hash
+        let token = ''
+        try {
+          const url = new URL(href)
+          token = url.searchParams.get('token') || ''
+        } catch {}
+        if (!token) {
+          const hashPart = (window.location.hash || '')
+          const m = hashPart.match(/[?&]token=([^&#]+)/i)
+          if (m && m[1]) token = decodeURIComponent(m[1])
+        }
+        if (token) setResetToken(token)
       }
     } catch {}
   }, [])
@@ -136,6 +143,17 @@ const AuthGate = ({ children, onAuthenticated }) => {
                   {showResetPwd ? '🙈' : '👁️'}
                 </button>
               </div>
+              {!resetToken && (
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Coller le token (si absent de l'URL)"
+                    className="w-full border rounded-lg px-3 py-2"
+                    style={{ borderColor: '#d1d5db', color: '#111827' }}
+                    onChange={(e) => setResetToken(e.target.value)}
+                  />
+                </div>
+              )}
               <button
                 type="button"
                 className="w-full rounded-lg px-3 py-2 font-medium cursor-pointer"
@@ -143,6 +161,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
                 onClick={async () => {
                   try {
                     if (!resetNewPwd || resetNewPwd.length < 1) { alert('Mot de passe requis'); return }
+                    if (!resetToken) { alert('Lien invalide: token manquant'); return }
                     const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
                     const res = await fetch(`${base}/api/auth/reset`, {
                       method: 'POST',
