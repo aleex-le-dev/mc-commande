@@ -241,6 +241,8 @@ class OrdersService {
     // Urgent au niveau commande: sommer les urgentOrders
     stats.urgent = orderStatusCountsArr.reduce((sum, s) => sum + (s.urgentOrders || 0), 0)
 
+    
+
     return {
       orders: data,
       stats,
@@ -297,6 +299,8 @@ class OrdersService {
         }
       }
     ]).toArray()
+
+    
 
     return result[0] || null
   }

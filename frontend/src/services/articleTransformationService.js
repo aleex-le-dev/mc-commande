@@ -31,6 +31,21 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
   const orderLevelMetaNote = extractNoteFromMeta(order?.meta_data)
   const itemLevelMetaNote = extractNoteFromMeta(item?.meta_data)
   
+  // Normalisation transporteur/méthode de livraison: si "Livraison gratuite",
+  // utiliser UPS pour France/FR, sinon DHL
+  const initialShippingMethod = order.shipping_title || order.shipping_method_title || order.shipping_method || 'Livraison gratuite'
+  const initialCarrier = order.shipping_carrier || null
+  const customerCountryRaw = order.customer_country || null
+  const customerCountry = typeof customerCountryRaw === 'string' ? customerCountryRaw.trim().toUpperCase() : null
+  let normalizedMethod = initialShippingMethod
+  let normalizedCarrier = initialCarrier
+  const isFreeShipping = typeof initialShippingMethod === 'string' && initialShippingMethod.toLowerCase().includes('livraison gratuite')
+  if (isFreeShipping) {
+    const isFrance = customerCountry === 'FR' || (typeof order.customer_country === 'string' && order.customer_country.trim().toLowerCase() === 'france')
+    normalizedMethod = isFrance ? 'UPS' : 'DHL'
+    normalizedCarrier = isFrance ? 'UPS' : 'DHL'
+  }
+
   return {
     ...item,
     article_id: articleId,
@@ -52,8 +67,8 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
       orderLevelMetaNote ||
       itemLevelMetaNote
     ),
-    shippingMethod: order.shipping_title || order.shipping_method_title || order.shipping_method || 'Livraison gratuite',
-    shippingCarrier: order.shipping_carrier || null,
+    shippingMethod: normalizedMethod,
+    shippingCarrier: normalizedCarrier,
     customerCountry: order.customer_country || null,
     status: item.production_status?.status || item.status || 'a_faire',
     productionType: item.production_status?.production_type || item.production_type || 'couture',

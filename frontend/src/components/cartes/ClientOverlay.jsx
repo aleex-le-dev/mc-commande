@@ -125,19 +125,28 @@ const ClientOverlay = ({
               {(() => {
                 const method = article.shippingMethod
                 const carrier = article.shippingCarrier
-                // Priorité: si un transporteur est défini, l'afficher tel quel
-                if (carrier && String(carrier).trim().length > 0) {
-                  return highlightText(carrier, searchTerm)
+                const hasCarrier = typeof carrier === 'string' && carrier.trim().length > 0
+                const hasMethod = typeof method === 'string' && method.trim().length > 0
+                // Si transporteur UPS, afficher aussi la méthode pour préciser (Standard / Point Relais)
+                if (hasCarrier && carrier.trim().toUpperCase() === 'UPS') {
+                  if (hasMethod) {
+                    return highlightText(`${carrier.trim()} - ${method.trim()}`, searchTerm)
+                  }
+                  return highlightText(carrier.trim(), searchTerm)
+                }
+                // Autres transporteurs: priorité transporteur
+                if (hasCarrier) {
+                  return highlightText(carrier.trim(), searchTerm)
                 }
                 // Sinon, afficher la méthode avec traitement du cas "gratuit"
-                if (method && String(method).trim().length > 0) {
-                  const title = String(method).toLowerCase()
+                if (hasMethod) {
+                  const title = method.trim().toLowerCase()
                   const isFree = title.includes('gratuit') || title.includes('free')
                   if (isFree) {
                     const fallbackCarrier = ((article.customerCountry || '').toUpperCase() === 'FR' ? 'UPS' : 'DHL')
                     return highlightText(`Livraison gratuite (${fallbackCarrier})`, searchTerm)
                   }
-                  return highlightText(method, searchTerm)
+                  return highlightText(method.trim(), searchTerm)
                 }
                 return highlightText('Non renseigné', searchTerm)
               })()}
