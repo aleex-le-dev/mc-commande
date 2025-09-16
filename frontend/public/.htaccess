@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
+Options -MultiViews
 
 # Force HTTPS (gère aussi les reverse proxies)
 RewriteCond %{HTTP:X-Forwarded-Proto} !https [OR]
@@ -16,7 +17,9 @@ RewriteCond %{REQUEST_URI} ^/(assets|favicon\.ico|robots\.txt|logo-mc-blanc\.png
 RewriteCond %{REQUEST_URI} \.(css|js|png|jpe?g|gif|webp|svg|ico|txt|map)$ [NC]
 RewriteRule - [L]
 
-# Fallback SPA vers index.html
+# Fallback SPA vers index.html (uniquement si ce n'est pas un fichier/dossier)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
 </IfModule>
 
@@ -50,5 +53,10 @@ Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json image/svg+xml
 </IfModule>
+
+# Types MIME explicites pour JS/CSS
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType text/css .css
 
 
