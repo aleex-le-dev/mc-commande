@@ -309,13 +309,17 @@ const ArticleCard = forwardRef(({
             window.dispatchEvent(new Event('mc-refresh-data'))
           }, 500)
           
+          // Déclencher des confettis quand terminé
+          if (newStatus === 'termine') {
+            try {
+              const rect = document.body.getBoundingClientRect()
+              setConfettiPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+              setShowConfetti(true)
+            } catch {}
+          }
+          
           // Cleanup du timeout si le composant est démonté
           return () => clearTimeout(refreshTimeoutId)
-          if (newStatus === 'termine') {
-            const rect = document.body.getBoundingClientRect()
-            setConfettiPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
-            setShowConfetti(true)
-          }
         }
       } catch (e) {
         console.error('Erreur changement statut:', e)
