@@ -55,6 +55,48 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 
+// Middleware de logging des requêtes HTTP pour diagnostic de routage/mime
+// - Journalise méthode, chemin, host, accept, user-agent, statut et content-type de la réponse
+// - Alerte si des requêtes d'assets `/assets/*` atteignent le backend (signe d'un mauvais routage)
+app.use((req, res, next) => {
+  const requestStartAtMs = Date.now()
+  const originalUrl = req.originalUrl || req.url
+  const hostHeader = req.headers && req.headers.host ? req.headers.host : 'unknown-host'
+  const acceptHeader = req.headers && req.headers.accept ? req.headers.accept : 'unknown-accept'
+  const userAgentHeader = req.headers && req.headers['user-agent'] ? req.headers['user-agent'] : 'unknown-ua'
+
+  const isAssetLikeRequest = typeof originalUrl === 'string' && (
+    originalUrl.startsWith('/assets/') ||
+    originalUrl.endsWith('.js') ||
+    originalUrl.endsWith('.css') ||
+    originalUrl.endsWith('.map') ||
+    originalUrl.endsWith('.png') ||
+    originalUrl.endsWith('.jpg') ||
+    originalUrl.endsWith('.jpeg') ||
+    originalUrl.endsWith('.gif') ||
+    originalUrl.endsWith('.webp') ||
+    originalUrl.endsWith('.svg')
+  )
+
+  res.on('finish', () => {
+    const responseTimeMs = Date.now() - requestStartAtMs
+    const statusCode = res.statusCode
+    const responseContentType = res.getHeader('content-type') || 'unknown-ctype'
+    const referrerHeader = req.headers && (req.headers.referer || req.headers.referrer) ? (req.headers.referer || req.headers.referrer) : 'no-referrer'
+
+    const baseLog = `HTTP ${req.method} ${originalUrl} → ${statusCode} (${responseTimeMs}ms) host=${hostHeader} accept=${acceptHeader} ua=${userAgentHeader}`
+    const ctypeLog = `resp.content-type=${responseContentType} referrer=${referrerHeader}`
+
+    if (isAssetLikeRequest) {
+      console.warn(`🔎 ASSET-REQUEST backend: ${baseLog} ${ctypeLog}`)
+    } else {
+      console.log(`📨 Request: ${baseLog} ${ctypeLog}`)
+    }
+  })
+
+  next()
+})
+
 // CORS
 app.use(cors)
 app.use(corsMiddleware)
