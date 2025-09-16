@@ -14,6 +14,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
   const [resetToken, setResetToken] = useState('')
   const [resetNewPwd, setResetNewPwd] = useState('')
   const [showResetPwd, setShowResetPwd] = useState(false)
+  const [loginError, setLoginError] = useState('')
   const requiredPassword = useMemo(() => (import.meta.env.VITE_APP_PASSWORD || '').toString(), [])
   // plus d'affichage de logs, uniquement console
 
@@ -100,6 +101,10 @@ const AuthGate = ({ children, onAuthenticated }) => {
         }
       } catch {}
       // Échec: animer le formulaire
+      try {
+        setLoginError('Mot de passe incorrect')
+        setTimeout(() => setLoginError(''), 2500)
+      } catch {}
     }
     // Échec: ne pas révéler d'information, secouer légèrement le formulaire
     const form = e?.currentTarget
@@ -162,12 +167,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
                   try {
                     if (!resetNewPwd || resetNewPwd.length < 1) { alert('Mot de passe requis'); return }
                     if (!resetToken) { alert('Lien invalide: token manquant'); return }
-                    const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-                    const res = await fetch(`${base}/api/auth/reset`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ token: resetToken, password: resetNewPwd })
-                    })
+                    const res = await ApiService.http.post('/auth/reset', { token: resetToken, password: resetNewPwd })
                     const data = await res.json()
                     if (!res.ok || data.success !== true) throw new Error(data.error || 'Erreur reset')
                     alert('Mot de passe défini. Connecte-toi avec le nouveau mot de passe.')
@@ -231,7 +231,17 @@ const AuthGate = ({ children, onAuthenticated }) => {
               100% { transform: translateX(0); }
             }
           `}</style>
+          {!resetMode && loginError && (
+            <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+              {loginError}
+            </div>
+          )}
         </div>
+        {!resetMode && loginError && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] rounded-lg px-4 py-2 text-sm shadow-lg" style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+            {loginError}
+          </div>
+        )}
       </div>
     )
   }
