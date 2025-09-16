@@ -307,7 +307,7 @@ class OrdersService {
     const items = db.getCollection('order_items')
     const now = new Date()
     const providedDate = payload?.order_date ? new Date(payload.order_date) : null
-    const orderDate = providedDate && !isNaN(providedDate.getTime()) ? providedDate : now
+    const orderDate = providedDate && !isNaN(providedDate.getTime()) ? providedDate : null
 
     // Gestion du numéro et de l'ID de commande (insensible à la casse)
     const providedOrderNumber = typeof payload?.order_number === 'string' && payload.order_number.trim().length > 0
@@ -334,10 +334,11 @@ class OrdersService {
     const status = payload?.status || 'a_faire'
     const customer = payload?.customer || 'Client inconnu'
     const customer_note = payload?.note || ''
-    const customer_address_input = typeof payload?.customer_address === 'string' && payload.customer_address.trim().length > 0 ? payload.customer_address.trim() : null
-    const customer_email_input = typeof payload?.customer_email === 'string' && payload.customer_email.trim().length > 0 ? payload.customer_email.trim() : null
-    const customer_phone_input = typeof payload?.customer_phone === 'string' && payload.customer_phone.trim().length > 0 ? payload.customer_phone.trim() : null
-    const customer_country_input = typeof payload?.customer_country === 'string' && payload.customer_country.trim().length > 0 ? payload.customer_country.trim().toUpperCase() : null
+    // Normaliser et préserver les infos client fournies
+    const customer_address_input = (typeof payload?.customer_address === 'string') ? (payload.customer_address.trim() || null) : null
+    const customer_email_input = (typeof payload?.customer_email === 'string') ? (payload.customer_email.trim() || null) : null
+    const customer_phone_input = (typeof payload?.customer_phone === 'string') ? (payload.customer_phone.trim() || null) : null
+    const customer_country_input = (typeof payload?.customer_country === 'string') ? ((payload.customer_country.trim().toUpperCase()) || null) : null
     // Méthode non forcée; accepter le transporteur fourni
     const shipping_method_input = null
     const shipping_carrier_input = typeof payload?.shipping_carrier === 'string' && payload.shipping_carrier.trim().length > 0
@@ -357,7 +358,7 @@ class OrdersService {
     const toInsert = itemsInput.map((it, idx) => ({
       order_id: orderId,
       order_number: orderNumber,
-      order_date: orderDate,
+      order_date: orderDate || now,
       status,
       customer,
       customer_email: customer_email_input,

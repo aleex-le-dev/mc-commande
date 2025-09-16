@@ -53,7 +53,8 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
     const e = {}
     if (!customer || customer.trim().length === 0) e.customer = 'Nom client obligatoire'
     if (!productName || productName.trim().length === 0) e.productName = 'Nom produit obligatoire'
-    if (!orderIdentifier || !/^[A-Za-z0-9]+$/.test(orderIdentifier.trim())) e.orderIdentifier = 'Identifiant alphanumérique requis'
+    if (!dateStr || dateStr.trim().length === 0) e.date = 'Date obligatoire'
+    if (!orderIdentifier || orderIdentifier.trim().length === 0) e.orderIdentifier = 'Numéro de commande requis'
     if (!['maille', 'couture'].includes(String(productionType))) e.productionType = 'Choisir maille ou couture'
     if (isNaN(Number(qty)) || Number(qty) < 1) e.qty = 'Quantité invalide'
     if (isNaN(Number(price)) || Number(price) < 0) e.price = 'Prix invalide'
@@ -61,7 +62,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
     if (customerPhone && customerPhone.replace(/\D/g, '').length < 6) e.customerPhone = 'Téléphone invalide'
     if (!customerCountry || customerCountry.trim().length < 2) e.customerCountry = 'Pays invalide'
     return e
-  }, [customer, productName, orderIdentifier, productionType, qty, price, customerEmail, customerPhone, customerCountry])
+  }, [customer, productName, dateStr, orderIdentifier, productionType, qty, price, customerEmail, customerPhone, customerCountry])
 
   const isValid = Object.keys(validation).length === 0
 
@@ -120,7 +121,7 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
-      <div className="relative w-full max-w-lg mx-4 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}>
+      <div className="relative w-full max-w-lg mx-4 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', maxHeight: '90vh', overflowY: 'auto' }}>
         <form onSubmit={handleSubmit} className="p-4">
           <h2 className="text-lg font-semibold mb-3">Créer une commande</h2>
 
@@ -141,26 +142,26 @@ export default function CreateOrderModal({ visible, onClose, onCreated }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm mb-1">Date de commande</label>
+                <label className="block text-sm mb-1">Date de commande *</label>
                 <input
                   type="date"
                   className="w-full px-3 py-2 rounded border"
-                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                  style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.date ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
                   value={dateStr}
                   onChange={(e) => setDateStr(e.target.value)}
                 />
+                {validation.date && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.date}</p>}
               </div>
               <div>
-                <label className="block text-sm mb-1">Numéro de commande (alphanumérique) *</label>
+                <label className="block text-sm mb-1">Numéro de commande *</label>
                 <input
                   type="text"
                   inputMode="text"
-                  pattern="[A-Za-z0-9]+"
                   className="w-full px-3 py-2 rounded border"
                   style={{ backgroundColor: 'var(--bg-primary)', borderColor: validation.orderIdentifier ? '#ef4444' : 'var(--border-primary)', color: 'var(--text-primary)' }}
                   value={orderIdentifier}
                   onChange={(e) => setOrderIdentifier(e.target.value)}
-                  placeholder="Ex: MC123A ou 22605443"
+                  placeholder="Ex: commande paypal ou 546466"
                 />
                 {validation.orderIdentifier && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{validation.orderIdentifier}</p>}
               </div>

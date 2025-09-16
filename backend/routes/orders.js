@@ -52,11 +52,11 @@ router.post('/', async (req, res) => {
     if (!Array.isArray(body.items) || body.items.length === 0 || typeof body.items[0]?.product_name !== 'string' || body.items[0].product_name.trim().length === 0) {
       return res.status(400).json({ error: 'Le nom du produit est obligatoire' })
     }
-    // Validation: identifiant de commande alphanumérique si fourni
+    // Validation minimale du numéro de commande: non vide uniquement
     if (body.order_number !== undefined && body.order_number !== null) {
       const str = String(body.order_number).trim()
-      if (!/^[A-Za-z0-9]+$/.test(str)) {
-        return res.status(400).json({ error: "Identifiant de commande invalide: uniquement lettres et chiffres autorisés" })
+      if (str.length === 0) {
+        return res.status(400).json({ error: 'Numéro de commande requis' })
       }
       body.order_number = str
     }

@@ -40,9 +40,9 @@ export const transformItemToArticle = (item, order, assignment = null, tricoteus
     orderId: order.order_id,
     orderDate: order.order_date,
     customer: order.customer_name || order.customer || null,
-    customerEmail: order.customer_email || null,
-    customerPhone: order.customer_phone || null,
-    customerAddress: order.customer_address || null,
+    customerEmail: (typeof item?.customer_email === 'string' && item.customer_email) || order.customer_email || null,
+    customerPhone: (typeof item?.customer_phone === 'string' && item.customer_phone) || order.customer_phone || null,
+    customerAddress: (typeof item?.customer_address === 'string' && item.customer_address) || order.customer_address || null,
     // Note client: prioriser les notes d'articles depuis production_status
     customerNote: (
       (typeof item?.production_status?.notes === 'string' && item.production_status.notes.trim().length > 0 ? item.production_status.notes : null) ||
