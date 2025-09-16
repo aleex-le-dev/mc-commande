@@ -1,7 +1,5 @@
-# Force refresh for all assets
+# Assets directs (pas de fallback SPA)
 /assets/* /assets/:splat 200
-/*.js /:splat 200
-/*.css /:splat 200
 
-# SPA fallback
+# Fallback SPA pour le reste
 /* /index.html 200
