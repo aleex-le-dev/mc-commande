@@ -95,7 +95,7 @@ const AuthGate = ({ children, onAuthenticated }) => {
           if (typeof onAuthenticated === 'function') onAuthenticated()
           try {
             const link = document.querySelector('link[rel="icon"]')
-            if (link) link.href = '/vite.svg'
+            if (link) link.href = '/mclogosite.png'
           } catch {}
           return
         }

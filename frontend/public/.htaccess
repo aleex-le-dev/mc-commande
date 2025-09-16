@@ -12,7 +12,7 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule - [L]
 
 # Ne pas réécrire pour les assets et fichiers statiques
-RewriteCond %{REQUEST_URI} ^/(assets|favicon\.ico|robots\.txt|vite\.svg|logo-mc-blanc\.png|mclogosite\.png) [NC,OR]
+RewriteCond %{REQUEST_URI} ^/(assets|favicon\.ico|robots\.txt|logo-mc-blanc\.png|mclogosite\.png) [NC,OR]
 RewriteCond %{REQUEST_URI} \.(css|js|png|jpe?g|gif|webp|svg|ico|txt|map)$ [NC]
 RewriteRule - [L]
 
