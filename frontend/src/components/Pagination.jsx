@@ -13,6 +13,13 @@ const Pagination = ({
   showItemsPerPage = true,
   onItemsPerPageChange
 }) => {
+  // Déclenche le changement de page puis remonte en haut de la page
+  const handlePageChange = (page) => {
+    onPageChange(page)
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
   // Générer les numéros de page à afficher
   const getPageNumbers = () => {
     const pages = []
@@ -77,7 +84,7 @@ const Pagination = ({
       <div className="flex items-center gap-1 flex-wrap justify-center">
         {/* Bouton première page */}
         <button
-          onClick={() => onPageChange(1)}
+          onClick={() => handlePageChange(1)}
           disabled={currentPage === 1}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Première page"
@@ -87,7 +94,7 @@ const Pagination = ({
 
         {/* Bouton précédent */}
         <button
-          onClick={() => onPageChange(currentPage - 1)}
+          onClick={() => handlePageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Page précédente"
@@ -101,7 +108,7 @@ const Pagination = ({
           {pageNumbers.map((page, index) => (
             <button
               key={index}
-              onClick={() => typeof page === 'number' && onPageChange(page)}
+              onClick={() => typeof page === 'number' && handlePageChange(page)}
               disabled={page === '...'}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 page === currentPage
@@ -118,7 +125,7 @@ const Pagination = ({
 
         {/* Bouton suivant */}
         <button
-          onClick={() => onPageChange(currentPage + 1)}
+          onClick={() => handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Page suivante"
@@ -129,7 +136,7 @@ const Pagination = ({
 
         {/* Bouton dernière page */}
         <button
-          onClick={() => onPageChange(totalPages)}
+          onClick={() => handlePageChange(totalPages)}
           disabled={currentPage === totalPages}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           title="Dernière page"
