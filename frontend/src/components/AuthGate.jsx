@@ -52,12 +52,16 @@ const AuthGate = ({ children, onAuthenticated }) => {
     }
   }, [isAuthenticated])
 
-  // Activer le formulaire de réinitialisation si /password?token=...
+  // Activer le formulaire de réinitialisation si /password?token=... (support hash routing)
   useEffect(() => {
     try {
       const url = new URL(window.location.href)
-      const isPasswordRoute = url.pathname.toLowerCase().includes('/password')
-      const token = url.searchParams.get('token')
+      const pathname = (url.pathname || '').toLowerCase()
+      const hash = (window.location.hash || '').toLowerCase()
+      const isPasswordRoute = pathname.includes('/password') || hash.includes('/password')
+      const tokenFromSearch = url.searchParams.get('token')
+      const tokenFromHash = new URLSearchParams((window.location.hash.split('?')[1] || '')).get('token')
+      const token = tokenFromSearch || tokenFromHash
       if (isPasswordRoute && token) {
         setResetMode(true)
         setResetToken(token)
