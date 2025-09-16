@@ -42,7 +42,7 @@ router.post('/forgot', async (req, res) => {
 
     const to = 'contact@maisoncleo.com'
     const base = process.env.FRONTEND_ORIGIN || process.env.VITE_FRONTEND_ORIGIN || 'http://localhost:5173'
-    const resetUrl = `${base}/password?token=${encodeURIComponent(token)}`
+    const resetUrl = `${base}#/password?token=${encodeURIComponent(token)}`
 
     // 1) Essayer RESEND (gratuit, simple, compatible)
     if (process.env.RESEND_API_KEY) {
