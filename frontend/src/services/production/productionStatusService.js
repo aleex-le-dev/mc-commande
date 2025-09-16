@@ -30,10 +30,12 @@ export const ProductionStatusService = {
    */
   async updateArticleStatus(orderId, lineItemId, status, notes = null) {
     try {
-      const response = await HttpClientService.put(`/production/status/${orderId}/${lineItemId}`, {
-        status,
-        notes
-      })
+      // Ne pas inclure "notes" si null/undefined pour éviter d'écraser une note existante
+      const payload = { status }
+      if (typeof notes === 'string') {
+        payload.notes = notes
+      }
+      const response = await HttpClientService.put(`/production/status/${orderId}/${lineItemId}`, payload)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

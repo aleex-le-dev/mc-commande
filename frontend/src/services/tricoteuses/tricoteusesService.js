@@ -14,10 +14,14 @@ export const TricoteusesService = {
    */
   async getTricoteuses() {
     try {
-      // Vérifier le cache d'abord
+      // Vérifier le cache d'abord (ne pas renvoyer un cache vide)
       const cached = HttpCacheService.get('tricoteuses')
-      if (cached) {
+      if (Array.isArray(cached) && cached.length > 0) {
         return cached
+      }
+      // Si le cache existe mais est vide, on l'invalide pour forcer un refetch
+      if (Array.isArray(cached) && cached.length === 0) {
+        HttpCacheService.delete('tricoteuses')
       }
 
       const response = await HttpClientService.get('/tricoteuses')
@@ -26,10 +30,25 @@ export const TricoteusesService = {
       }
       
       const data = await response.json()
-      const tricoteuses = data.data || data.tricoteuses || []
+      const raw = data.data || data.tricoteuses || []
+      // Normaliser le schéma (photoUrl peut être photo_url ou photo)
+      const tricoteuses = Array.isArray(raw)
+        ? raw.map(t => ({
+            ...t,
+            photoUrl: t.photoUrl || t.photo_url || t.photo || ''
+          }))
+        : []
       
-      // Mettre en cache
-      HttpCacheService.set('tricoteuses', tricoteuses)
+      // Mettre en cache seulement si non vide
+      if (tricoteuses.length > 0) {
+        HttpCacheService.set('tricoteuses', tricoteuses)
+      } else {
+        // S'assurer que le prochain appel retentera depuis le réseau
+        HttpCacheService.delete('tricoteuses')
+      }
+      
+      // Notifier l'application d'une mise à jour des tricoteuses
+      try { window.dispatchEvent(new Event('mc-tricoteuses-updated')) } catch {}
       
       return tricoteuses
     } catch (error) {
