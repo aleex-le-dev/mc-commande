@@ -5,11 +5,13 @@ import { useTricoteuses } from '../hooks/useTricoteuses'
 import { useQueryClient } from '@tanstack/react-query'
 import ArticleCard from './cartes/ArticleCard'
 import LoadingSpinner from './LoadingSpinner'
+import createDeleteHandlers from '../utils/deleteHandlers'
 
 const TerminePage = () => {
   const queryClient = useQueryClient()
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' })
   const [isDeleting, setIsDeleting] = useState(false)
+  const { handleDeleteOrder } = createDeleteHandlers(queryClient)
   
   const { articles, groupedArticles, isLoading, error } = useArticles({
     page: 1,
@@ -86,37 +88,17 @@ const TerminePage = () => {
     setIsDeleting(true)
     
     try {
-      const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
-      const response = await fetch(`${base}/api/orders/${orderId}/archive`, {
-        method: 'POST'
+      await handleDeleteOrder(orderId)
+
+      // Afficher le toast de succès
+      setToast({ 
+        visible: true, 
+        message: `Commande #${orderNumber} supprimée avec succès ✅`, 
+        type: 'success' 
       })
       
-      if (response.ok) {
-        // Mise à jour optimiste du cache
-        queryClient.setQueryData(['unified-orders'], (oldData) => {
-          if (!oldData) return oldData
-          return oldData.filter(order => String(order.order_id) !== String(orderId))
-        })
-        
-        // Invalider les caches pour forcer le rechargement
-        queryClient.invalidateQueries(['unified-orders'])
-        queryClient.invalidateQueries(['db-orders'])
-        
-        // Forcer le re-render en déclenchant un événement global
-        window.dispatchEvent(new Event('mc-data-updated'))
-        
-        // Afficher le toast de succès
-        setToast({ 
-          visible: true, 
-          message: `Commande #${orderNumber} archivée avec succès ✅`, 
-          type: 'success' 
-        })
-        
-        // Masquer le toast après 5 secondes
-        setTimeout(() => setToast({ visible: false, message: '', type: 'success' }), 5000)
-      } else {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`)
-      }
+      // Masquer le toast après 5 secondes
+      setTimeout(() => setToast({ visible: false, message: '', type: 'success' }), 5000)
     } catch (error) {
       console.error('Erreur lors de la suppression de la commande:', error)
       setToast({ 
