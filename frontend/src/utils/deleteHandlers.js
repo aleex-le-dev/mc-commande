@@ -4,7 +4,7 @@ export function createDeleteHandlers(queryClient) {
 
   const handleDeleteArticle = async (orderId, lineItemId) => {
     const response = await fetch(`${base}/api/orders/${orderId}/items/${lineItemId}`, { method: 'DELETE' })
-    if (!response.ok) throw new Error('DELETE article failed')
+    if (!response.ok && response.status !== 404) throw new Error('DELETE article failed')
     // Optimistic cache prune
     const targetOrderId = String(orderId)
     const targetLineId = String(lineItemId)
@@ -31,7 +31,7 @@ export function createDeleteHandlers(queryClient) {
 
   const handleDeleteOrder = async (orderId) => {
     const response = await fetch(`${base}/api/orders/${orderId}`, { method: 'DELETE' })
-    if (!response.ok) throw new Error('DELETE order failed')
+    if (!response.ok && response.status !== 404) throw new Error('DELETE order failed')
     // Optimistic cache prune
     const targetOrderId = String(orderId)
     queryClient.setQueryData(['unified-orders'], (oldData) => {
