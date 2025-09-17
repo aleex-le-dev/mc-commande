@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import OrderHeader from './cartes/OrderHeader'
-import SimpleFlexGrid from './cartes/SimpleFlexGrid'
 import LoadingSpinner from './LoadingSpinner'
-import Pagination from './Pagination'
 import { useArticles } from '../hooks/useArticles'
+import InfiniteScrollGrid from './cartes/InfiniteScrollGrid'
 
 /**
  * Page générique pour Maille/Couture
@@ -12,20 +11,17 @@ const ProductionPage = ({ productionType, title }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  // La pagination est remplacée par un scroll infini; ces états ne sont plus nécessaires
   
   // Utiliser le hook unifié pour les articles
   const { 
     articles,
     filteredArticles,
     stats,
-    pagination,
     isLoading,
     error
   } = useArticles({
-    page: currentPage,
-    limit: itemsPerPage,
+    // On récupère tous les articles filtrés et on laisse le grid gérer l'affichage progressif
     status: selectedStatus,
     search: searchTerm,
     sortBy: 'order_date',
@@ -33,6 +29,9 @@ const ProductionPage = ({ productionType, title }) => {
     productionType,
     showUrgentOnly
   })
+  // Ref vers le grid pour exposer des actions (ex: aller en bas)
+  const gridRef = useRef(null)
+
 
   
   // Gérer l'ouverture des overlays
@@ -87,11 +86,16 @@ const ProductionPage = ({ productionType, title }) => {
           selectedType={productionType}
           filteredArticlesCount={stats.total}
           searchTerm={searchTerm}
-          onSearchChange={(val) => { setSearchTerm(val); setCurrentPage(1) }}
+          onSearchChange={(val) => { setSearchTerm(val) }}
           onGoToEnd={() => {
             try {
-              const container = document.scrollingElement || document.documentElement
-              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+              // Utiliser l'API du grid pour charger tout puis scroller en bas
+              if (gridRef.current && typeof gridRef.current.goToEnd === 'function') {
+                gridRef.current.goToEnd()
+              } else {
+                const container = document.scrollingElement || document.documentElement
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+              }
             } catch {}
           }}
         />
@@ -168,8 +172,9 @@ const ProductionPage = ({ productionType, title }) => {
         </div>
       </div>
 
-      <SimpleFlexGrid
-        filteredArticles={filteredArticles}
+      <InfiniteScrollGrid
+        ref={gridRef}
+        allArticles={filteredArticles}
         getArticleSize={getArticleSize}
         getArticleColor={getArticleColor}
         getArticleOptions={getArticleOptions}
@@ -177,24 +182,9 @@ const ProductionPage = ({ productionType, title }) => {
         openOverlayCardId={openOverlayCardId}
         searchTerm={searchTerm}
         productionType={productionType}
-        prioritizeUrgent={false}
       />
       
-      {/* Pagination avancée */}
-      {pagination && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={pagination.totalPages || pagination.pages || 1}
-          totalItems={pagination.total || filteredArticles?.length || 0}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-          onItemsPerPageChange={(newItemsPerPage) => {
-            setItemsPerPage(newItemsPerPage)
-            setCurrentPage(1) // Retourner à la première page
-          }}
-          showItemsPerPage={true}
-        />
-      )}
+      {/* La pagination est supprimée au profit d'un scroll infini avec lots de 15 */}
       
       {/* Toast synchro quotidienne */}
       {typeof window !== 'undefined' && window.__dailySyncToast && (

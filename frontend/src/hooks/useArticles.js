@@ -201,33 +201,11 @@ export const useArticles = (options = {}) => {
     return filtered
   }, [articles, productionType, status, search, showUrgentOnly])
 
-  // Pagination côté client pour les articles filtrés
-  const paginatedArticles = useMemo(() => {
-    // Si une recherche est active, ignorer la pagination et renvoyer tous les résultats
-    if (typeof search === 'string' && search.trim() !== '') {
-      return filteredArticles
-    }
-    const startIndex = (page - 1) * limit
-    const endIndex = startIndex + limit
-    return filteredArticles.slice(startIndex, endIndex)
-  }, [filteredArticles, page, limit, search])
+  // Pagination côté client remplacée par un scroll infini dans la grille
+  // On conserve les dépendances pour compatibilité potentielle, mais on ne tronque plus la liste
 
-  // Calcul de la pagination pour les articles filtrés
-  const clientPagination = useMemo(() => {
-    const isSearching = typeof search === 'string' && search.trim() !== ''
-    const totalItems = filteredArticles.length
-    const totalPages = isSearching ? 1 : Math.ceil(totalItems / limit)
-    
-    return {
-      total: totalItems,
-      totalPages,
-      pages: totalPages,
-      currentPage: isSearching ? 1 : page,
-      itemsPerPage: isSearching ? totalItems : limit,
-      hasNextPage: !isSearching && page < totalPages,
-      hasPrevPage: !isSearching && page > 1
-    }
-  }, [filteredArticles.length, page, limit, search])
+  // Pagination client supprimée (gérée désormais par le composant à défilement infini)
+  const clientPagination = undefined
 
   // Statistiques des articles (responsabilité unique)
   const stats = useMemo(() => {
@@ -259,7 +237,7 @@ export const useArticles = (options = {}) => {
   return {
     // Données
     articles,
-    filteredArticles: paginatedArticles, // Utiliser les articles paginés
+    filteredArticles, // Renvoyer tous les articles filtrés; l'affichage progressif est géré par le grid
     groupedArticles,
     stats,
     pagination: clientPagination, // Utiliser la pagination côté client

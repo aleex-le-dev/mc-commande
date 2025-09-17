@@ -13,7 +13,8 @@ const InfiniteScrollGrid = forwardRef(({
   handleOverlayOpen, 
   openOverlayCardId, 
   searchTerm,
-  productionType = 'unknown'
+  productionType = 'unknown',
+  disableProgressive = true
 }, ref) => {
   // Hooks spécialisés pour la gestion d'état
   const gridState = useGridState()
@@ -69,6 +70,7 @@ const InfiniteScrollGrid = forwardRef(({
   // Observer pour détecter quand on approche du bas
   const observerRef = useRef()
   const lastArticleRef = useCallback(node => {
+    if (disableProgressive) return
     if (paginationState.isLoadingMore) return
     
     if (observerRef.current) observerRef.current.disconnect()
@@ -80,7 +82,7 @@ const InfiniteScrollGrid = forwardRef(({
     }, { threshold: 0.1 })
     
     if (node) observerRef.current.observe(node)
-  }, [paginationState.isLoadingMore, paginationState.hasMore])
+  }, [paginationState.isLoadingMore, paginationState.hasMore, disableProgressive])
 
   // Charger plus d'articles
   const loadMoreArticles = useCallback(() => {
@@ -90,8 +92,10 @@ const InfiniteScrollGrid = forwardRef(({
   // Exposer une méthode pour charger tout et scroller en bas
   useImperativeHandle(ref, () => ({
     goToEnd: () => {
-      // Charger tout d'un coup pour atteindre la fin
-      paginationState.setVisibleArticles(sortedArticles)
+      if (!disableProgressive) {
+        // Charger tout d'un coup pour atteindre la fin
+        paginationState.setVisibleArticles(sortedArticles)
+      }
       // Scroller quand le DOM est prêt (frame suivante)
       requestAnimationFrame(() => {
         if (bottomSentinelRef.current) {
@@ -127,23 +131,26 @@ const InfiniteScrollGrid = forwardRef(({
     return () => window.removeEventListener('mc-tricoteuses-updated', handler)
   }, [gridState])
 
-  // Réinitialiser le chargement progressif quand la recherche change
+  // Réinitialiser le chargement progressif quand la recherche ou l'ordre change
   useEffect(() => {
+    if (disableProgressive) return
     if (sortedArticles.length > 0) {
-      const firstBatch = sortedArticles.slice(0, 15)
-      paginationState.setVisibleArticles(firstBatch)
+      paginationState.initialize(sortedArticles)
     } else {
-      paginationState.setVisibleArticles([])
+      paginationState.resetPagination()
     }
-  }, [sortedArticles])
+  }, [sortedArticles, paginationState, disableProgressive])
 
   // Charger le premier lot d'articles (seulement si pas de recherche)
   useEffect(() => {
+    if (disableProgressive) return
     if (allArticles.length > 0 && !searchTerm) {
-      const firstBatch = allArticles.slice(0, 15)
-      paginationState.setVisibleArticles(firstBatch)
+      paginationState.initialize(allArticles)
     }
-  }, [allArticles, searchTerm, paginationState])
+  }, [allArticles, searchTerm, paginationState, disableProgressive])
+
+  // Quand on désactive le progressif, on rend tout d'un coup
+  const itemsToRender = disableProgressive ? sortedArticles : paginationState.visibleArticles
 
   // Fonction pour vérifier si un article doit avoir le badge en retard
   const isArticleEnRetard = (article) => {
@@ -216,7 +223,7 @@ const InfiniteScrollGrid = forwardRef(({
     <div className="w-full">
       {/* Grille avec chargement progressif */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full max-w-full">
-        {paginationState.visibleArticles.map((article, index) => {
+        {itemsToRender.map((article, index) => {
           const cardId = `${article.orderId}-${article.line_item_id}`
           const isHighlighted = searchTerm && (
             `${article.orderNumber}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -225,7 +232,7 @@ const InfiniteScrollGrid = forwardRef(({
           )
           
           // Référence pour le dernier article (pour l'observer)
-          const isLastArticle = index === paginationState.visibleArticles.length - 1
+          const isLastArticle = !disableProgressive && index === itemsToRender.length - 1
           
           // Vérifier si c'est le dernier article en retard (en utilisant l'index global)
           const isDernierEnRetard = lastRetardIndex !== -1 && 
@@ -268,7 +275,7 @@ const InfiniteScrollGrid = forwardRef(({
       </div>
       
       {/* Indicateur de chargement en bas */}
-      {paginationState.isLoadingMore && (
+      {!disableProgressive && paginationState.isLoadingMore && (
         <div className="flex justify-center py-8">
           <div className="flex items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -279,7 +286,7 @@ const InfiniteScrollGrid = forwardRef(({
       
       {/* Message de fin */}
       <div ref={bottomSentinelRef} />
-      {!paginationState.hasMore && paginationState.visibleArticles.length > 0 && (
+      {!disableProgressive && !paginationState.hasMore && itemsToRender.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">
             ✅ Tous les {filteredArticles.length} articles ont été chargés

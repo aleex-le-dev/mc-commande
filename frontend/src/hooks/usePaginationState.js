@@ -43,8 +43,15 @@ export const usePaginationState = (initialBatchSize = 15) => {
   // Définir les articles visibles
   const setVisibleArticlesDirect = useCallback((articles) => {
     setVisibleArticles(articles)
-    setCurrentBatch(0)
-    setHasMore(articles.length > initialBatchSize)
+  }, [])
+
+  // Initialiser avec la liste complète en calculant le premier lot
+  const initialize = useCallback((allArticles) => {
+    const firstBatch = allArticles.slice(0, initialBatchSize)
+    setVisibleArticles(firstBatch)
+    setCurrentBatch(firstBatch.length > 0 ? 1 : 0)
+    setHasMore(allArticles.length > firstBatch.length)
+    setIsLoadingMore(false)
   }, [initialBatchSize])
 
   return {
@@ -56,7 +63,8 @@ export const usePaginationState = (initialBatchSize = 15) => {
     setVisibleCount,
     loadMore,
     resetPagination,
-    setVisibleArticles: setVisibleArticlesDirect
+    setVisibleArticles: setVisibleArticlesDirect,
+    initialize
   }
 }
 
