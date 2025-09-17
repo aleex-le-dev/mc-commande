@@ -30,6 +30,8 @@ const HeaderMedia = ({
           <img 
             src={displayImageUrl}
             alt={article.product_name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
             onLoad={() => {
               // Image chargée avec succès

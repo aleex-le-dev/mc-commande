@@ -160,12 +160,12 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       console.log('💾 [SyncButton] Stockage du toast:', toastData)
       localStorage.setItem('mc-sync-toast', JSON.stringify(toastData))
       
-      // Forcer un rechargement complet de la page après un délai
-      console.log('🔄 [SyncButton] Rechargement de la page dans 2 secondes...')
+      // Forcer un rechargement complet de la page après un court délai
+      console.log('🔄 [SyncButton] Rechargement de la page dans 0.5 seconde...')
       setTimeout(() => {
         console.log('🔄 [SyncButton] Rechargement de la page')
         window.location.reload()
-      }, 2000)
+      }, 500)
       
       // Précharger les images des nouvelles commandes
       try {

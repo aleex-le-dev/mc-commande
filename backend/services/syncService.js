@@ -91,31 +91,32 @@ async function synchronizeOrdersOnce() {
 
   const orderItemsCollection = database.getCollection('order_items')
 
-  const lastOrder = await orderItemsCollection
-    .find({})
-    .sort({ order_id: -1 })
-    .limit(1)
+  // Déterminer la dernière date connue en BDD (par sécurité: order_date puis created_at)
+  const [lastByDate] = await orderItemsCollection
+    .find({}, { projection: { order_date: 1, created_at: 1, order_id: 1 }, sort: { order_date: -1, created_at: -1 }, limit: 1 })
     .toArray()
 
-  const lastOrderId = lastOrder.length > 0 ? lastOrder[0].order_id : 0
+  const latestKnownDate = lastByDate ? (lastByDate.order_date || lastByDate.created_at) : null
 
-  const allOrders = await ordersService.getOrdersFromWooCommerce({ per_page: 100 })
-  const newOrders = allOrders.filter(order => order.id > lastOrderId)
+  // Récupérer les commandes récentes depuis WooCommerce (les plus récentes en premier)
+  const wooOrders = await ordersService.getOrdersFromWooCommerce({ per_page: 100 })
 
-  if (newOrders.length === 0) {
-    return {
-      success: true,
-      message: 'Aucune nouvelle commande à synchroniser',
-      synchronized: 0,
-      lastOrderId,
-      newOrders: [],
-      timestamp: new Date().toISOString()
-    }
-  }
+  // Ne garder que les commandes plus récentes que la dernière date connue
+  const recentWooOrders = Array.isArray(wooOrders) && latestKnownDate
+    ? wooOrders.filter(o => {
+        try {
+          const created = new Date(o.date_created)
+          return created > new Date(latestKnownDate)
+        } catch {
+          return false
+        }
+      })
+    : wooOrders
 
+  // Insérer uniquement les commandes récentes absentes de la BDD (évite de récupérer les anciennes)
   const insertedOrders = []
 
-  for (const order of newOrders) {
+  for (const order of recentWooOrders) {
     try {
       const existingOrder = await orderItemsCollection.findOne({ order_id: order.id })
       if (existingOrder) {
@@ -171,7 +172,6 @@ async function synchronizeOrdersOnce() {
     message: `Synchronisation réussie: ${insertedOrders.length} nouvelles commandes, ${cleanupResult.deleted} commandes finales supprimées`,
     synchronized: insertedOrders.length,
     deleted: cleanupResult.deleted,
-    lastOrderId,
     newOrders: insertedOrders.map(o => o.order_id),
     cleanup: cleanupResult,
     timestamp: new Date().toISOString()
