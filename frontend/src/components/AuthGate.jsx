@@ -15,6 +15,9 @@ const AuthGate = ({ children, onAuthenticated }) => {
   const [resetNewPwd, setResetNewPwd] = useState('')
   const [showResetPwd, setShowResetPwd] = useState(false)
   const [loginError, setLoginError] = useState('')
+  const [waking, setWaking] = useState(false)
+  const [wakeMsg, setWakeMsg] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
   // Suppression du fallback VITE_APP_PASSWORD: seule la vérification backend est valide
   // plus d'affichage de logs, uniquement console
 
@@ -195,16 +198,49 @@ const AuthGate = ({ children, onAuthenticated }) => {
                 type="button"
                 onClick={async () => {
                   try {
+                    setWaking(true)
+                    setWakeMsg('')
+                    const res = await ApiService.http.get('/health')
+                    if (res.ok) {
+                      setWakeMsg('Serveur réveillé, réessayez le mot de passe.')
+                    } else {
+                      setWakeMsg('Serveur non joignable, réessayez dans quelques secondes.')
+                    }
+                  } catch (e) {
+                    setWakeMsg('Échec de réveil. Vérifiez la connexion internet et réessayez.')
+                  } finally {
+                    setWaking(false)
+                  }
+                }}
+                className="w-full mt-3 rounded-lg px-3 py-2 font-medium cursor-pointer"
+                style={{ backgroundColor: '#f3f4f6', color: '#111827', border: '1px solid #e5e7eb' }}
+                disabled={waking}
+              >
+                {waking ? 'Réveil en cours…' : 'Réveiller le serveur'}
+              </button>
+              {wakeMsg && (
+                <div className="mt-2 text-sm" style={{ color: '#374151' }}>
+                  {wakeMsg}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    if (forgotLoading) return
+                    setForgotLoading(true)
                     await authService.forgot()
                     alert('Un nouveau mot de passe a été envoyé sur le mail c********@maisoncleo.com')
                   } catch (e) {
                     alert('Erreur envoi du mot de passe. Contactez le support.')
+                  } finally {
+                    setForgotLoading(false)
                   }
                 }}
                 className="w-full text-center mt-3 underline cursor-pointer"
                 style={{ color: '#6b7280' }}
               >
-                Mot de passe oublié ?
+                {forgotLoading ? 'Envoi en cours…' : 'Mot de passe oublié ?'}
               </button>
             </>
           )}
