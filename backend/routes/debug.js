@@ -609,4 +609,49 @@ router.get('/storage', async (req, res) => {
   }
 })
 
+// IP publique du service (pour allowlist WAF)
+router.get('/public-ip', async (req, res) => {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    const providers = [
+      'https://api.ipify.org?format=json',
+      'https://ifconfig.me/all.json'
+    ]
+
+    let ip = null
+    let details = {}
+
+    for (const url of providers) {
+      try {
+        const r = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json', 'User-Agent': 'mc-commande-sync/1.0' } })
+        if (!r.ok) continue
+        const data = await r.json().catch(() => ({}))
+        if (data?.ip) {
+          ip = data.ip
+          details = data
+          break
+        }
+        if (data?.ip_addr) {
+          ip = data.ip_addr
+          details = data
+          break
+        }
+      } catch (_) {
+        // essayer le provider suivant
+      }
+    }
+
+    clearTimeout(timeout)
+
+    if (!ip) {
+      return res.status(503).json({ success: false, error: 'Impossible de déterminer l\'IP publique' })
+    }
+
+    res.json({ success: true, ip, details })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 module.exports = router
