@@ -623,7 +623,7 @@ class OrdersService {
         return new Promise(resolve => setTimeout(resolve, ms))
       }
 
-      async function fetchWithRetry(url, headers, attempt = 1) {
+      async function fetchOnce(url, headers) {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
         try {
@@ -632,19 +632,6 @@ class OrdersService {
             headers,
             signal: controller.signal
           })
-
-          if (response.status === 429 || response.status === 503) {
-            const retryAfterHeader = response.headers.get('retry-after')
-            const retryAfterSec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : null
-            const backoffMs = retryAfterSec && !Number.isNaN(retryAfterSec)
-              ? retryAfterSec * 1000
-              : Math.min(1000 * Math.pow(2, attempt - 1), 10000)
-            if (attempt < 5) {
-              console.warn(`⚠️ WooCommerce ${response.status}. Retry après ${backoffMs}ms (tentative ${attempt})`)
-              await wait(backoffMs)
-              return fetchWithRetry(url, headers, attempt + 1)
-            }
-          }
 
           if (!response.ok) {
             const text = await response.text().catch(() => '')
@@ -677,7 +664,7 @@ class OrdersService {
         const url = `${baseUrl}/wp-json/${apiVersion}/orders?${params.toString()}`
         console.log('🔄 Récupération commandes WooCommerce:', url)
 
-        const response = await fetchWithRetry(url, commonHeaders)
+        const response = await fetchOnce(url, commonHeaders)
         const ordersPage = await response.json()
         if (!Array.isArray(ordersPage)) {
           throw new Error('Réponse WooCommerce invalide: tableau attendu')
