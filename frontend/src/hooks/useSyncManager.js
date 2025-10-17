@@ -83,19 +83,20 @@ export const useSyncManager = (performSync) => {
       }
     }
 
-    const isPageRefresh = !window.performance.navigation || window.performance.navigation.type === 1
-    if (isPageRefresh) {
-      // OPTIMISATION: Timeout avec cleanup
-      const timeoutId = setTimeout(async () => {
-        await fetchInitialLogs()
-        await performManualSync()
-      }, 1000)
-      
-      // Cleanup du timeout si le composant est démonté
-      return () => clearTimeout(timeoutId)
-    } else {
+    // Désactiver l'auto-sync au rafraîchissement pour éviter les boucles
+    // const isPageRefresh = !window.performance.navigation || window.performance.navigation.type === 1
+    // if (isPageRefresh) {
+    //   // OPTIMISATION: Timeout avec cleanup
+    //   const timeoutId = setTimeout(async () => {
+    //     await fetchInitialLogs()
+    //     await performManualSync()
+    //   }, 1000)
+    //   
+    //   // Cleanup du timeout si le composant est démonté
+    //   return () => clearTimeout(timeoutId)
+    // } else {
       fetchInitialLogs()
-    }
+    // }
   }, [performManualSync, syncProgress])
 
   return {
