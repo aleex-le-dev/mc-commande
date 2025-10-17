@@ -613,7 +613,7 @@ class OrdersService {
       const apiVersion = process.env.VITE_WORDPRESS_API_VERSION || 'wc/v3'
 
       const isProduction = String(process.env.NODE_ENV).toLowerCase() === 'production'
-      const perPage = Number(options.per_page) || (isProduction ? 10 : 100)
+      const perPage = Number(options.per_page) || (isProduction ? 5 : 100)
       const maxPages = Number(options.maxPages) || (isProduction ? 4 : 2)
       const smallDelayMs = Number(options.pageDelayMs) || 200
       const userAgent = `mc-commande-sync/1.0 (+render); node/${process.version}`
