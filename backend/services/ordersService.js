@@ -611,76 +611,35 @@ class OrdersService {
       const consumerKey = process.env.VITE_WORDPRESS_CONSUMER_KEY
       const consumerSecret = process.env.VITE_WORDPRESS_CONSUMER_SECRET
       const apiVersion = process.env.VITE_WORDPRESS_API_VERSION || 'wc/v3'
+      
+      const params = new URLSearchParams({
+        per_page: options.per_page || 100,
+        orderby: 'id',
+        order: 'desc', // Récupérer les plus récentes en premier
+        status: 'processing,completed,on-hold'
+      })
 
-      const isProduction = String(process.env.NODE_ENV).toLowerCase() === 'production'
-      const perPage = Number(options.per_page) || (isProduction ? 5 : 100)
-      const maxPages = Number(options.maxPages) || (isProduction ? 4 : 2)
-      const smallDelayMs = Number(options.pageDelayMs) || 200
-      const userAgent = `mc-commande-sync/1.0 (+render); node/${process.version}`
-      const timeoutMs = Number(process.env.WC_FETCH_TIMEOUT_MS) || 30000
+      const url = `${baseUrl}/wp-json/${apiVersion}/orders?${params.toString()}`
+      
+      console.log('🔄 Récupération commandes WooCommerce:', url)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64'),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': `mc-commande-sync/1.0 (+render); node/${process.version}`
+        }
+      })
 
-      async function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms))
+      if (!response.ok) {
+        throw new Error(`Erreur API WooCommerce: ${response.status} ${response.statusText}`)
       }
 
-      async function fetchOnce(url, headers) {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-        try {
-          const response = await fetch(url, {
-            method: 'GET',
-            headers,
-            signal: controller.signal
-          })
-
-          if (!response.ok) {
-            const text = await response.text().catch(() => '')
-            throw new Error(`Erreur API WooCommerce: ${response.status} ${response.statusText} ${text?.slice(0, 256)}`)
-          }
-
-          return response
-        } finally {
-          clearTimeout(timeoutId)
-        }
-      }
-
-      const commonHeaders = {
-        'Authorization': 'Basic ' + Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64'),
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': userAgent
-      }
-
-      const allOrders = []
-      for (let page = 1; page <= maxPages; page++) {
-        const params = new URLSearchParams({
-          per_page: String(perPage),
-          page: String(page),
-          orderby: 'id',
-          order: 'desc',
-          status: 'processing,completed,on-hold'
-        })
-
-        const url = `${baseUrl}/wp-json/${apiVersion}/orders?${params.toString()}`
-        console.log('🔄 Récupération commandes WooCommerce:', url)
-
-        const response = await fetchOnce(url, commonHeaders)
-        const ordersPage = await response.json()
-        if (!Array.isArray(ordersPage)) {
-          throw new Error('Réponse WooCommerce invalide: tableau attendu')
-        }
-
-        allOrders.push(...ordersPage)
-        if (ordersPage.length < perPage) {
-          break
-        }
-        if (page < maxPages) {
-          await wait(smallDelayMs)
-        }
-      }
-
-      console.log(`📦 ${allOrders.length} commandes récupérées depuis WooCommerce`)
-      return allOrders
+      const orders = await response.json()
+      console.log(`📦 ${orders.length} commandes récupérées depuis WooCommerce`)
+      return orders
     } catch (error) {
       console.error('Erreur récupération commandes WooCommerce:', error)
       throw error
