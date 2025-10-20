@@ -17,7 +17,8 @@ class UnifiedApiService {
     if (import.meta.env.DEV) {
       return 'http://localhost:3001'
     }
-    return import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'
+    // Forcer l'URL Render même si VITE_API_URL est définie
+    return 'https://maisoncleo-commande.onrender.com'
   }
 
   /**
