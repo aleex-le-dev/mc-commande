@@ -258,7 +258,7 @@ const ArticleCard = forwardRef(({
       
       try {
         // Appeler l'API pour changer le type de production
-        const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+        const base = (import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com')
         const response = await fetch(`${base}/api/production-status/${article.line_item_id}/type`, {
           method: 'PUT',
           headers: {

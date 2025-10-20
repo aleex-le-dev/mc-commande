@@ -120,7 +120,7 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
           const newOrders = result?.newOrders || []
           if (newOrders.length > 0) {
             // Récupérer les détails des nouvelles commandes pour compter les types
-            const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+            const base = (import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com')
             const ordersResponse = await fetch(`${base}/api/orders?page=1&limit=1000`, { credentials: 'include' })
             if (ordersResponse.ok) {
               const ordersData = await ordersResponse.json()
@@ -169,7 +169,7 @@ const SyncButton = ({ variant = 'icon', className = '', onDone }) => {
       
       // Précharger les images des nouvelles commandes
       try {
-        const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+        const base = (import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com')
         const res = await fetch(`${base}/api/orders`, { credentials: 'include' })
         if (res.ok) {
           const data = await res.json()

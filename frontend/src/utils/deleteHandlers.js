@@ -1,6 +1,6 @@
 // Handlers de suppression (article et commande) avec notifications UI
 export function createDeleteHandlers(queryClient) {
-  const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+  const base = (import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com')
 
   const handleDeleteArticle = async (orderId, lineItemId) => {
     const response = await fetch(`${base}/api/orders/${orderId}/items/${lineItemId}`, { method: 'DELETE' })

@@ -8,7 +8,7 @@ const SyncProgress = ({ syncProgress, syncLogs }) => {
     let intervalId
     const fetchLog = async () => {
       try {
-        const base = (import.meta.env.DEV ? 'http://localhost:3001' : (import.meta.env.VITE_API_URL || 'https://maisoncleo-commande.onrender.com'))
+        const base = (import.meta.env.DEV ? 'http://localhost:3001' : 'https://maisoncleo-commande.onrender.com')
         const res = await fetch(`${base}/api/sync/logs`, { method: 'GET', credentials: 'include' })
         if (!res.ok) return
         const data = await res.json()
